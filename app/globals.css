@@ -1,0 +1,16 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 기본 리셋/테마 (선택) */
+:root {
+    color-scheme: light dark;
+}
+
+html, body {
+    height: 100%;
+}
+
+body {
+    margin: 0;
+}

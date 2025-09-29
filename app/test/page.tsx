@@ -1,4 +1,6 @@
-export default function TestPage() {
+import { ReactElement } from 'react'
+
+export default function TestPage(): ReactElement {
   return (
     <main>
       <h1>테스트 페이지</h1>
