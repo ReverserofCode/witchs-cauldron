@@ -78,3 +78,91 @@ docker exec -it witchs-cauldron-frontend npx tsc --noEmit
 - `app/api/health/route.ts` 헬스체크 엔드포인트
 - `app/test/page.tsx` 테스트 페이지
 - `postcss.config.js` Tailwind v4 PostCSS 설정
+
+## GPT API 컨테이너(gpt-codex) 연동
+
+개발용 GPT 백엔드 컨테이너(`gpt-codex`)가 포함되어 있습니다. 호스트 및 프런트에서 쉽게 사용할 수 있도록 프록시/포트 노출이 구성되어 있습니다.
+
+### 실행/재빌드
+
+```cmd
+:: gpt-codex만 클린 빌드
+docker compose build --no-cache gpt-codex
+
+:: gpt-codex만 실행
+docker compose up -d gpt-codex
+
+:: 전체 서비스 실행
+docker compose up -d
+```
+
+### 상태/로그/헬스체크
+
+```cmd
+:: 상태 확인
+docker compose ps
+
+:: gpt-codex 로그 팔로우
+docker compose logs -f gpt-codex
+
+:: 호스트에서 헬스 체크 (컨테이너 직접)
+curl http://localhost:8080/health
+
+:: 프런트 프록시 경유 (개발 모드에서만)
+curl http://localhost:3000/api/gpt/health
+```
+
+### 컨테이너 내부 작업
+
+```cmd
+:: 쉘 접속 (bash 또는 sh)
+docker exec -it gpt-codex bash
+:: 또는
+docker exec -it gpt-codex sh
+
+:: 패키지 설치 (볼륨 마운트된 /srv 기준)
+docker exec -it gpt-codex npm install <패키지명>
+
+:: 글로벌 패키지(@openai/codex) 확인
+docker exec -it gpt-codex npm ls -g @openai/codex
+
+:: codex 바이너리 확인
+docker exec -it gpt-codex codex --help
+```
+
+### 프런트에서 호출 (CORS 회피 프록시)
+
+개발 모드에서 Next.js가 `/api/gpt/:path*`를 Docker 네트워크의 `gpt-codex:8080`으로 프록시합니다. 프런트 코드는 `/api/gpt/...`로 호출하세요.
+
+예시:
+
+```ts
+// 브라우저 측 코드
+const res = await fetch("/api/gpt/chat", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ message: "hello" }),
+});
+const data = await res.json();
+```
+
+### 환경 변수(.env)
+
+루트의 `.env` 파일이 `gpt-codex`에 주입됩니다.
+
+```env
+OPENAI_API_KEY=sk-...
+NODE_ENV=development
+```
+
+민감값은 저장소에 커밋하지 마세요. 필요 시 `docker-compose.yml`에서 `env_file`로 경로를 조정할 수 있습니다.
+
+### 엔드포인트
+
+- `GET /health` → `{ ok: true, service: 'gpt-codex', hasOpenAIKey: boolean }`
+- `GET /env-check` → `{ hasOpenAIKey: boolean }`
+- `POST /chat` → 개발용 에코 응답
+
+직접 접근: `http://localhost:8080/...`
+
+프록시 경유: `http://localhost:3000/api/gpt/...`
