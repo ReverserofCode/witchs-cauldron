@@ -1,89 +1,85 @@
-##### docker-compose: 프론트엔드 개발 컨테이너 #####
-# 사용법(Windows cmd)
-# - 시작:    docker compose up -d --build
-# - 로그:    docker logs -f --tail=200 witchs-cauldron-frontend
-# - 중지:    docker compose down
-# - 셸 접속: docker exec -it witchs-cauldron-frontend sh
-#
-# 참고(경로): 아래 volumes는 compose 파일이 "프로젝트 루트"(상위 폴더)에 있을 때 기준으로 작성됨.
-# - 만약 이 파일을 frontend/ 폴더 내부에 둘 경우, "./frontend:/app" 대신 ".:/app" 형태를 사용하세요.
+# 기존 내용 유지 ...
 services:
-  # 개발용 프론트엔드 컨테이너 정의
   frontend:
-    # 고정 컨테이너 이름(프로젝트 친화적): docker exec 시 편리
     container_name: witchs-cauldron-frontend
-    # 가벼운 공식 Node 이미지 사용 (alpine 변형)
     image: node:22-alpine
-    # 컨테이너 내부 작업 디렉터리
     working_dir: /app
     ports:
-      # 호스트:컨테이너 포트 매핑 (Next.js dev 서버 기본 3000)
-      - 3000:3000
+      - "3000:3000"
     environment:
-      # 컨테이너 내부 서버를 모든 인터페이스에서 수신하도록 설정 (0.0.0.0)
       - HOST=0.0.0.0
-      # Next.js 텔레메트리 비활성화 (로컬 개발/CI에 불필요한 전송 방지)
       - NEXT_TELEMETRY_DISABLED=1
-      # Windows/OneDrive 환경에서 파일 변경 감지 안정화를 위해 폴링 강제
       - CHOKIDAR_USEPOLLING=true
-      # Webpack/Watchpack도 폴링 모드로 동작하도록 설정
       - WATCHPACK_POLLING=true
     volumes:
-      # 소스 코드를 바인드 마운트하여 실시간 변경 반영(핫리로드)
-      # 주의: 이 경로는 compose 파일이 상위(프로젝트 루트)에 있을 때 기준입니다.
       - ./frontend:/app
-      # node_modules는 네임드 볼륨에 분리하여 호스트-컨테이너 간 충돌 방지
       - frontend_node_modules:/app/node_modules
-    # 컨테이너 시작 시 실행할 셸 명령
-    # - package.json 체크 후, 없으면 가이드 출력하고 종료 (초기화 유도)
-    # - Node 버전 출력(존재 여부 확인)
-    # - package-lock.json 존재 시 우선 npm ci (실패 시 npm install), 없으면 npm install
-    # - 이후 개발 서버(npm run dev) 시작
     command:
       - sh
       - -lc
       - |
         set -e
-        # 1) 프로젝트 초기화 여부 확인
         if [ ! -f package.json ]; then
           echo "[CHECK] No package.json in /app. Initialize the project: npx create-next-app@latest ." >&2
           exit 1
         fi
         echo "[CHECK] package.json found."
-
-        # 2) Node 존재 확인 및 버전 출력 (디버깅 편의)
-        if command -v node >/dev/null 2>&1; then
-          node -v
-        else
-          echo "[WARN] node not found in PATH" >&2
-        fi
-
-        # 3) 의존성 설치 전략: lock 파일 우선(npm ci), 실패 시 fallback(npm install)
-        if [ -f package-lock.json ]; then
-          echo "[INFO] Using npm ci"
-          npm ci || npm install
-        else
-          echo "[INFO] Using npm install"
-          npm install
-        fi
-
-        # 4) 개발 서버 시작
+        if command -v node >/dev/null 2>&1; then node -v; else echo "[WARN] node not found in PATH" >&2; fi
+        if [ -f package-lock.json ]; then echo "[INFO] Using npm ci"; npm ci || npm install; else echo "[INFO] Using npm install"; npm install; fi
         echo "[START] npm run dev"
         npm run dev
-    # 컨테이너 헬스체크: dev 서버가 3000 포트에서 응답하는지 확인
     healthcheck:
       test:
-        # 셸을 통해 wget으로 루트 페이지 요청, 실패 시 비정상 처리 (반환 코드로 판단)
-        - CMD-SHELL
-        - wget -qO- http://localhost:3000/ >/dev/null 2>&1 || exit 1
-      # 헬스체크 주기/타임아웃/재시도/초기 유예시간
+        [
+          "CMD-SHELL",
+          "wget -qO- http://localhost:3000/ >/dev/null 2>&1 || exit 1",
+        ]
       interval: 10s
       timeout: 3s
       retries: 10
       start_period: 40s
-    # 사용자가 명시적으로 중지할 때까지 자동 재시작(개발 중 편의)
     restart: unless-stopped
 
-# 네임드 볼륨 정의: node_modules를 컨테이너 측에 유지해 호스트 OS 차이/권한 이슈 회피
+  # === 새로 추가되는 GPT-Codex 서비스 ===
+  gpt-codex:
+    container_name: gpt-codex
+    image: node:22-alpine
+    working_dir: /srv
+    ports:
+      - "8080:8080" # 호스트:컨테이너
+    environment:
+      - HOST=0.0.0.0
+      # 필요 시 .env 로 관리 권장 (아래 제안 2 참고)
+      # - OPENAI_API_KEY=your_key_here
+    volumes:
+      - ./gpt-codex:/srv
+      - gpt_codex_node_modules:/srv/node_modules
+    command:
+      - sh
+      - -lc
+      - |
+        set -e
+        if [ ! -f package.json ]; then
+          echo "[CHECK] No package.json in /srv. Put your API server here (e.g., Express/Fastify)." >&2
+          exit 1
+        fi
+        if [ -f package-lock.json ]; then npm ci || npm install; else npm install; fi
+        echo "[START] npm run start"
+        npm run start
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget -qO- http://localhost:8080/health >/dev/null 2>&1 || exit 1",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+    # 프론트에서 gpt-codex:8080 으로 호출하면 Docker 네트워크 내부 DNS로 접근됩니다.
+    # (별도 depends_on 은 필수는 아님. 최초 기동순서가 필요하면 추가)
+
 volumes:
   frontend_node_modules: null
+  gpt_codex_node_modules: null

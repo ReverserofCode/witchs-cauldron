@@ -14,7 +14,7 @@ interface RootLayoutProps {
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <html lang="ko">
-      <body className="min-h-screen bg-white text-gray-900 dark:bg-zinc-900 dark:text-zinc-100 p-6">
+      <body className="min-h-screen p-6 text-gray-900 bg-white dark:bg-zinc-900 dark:text-zinc-100">
         {children}
       </body>
     </html>
