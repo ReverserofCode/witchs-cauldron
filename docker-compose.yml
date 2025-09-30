@@ -43,14 +43,17 @@ services:
   # === 새로 추가되는 GPT-Codex 서비스 ===
   gpt-codex:
     container_name: gpt-codex
-    image: node:22-alpine
+    build:
+      context: ./gpt-codex
+      dockerfile: Dockerfile
+    image: gpt-codex:local
     working_dir: /srv
     ports:
       - "8080:8080" # 호스트:컨테이너
+    env_file:
+      - ./.env
     environment:
       - HOST=0.0.0.0
-      # 필요 시 .env 로 관리 권장 (아래 제안 2 참고)
-      # - OPENAI_API_KEY=your_key_here
     volumes:
       - ./gpt-codex:/srv
       - gpt_codex_node_modules:/srv/node_modules
@@ -64,13 +67,16 @@ services:
           exit 1
         fi
         if [ -f package-lock.json ]; then npm ci || npm install; else npm install; fi
+        echo "[INFO] node -v && npm -v && brew --version && which codex || true"
+        node -v && npm -v && brew --version || true
+        which codex || true
         echo "[START] npm run start"
         npm run start
     healthcheck:
       test:
         [
           "CMD-SHELL",
-          "wget -qO- http://localhost:8080/health >/dev/null 2>&1 || exit 1",
+          "curl -fsS http://localhost:8080/health >/dev/null || exit 1",
         ]
       interval: 10s
       timeout: 3s
