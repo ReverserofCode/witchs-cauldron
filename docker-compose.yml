@@ -40,52 +40,5 @@ services:
       start_period: 40s
     restart: unless-stopped
 
-  # === 새로 추가되는 GPT-Codex 서비스 ===
-  gpt-codex:
-    container_name: gpt-codex
-    build:
-      context: ./gpt-codex
-      dockerfile: Dockerfile
-    image: gpt-codex:local
-    working_dir: /srv
-    ports:
-      - "8080:8080" # 호스트:컨테이너
-    env_file:
-      - ./.env
-    environment:
-      - HOST=0.0.0.0
-    volumes:
-      - ./gpt-codex:/srv
-      - gpt_codex_node_modules:/srv/node_modules
-    command:
-      - sh
-      - -lc
-      - |
-        set -e
-        if [ ! -f package.json ]; then
-          echo "[CHECK] No package.json in /srv. Put your API server here (e.g., Express/Fastify)." >&2
-          exit 1
-        fi
-        if [ -f package-lock.json ]; then npm ci || npm install; else npm install; fi
-        echo "[INFO] node -v && npm -v && brew --version && which codex || true"
-        node -v && npm -v && brew --version || true
-        which codex || true
-        echo "[START] npm run start"
-        npm run start
-    healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "curl -fsS http://localhost:8080/health >/dev/null || exit 1",
-        ]
-      interval: 10s
-      timeout: 3s
-      retries: 10
-      start_period: 30s
-    restart: unless-stopped
-    # 프론트에서 gpt-codex:8080 으로 호출하면 Docker 네트워크 내부 DNS로 접근됩니다.
-    # (별도 depends_on 은 필수는 아님. 최초 기동순서가 필요하면 추가)
-
 volumes:
   frontend_node_modules: null
-  gpt_codex_node_modules: null

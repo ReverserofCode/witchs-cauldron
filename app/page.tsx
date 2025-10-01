@@ -41,12 +41,6 @@ export default function Page(): ReactElement {
 
       {/* ABOUT */}
       <section id="about" className="grid gap-6 mt-16 md:grid-cols-3">
-        <Card title="Name" value="MOING" />
-        <Card title="Height" value="155" />
-        <Card title="Weight" value="44" />
-        <Card title="Age" value="99" />
-        <Card title="MBTI" value="INFP" />
-        <Card title="Birthday" value="3/14" />
       </section>
 
       {/* FOOTER */}
