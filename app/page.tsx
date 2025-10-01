@@ -1,8 +1,11 @@
 import { ReactElement } from 'react'
+import GlobalNav from './components/globalNav'
+
 
 export default function Page(): ReactElement {
   return (
     <main className="container max-w-6xl px-6 py-10 mx-auto">
+      <GlobalNav />
       {/* HERO */}
       <section className="grid items-center grid-cols-1 gap-8 md:grid-cols-2">
         <div className="space-y-4">

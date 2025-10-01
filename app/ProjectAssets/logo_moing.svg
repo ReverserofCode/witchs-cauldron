@@ -1,0 +1,18 @@
+<svg width="920" height="220" viewBox="0 0 920 220" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#DBCEF7"/>
+      <stop offset="100%" stop-color="#5E4E75"/>
+    </linearGradient>
+  </defs>
+  <g transform="translate(40,40)">
+    <ellipse cx="60" cy="120" rx="52" ry="44" fill="url(#g)" stroke="#5E4E75" stroke-width="6"/>
+    <rect x="48" y="16" width="24" height="40" rx="6" fill="#DBCEF7" stroke="#5E4E75" stroke-width="6"/>
+    <circle cx="60" cy="96" r="8" fill="#FFFFFF"/>
+    <circle cx="84" cy="108" r="6" fill="#FFFFFF" opacity="0.8"/>
+    <circle cx="44" cy="112" r="5" fill="#FFFFFF" opacity="0.8"/>
+  </g>
+  <g font-family="Poppins, Arial, sans-serif" font-weight="700" font-size="140" fill="#5E4E75">
+    <text x="150" y="150">Moing</text>
+  </g>
+</svg>
