@@ -75,9 +75,22 @@ docker exec -it witchs-cauldron-frontend npx tsc --noEmit
 ## 디렉터리
 
 - `app/` Next.js App Router 소스
-- `app/api/health/route.ts` 헬스체크 엔드포인트
-- `app/test/page.tsx` 테스트 페이지
+  - `layout.tsx` 글로벌 폰트, AppShell, 공통 메타데이터
+  - `page.tsx` 홈 화면 섹션 컴포넌트 조합
+  - `test/page.tsx` 셋업 확인용 샌드박스 페이지
+  - `api/health/route.ts` 헬스체크 엔드포인트
+- `components/layout/` 헤더, 푸터, 페이지 헤더 등 공용 레이아웃 컴포넌트
+- `components/home/` 홈 화면 전용 섹션 컴포넌트
+- `components/ui/Container.tsx` 공용 레이아웃 컨테이너
+- `config/navigation.ts` 내비게이션 및 리소스 카드 정의
 - `postcss.config.js` Tailwind v4 PostCSS 설정
+
+## 프론트엔드 기본 구조
+
+- 글로벌 레이아웃(AppShell)과 SiteHeader/SiteFooter로 페이지 공통 UI를 구성합니다.
+- PageHeader 컴포넌트로 페이지 단위 헤더를 재사용합니다.
+- HomeHero, ResourceGrid 등 섹션 단위 컴포넌트로 홈 화면을 모듈화합니다.
+- `config/navigation.ts`에서 내비게이션과 리소스 링크를 중앙 집중 관리합니다.
 
 ## GPT API 컨테이너(gpt-codex) 연동
 
