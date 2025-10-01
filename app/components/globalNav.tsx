@@ -1,10 +1,12 @@
-import type { CSSProperties, ReactNode } from 'react';
+import Image from 'next/image'
+import Link from 'next/link'
+import type { ReactNode } from 'react'
 
-type NavItem = { label: string; href: string };
+type NavItem = { label: string; href: string }
 
 interface GlobalNavProps {
-  brand?: ReactNode;
-  items?: NavItem[];
+  brand?: ReactNode
+  items?: NavItem[]
 }
 
 const defaultItems: NavItem[] = [
@@ -12,66 +14,32 @@ const defaultItems: NavItem[] = [
   { label: '소개', href: '/about' },
   { label: '서비스', href: '/services' },
   { label: '문의', href: '/contact' },
-];
+]
 
-export default function GlobalNav({ brand = 'MyApp', items = defaultItems }: GlobalNavProps) {
+export default function GlobalNav({ brand, items = defaultItems }: GlobalNavProps) {
   return (
-    <header style={styles.header}>
-      <div style={styles.container}>
-        <a href="/" style={styles.brand} aria-label="홈으로 이동">
-          {brand}
-        </a>
+    <header className="surface sticky top-0 z-50">
+      <div className="container flex items-center justify-between gap-4 py-3">
+        <Link href="/" aria-label="홈으로 이동" className="flex items-center gap-2 font-extrabold text-lg text-ink">
+          <Image src="/icon.svg" alt="Moing" width={28} height={28} />
+          {brand ?? <span>마녀의 포션공방</span>}
+        </Link>
 
         <nav aria-label="글로벌 내비게이션">
-          <ul style={styles.navList}>
+          <ul className="hidden md:flex items-center gap-2">
             {items.map((item) => (
-              <li key={item.href} style={styles.navItem}>
-                <a href={item.href} style={styles.link}>
+              <li key={item.href}>
+                <Link
+                  className="px-3 py-2 text-sm font-semibold text-ink hover:text-[rgb(var(--moing-deep))] rounded-md hover:bg-[rgba(var(--moing-accent),0.35)]"
+                  href={item.href}
+                >
                   {item.label}
-                </a>
+                </Link>
               </li>
             ))}
           </ul>
         </nav>
       </div>
     </header>
-  );
+  )
 }
-
-const styles: Record<string, CSSProperties> = {
-  header: {
-    position: 'sticky',
-    top: 0,
-    background: '#ffffff',
-    borderBottom: '1px solid #e5e7eb',
-    zIndex: 50,
-  },
-  container: {
-    maxWidth: 1200,
-    margin: '0 auto',
-    padding: '12px 16px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 16,
-  },
-  brand: {
-    fontSize: 18,
-    fontWeight: 700,
-    color: '#111827',
-    textDecoration: 'none',
-  },
-  navList: {
-    display: 'flex',
-    listStyle: 'none',
-    gap: 16,
-    margin: 0,
-    padding: 0,
-  },
-  navItem: {},
-  link: {
-    color: '#374151',
-    textDecoration: 'none',
-    padding: '6px 8px',
-  },
-};

@@ -1,42 +1,38 @@
+import Image from 'next/image'
 import { ReactElement } from 'react'
-import GlobalNav from './components/globalNav'
-
 
 export default function Page(): ReactElement {
   return (
     <main className="container max-w-6xl px-6 py-10 mx-auto">
-      <GlobalNav />
       {/* HERO */}
-      <section className="grid items-center grid-cols-1 gap-8 md:grid-cols-2">
+      <section className="grid items-center grid-cols-1 gap-10 md:grid-cols-2">
         <div className="space-y-4">
-          <span className="inline-flex items-center gap-2 px-3 py-1 text-xs font-medium rounded-full bg-chip/40 text-violet-400 ring-1 ring-violet-400/30">
-            KR V-tuber • Moing
-          </span>
+          <span className="chip">KR V-tuber • Moing</span>
           <h1 className="text-4xl font-extrabold leading-tight md:text-5xl">
             The witch of the potion store
           </h1>
           <p className="text-muted max-w-prose">
-            보랏빛 포션과 마법이 흐르는 공간. 이 레포는 테마 기반 UI 스켈레톤으로, 향후 콘텐츠와 기능을 얹기 쉽도록 구성되어 있습니다.
+            보랏빛 포션과 마법이 흐르는 공간. 이 레포는 Moing 팔레트를 반영한 디자인으로, 향후 콘텐츠와 기능을 쉽게 확장할 수 있도록 구성되어 있습니다.
           </p>
           <div className="flex flex-wrap gap-3 pt-2">
+            <a className="btn btn-primary" href="#about">바로 둘러보기</a>
+            <a className="btn btn-ghost" href="#contact">문의하기</a>
+          </div>
+          <div className="flex flex-wrap gap-3 pt-4">
             {[
-              { label: 'Dangerous', color: 'from-fuchsia-500 to-violet-600' },
-              { label: 'Love', color: 'from-pink-400 to-rose-500' },
-              { label: 'Healing', color: 'from-amber-300 to-yellow-500' },
+              { label: 'Dangerous' },
+              { label: 'Love' },
+              { label: 'Healing' },
             ].map((p) => (
-              <span
-                key={p.label}
-                className={`inline-flex items-center gap-2 rounded-full bg-gradient-to-r ${p.color} px-3 py-1 text-xs font-semibold text-white shadow/20 shadow-violet-900/20 ring-1 ring-white/10`}
-              >
-                ● {p.label}
-              </span>
+              <span key={p.label} className="chip">● {p.label}</span>
             ))}
           </div>
         </div>
         <div className="md:justify-self-end">
-          {/* Placeholder avatar frame; image can be added later */}
           <div className="avatar-frame" aria-hidden>
             <div className="glow" />
+            {/* 실제 이미지 사용 시 아래 주석 해제 및 경로 교체 */}
+            {/* <Image src="/app/ProjectAssets/Profile.jpg" alt="Moing" fill className="object-cover" /> */}
             <div className="inner" />
           </div>
         </div>
@@ -44,14 +40,12 @@ export default function Page(): ReactElement {
 
       {/* ABOUT */}
       <section id="about" className="grid gap-6 mt-16 md:grid-cols-3">
+        <Card title="Primary" value="#9F6AF8" />
+        <Card title="Accent" value="#DBCEF7" />
+        <Card title="Deep" value="#5E4E75" />
       </section>
-
-      {/* FOOTER */}
-      <footer className="mt-16 text-xs text-center text-muted">
-        © {new Date().getFullYear()} Witch's Cauldron. Inspired by Moing.
-      </footer>
     </main>
-  );
+  )
 }
 
 function Card({ title, value }: { title: string; value: string }) {

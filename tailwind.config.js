@@ -6,7 +6,31 @@ module.exports = {
     "./pages/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: {
-    extend: {},
+    container: {
+      center: true,
+      padding: {
+        DEFAULT: '1rem',
+        md: '1.5rem',
+        lg: '2rem',
+      },
+    },
+    extend: {
+      colors: {
+        moing: {
+          primary: '#9F6AF8',
+          accent: '#DBCEF7',
+          deep: '#5E4E75',
+          pink: '#B9A8CB',
+          gold: '#CCC5D2',
+          black: '#170D2B',
+          white: '#FFFFFF',
+        },
+      },
+      boxShadow: {
+        'moing-md': '0 10px 24px rgba(159,106,248,0.22)',
+        'moing-deep': '0 10px 24px rgba(94,78,117,0.18)',
+      },
+    },
   },
   plugins: [],
 };
