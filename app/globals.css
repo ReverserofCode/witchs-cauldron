@@ -1,9 +1,17 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 /* 기본 리셋/테마 (선택) */
 :root {
+    /* Color tokens tuned to Moing's purple theme */
+    --ink: 18 18 23;
+    /* text */
+    --ink-muted: 108 108 122;
+    --page: 250 249 255;
+    --violet-500: 139 92 246;
+    /* tailwind violet-500 */
+    --violet-600: 124 58 237;
+    --chip: 84 51 153;
+    /* decorative */
     color-scheme: light dark;
 }
 
@@ -13,4 +21,104 @@ html, body {
 
 body {
     margin: 0;
+}
+
+/* Semantic helpers mapped to CSS variables */
+.text-ink {
+    color: rgb(var(--ink));
+}
+
+.text-muted {
+    color: rgb(var(--ink-muted));
+}
+
+.bg-page {
+    background: radial-gradient(1200px 800px at 80% -10%, rgba(var(--violet-500), 0.25), transparent 50%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.9)),
+        rgb(var(--page));
+}
+
+.bg-chip {
+    background-color: rgb(var(--chip));
+}
+
+/* Simple components (no @apply to keep tooling happy) */
+.btn-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem 1rem;
+    font-weight: 700;
+    color: #fff;
+    border-radius: 0.5rem;
+    background-image: linear-gradient(to right, rgb(var(--violet-500)), rgb(var(--violet-600)));
+    box-shadow: 0 8px 20px rgba(124, 58, 237, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.btn-primary:hover {
+    filter: brightness(1.05);
+}
+
+.btn-ghost {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem 1rem;
+    font-weight: 700;
+    border-radius: 0.5rem;
+    color: rgb(109 40 217);
+    background: transparent;
+    border: 1px solid rgba(196, 181, 253, 0.6);
+}
+
+.btn-ghost:hover {
+    background: rgb(245 243 255);
+}
+
+.card {
+    padding: 1rem;
+    border-radius: 0.75rem;
+    border: 1px solid rgba(196, 181, 253, 0.6);
+    background: rgba(255, 255, 255, 0.7);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    box-shadow: 0 6px 18px rgba(124, 58, 237, 0.1);
+}
+
+.card-title {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: rgb(var(--ink-muted));
+}
+
+.card-value {
+    font-size: 1.25rem;
+    font-weight: 800;
+}
+
+/* Avatar placeholder frame */
+.avatar-frame {
+    position: relative;
+    width: 260px;
+    height: 260px;
+    border-radius: 9999px;
+    background: radial-gradient(circle at 50% 45%, rgba(var(--violet-500), 0.35), rgba(var(--violet-600), 0.15) 60%, transparent 70%);
+    overflow: hidden;
+    box-shadow: 0 20px 50px rgba(124, 58, 237, 0.25);
+}
+
+.avatar-frame .glow {
+    position: absolute;
+    inset: -30%;
+    filter: blur(40px);
+    background: conic-gradient(from 180deg at 50% 50%, rgba(255, 255, 255, 0.2), rgba(124, 58, 237, 0.4), rgba(255, 255, 255, 0.2));
+}
+
+.avatar-frame .inner {
+    position: absolute;
+    inset: 10px;
+    border-radius: 9999px;
+    background: linear-gradient(180deg, #fff, #f7f2ff);
+    border: 1px solid rgba(124, 58, 237, 0.2);
 }

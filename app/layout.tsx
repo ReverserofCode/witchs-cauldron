@@ -1,10 +1,13 @@
 import { Metadata } from 'next'
 import { ReactNode } from 'react'
 import './globals.css'
+import { Inter } from 'next/font/google'
+
+const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Demo App',
-  description: 'Next.js starter in Docker',
+  title: 'Moing | Witch\'s Cauldron',
+  description: 'The witch of the potion store – base UI skeleton',
 };
 
 interface RootLayoutProps {
@@ -13,8 +16,8 @@ interface RootLayoutProps {
 
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
-    <html lang="ko">
-      <body className="min-h-screen p-6 text-gray-900 bg-white dark:bg-zinc-900 dark:text-zinc-100">
+    <html lang="ko" suppressHydrationWarning>
+      <body className={`${inter.className} min-h-dvh bg-page text-ink antialiased`}> 
         {children}
       </body>
     </html>
