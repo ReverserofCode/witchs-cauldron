@@ -86,30 +86,32 @@ function NavIcon({ name, className }: { name: string; className?: string }) {
 
 export default function GlobalNav({ brand, items = defaultItems }: GlobalNavProps) {
   return (
-    <header className="sticky top-0 z-50 surface">
-      <div className="container flex items-center justify-between gap-4 py-3 md:gap-4 md:py-2">
-        <Link href="/" aria-label="홈으로 이동" className="flex items-center gap-3 text-xl font-extrabold md:gap-4 md:text-2xl text-ink">
-          <Image src="/mainPage/favicon_moing.png" alt="Moing" width={40} height={40} />
-          {brand ?? <span>마녀의 포션공방</span>}
-        </Link>
+    <header className="sticky top-0 z-50 w-full surface">
+      <div className="flex items-center justify-between w-full gap-4 py-3 md:gap-4 md:py-2">
+        <div className="container flex items-center justify-between w-full">
+          <Link href="/" aria-label="홈으로 이동" className="flex items-center gap-3 text-xl font-extrabold md:gap-4 md:text-2xl text-ink">
+            <Image src="/mainPage/favicon_moing.png" alt="Moing" width={40} height={40} />
+            {brand ?? <span>마녀의 포션공방</span>}
+          </Link>
 
-        <nav aria-label="글로벌 내비게이션">
-          <ul className="items-center hidden gap-2 md:gap-3 md:flex">
-            {items.map((item) => (
-              <li key={item.href}>
-                <Link
-                  className="px-3 py-2 md:px-4 md:py-3 text-ink hover:text-[rgb(var(--moing-deep))] rounded-md hover:bg-[rgba(var(--moing-accent),0.35)]"
-                  href={item.href}
-                  aria-label={item.label}
-                  title={item.label}
-                >
-                  <NavIcon name={item.label} className="w-5 h-5 md:w-6 md:h-6" />
-                  <span className="sr-only">{item.label}</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </nav>
+          <nav aria-label="글로벌 내비게이션">
+            <ul className="items-center hidden gap-2 md:gap-3 md:flex">
+              {items.map((item) => (
+                <li key={item.href}>
+                  <Link
+                    className="px-3 py-2 md:px-4 md:py-3 text-ink hover:text-[rgb(var(--moing-deep))] rounded-md hover:bg-[rgba(var(--moing-accent),0.35)]"
+                    href={item.href}
+                    aria-label={item.label}
+                    title={item.label}
+                  >
+                    <NavIcon name={item.label} className="w-5 h-5 md:w-6 md:h-6" />
+                    <span className="sr-only">{item.label}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        </div>
       </div>
     </header>
   )
