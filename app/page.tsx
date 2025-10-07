@@ -1,18 +1,31 @@
 import Image from 'next/image'
+import profileImg from '../public/mainPage/Profile.png'
+import LeftAside from './components/leftAside'
+import RigthAside from './components/rigthAside'
 import { ReactElement } from 'react'
 
 export default function Page(): ReactElement {
   return (
-    <main className="container max-w-6xl px-6 py-10 mx-auto">
-      {/* HERO */}
-      <section className="grid items-center grid-cols-1 gap-10 md:grid-cols-2">
+    <main className="container flex flex-col max-w-6xl gap-6 px-6 py-10 mx-auto md:flex-row">
+      {/* Left Aside */}
+      <LeftAside />
+      
+      {/* Center Content Wrapper: 중앙 컬럼에 본문을 모아 배치 */}
+      <div className="flex-1 min-w-0">
+        {/* HERO */}
+        <section className="items-center grid-cols-1 gap-10 gridSection Main Main-container M md:grid-cols-2">
         <div className="space-y-4">
           <span className="chip">KR V-tuber • Moing</span>
           <h1 className="text-4xl font-extrabold leading-tight md:text-5xl">
             The witch of the potion store
           </h1>
-          <p className="text-muted max-w-prose">
-            보랏빛 포션과 마법이 흐르는 공간. 이 레포는 Moing 팔레트를 반영한 디자인으로, 향후 콘텐츠와 기능을 쉽게 확장할 수 있도록 구성되어 있습니다.
+          <p className="intro-text text-muted max-w-prose">
+            <span className="block mb-2 text-lg font-light transition duration-300 transform">
+              포션을 만들면 폭발하거나, 고백하게 만드는 재앙 제조기. “진짜 감기약 맞아요?” 음... 아마도요.
+            </span>
+            <span className="block text-lg font-light opacity-0 animate-fade-in animation-delay-200">
+              모잉 팬 사이트에 오신 걸 환영합니다.
+            </span>
           </p>
           <div className="flex flex-wrap gap-3 pt-2">
             <a className="btn btn-primary" href="#about">바로 둘러보기</a>
@@ -31,19 +44,29 @@ export default function Page(): ReactElement {
         <div className="md:justify-self-end">
           <div className="avatar-frame" aria-hidden>
             <div className="glow" />
-            {/* 실제 이미지 사용 시 아래 주석 해제 및 경로 교체 */}
-            {/* <Image src="/app/ProjectAssets/Profile.jpg" alt="Moing" fill className="object-cover" /> */}
-            <div className="inner" />
+            {/* Next.js 권장: 로컬 자산은 정적 import 사용. public 폴더가 아니라도 동작합니다. */}
+            <Image
+              src={profileImg}
+              alt="Moing"
+              fill
+              sizes="(min-width: 768px) 280px, 60vw"
+              className="object-cover"
+              priority
+            />
           </div>
         </div>
-      </section>
+        </section>
 
-      {/* ABOUT */}
-      <section id="about" className="grid gap-6 mt-16 md:grid-cols-3">
-        <Card title="Primary" value="#9F6AF8" />
-        <Card title="Accent" value="#DBCEF7" />
-        <Card title="Deep" value="#5E4E75" />
-      </section>
+        {/* ABOUT */}
+        <section id="about" className="grid gap-6 mt-16 md:grid-cols-3">
+          <Card title="Primary" value="#9F6AF8" />
+          <Card title="Accent" value="#DBCEF7" />
+          <Card title="Deep" value="#5E4E75" />
+        </section>
+      </div>
+
+      {/* Right Aside */}
+      <RigthAside />
     </main>
   )
 }

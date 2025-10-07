@@ -18,15 +18,15 @@ const defaultItems: NavItem[] = [
 
 export default function GlobalNav({ brand, items = defaultItems }: GlobalNavProps) {
   return (
-    <header className="surface sticky top-0 z-50">
+    <header className="sticky top-0 z-50 px-36 surface">
       <div className="container flex items-center justify-between gap-4 py-3">
-        <Link href="/" aria-label="홈으로 이동" className="flex items-center gap-2 font-extrabold text-lg text-ink">
+        <Link href="/" aria-label="홈으로 이동" className="flex items-center gap-2 text-lg font-extrabold text-ink">
           <Image src="/icon.svg" alt="Moing" width={28} height={28} />
           {brand ?? <span>마녀의 포션공방</span>}
         </Link>
 
         <nav aria-label="글로벌 내비게이션">
-          <ul className="hidden md:flex items-center gap-2">
+          <ul className="items-center hidden gap-2 md:flex">
             {items.map((item) => (
               <li key={item.href}>
                 <Link
