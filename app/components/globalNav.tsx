@@ -89,8 +89,10 @@ export default function GlobalNav({ brand, items = defaultItems }: GlobalNavProp
     <header className="sticky top-0 z-50 w-full surface">
       <div className="flex items-center justify-between w-full gap-4 py-3 md:gap-4 md:py-2">
         <div className="container flex items-center justify-between w-full">
-          <Link href="/" aria-label="홈으로 이동" className="flex items-center gap-3 text-xl font-extrabold md:gap-4 md:text-2xl text-ink">
-            <Image src="/mainPage/favicon_moing.png" alt="Moing" width={40} height={40} />
+          <Link href="/" aria-label="홈으로 이동" className="flex items-center gap-3 text-xl font-extrabold md:gap-4 md:text-2xl text-ink rounded-md hover:bg-[rgba(var(--moing-accent),0.35)] p-1">
+            <span className="inline-block w-10 h-10 overflow-hidden rounded-full">
+              <Image src="/mainPage/favicon_moing.png" alt="Moing" width={40} height={40} className="object-cover w-full h-full" />
+            </span>
             {brand ?? <span>마녀의 포션공방</span>}
           </Link>
 
