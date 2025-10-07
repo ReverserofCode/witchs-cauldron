@@ -1,3 +1,6 @@
+// Health check API
+// - GET /api/health
+// - Returns { ok: boolean, ts: number }
 import { NextResponse } from "next/server";
 
 interface HealthResponse {
@@ -5,6 +8,10 @@ interface HealthResponse {
   ts: number;
 }
 
+/**
+ * Health endpoint
+ * @returns 200 OK with { ok: true, ts: epochMillis }
+ */
 export async function GET(): Promise<NextResponse<HealthResponse>> {
   const data: HealthResponse = { ok: true, ts: Date.now() };
 

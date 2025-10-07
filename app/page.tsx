@@ -1,3 +1,7 @@
+// Home page (App Router)
+// - 메인 레이아웃: 3열 Grid (LeftAside | Content | RightAside)
+// - HERO 섹션: 텍스트 2컬럼 + 아바타 1컬럼
+// - ABOUT 섹션: 브랜드 컬러 카드
 import Image from 'next/image'
 import profileImg from '../public/mainPage/Profile.png'
 import LeftAside from './components/leftAside'
@@ -6,12 +10,14 @@ import { ReactElement } from 'react'
 
 export default function Page(): ReactElement {
   return (
+    // grid-cols: md 이상에서 좌/우 16rem 고정 + 중앙 유동
     <main className="container grid grid-cols-1 gap-6 px-6 py-10 md:grid-cols-[16rem_minmax(0,1fr)_16rem]">
       {/* Left Aside */}
       <LeftAside />
       {/* Center Content Wrapper: 중앙 컬럼에 본문을 모아 배치 */}
       <div className="min-w-0">
         {/* HERO */}
+        {/* 텍스트 2, 이미지 1 비율의 그리드 */}
         <section className="grid items-center w-full gap-10 md:grid-cols-3">
         <div className="space-y-4 md:col-span-2">
           <span className="chip">KR V-tuber • Moing</span>
@@ -40,6 +46,7 @@ export default function Page(): ReactElement {
             ))}
           </div>
         </div>
+        {/* 아바타 프레임: Tailwind로 크기 제어 (globals.css의 고정 w/h 제거됨) */}
         <div className="md:justify-self-end">
           <div className="avatar-frame relative w-36 h-36 md:w-52 md:h-52" aria-hidden>
             <div className="glow" />
@@ -57,6 +64,7 @@ export default function Page(): ReactElement {
         </section>
 
         {/* ABOUT */}
+        {/* 브랜드 팔레트 카드 */}
         <section id="about" className="grid gap-6 mt-16 md:grid-cols-3">
           <Card title="Primary" value="#9F6AF8" />
           <Card title="Accent" value="#DBCEF7" />

@@ -1,3 +1,6 @@
+// 상단 글로벌 네비게이션 바
+// - brand: 좌측 로고 영역 교체용 ReactNode
+// - items: 우측 메뉴 항목 배열
 import Image from 'next/image'
 import Link from 'next/link'
 import type { ReactNode } from 'react'

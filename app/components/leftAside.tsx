@@ -1,3 +1,4 @@
+// 좌측 사이드바: 빠른 링크 네비게이션
 import Link from 'next/link'
 import type { ReactElement } from 'react'
 

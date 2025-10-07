@@ -1,3 +1,7 @@
+// Root layout for the Next.js App Router.
+// - 전역 폰트/스타일 적용
+// - 공통 GlobalNav / Footer 래핑
+// - 페이지 본문은 {children}으로 주입
 import { Metadata } from 'next'
 import { ReactNode } from 'react'
 import './globals.css'

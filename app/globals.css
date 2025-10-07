@@ -1,3 +1,4 @@
+/* Tailwind v4: @import 방식 활성화 */
 @import "tailwindcss";
 
 /*
@@ -38,7 +39,7 @@ body {
     margin: 0;
 }
 
-/* Text helpers */
+/* Text helpers: 잉크/서브텍스트 컬러 유틸리티 */
 .text-ink {
     color: rgb(var(--ink));
 }
@@ -56,7 +57,7 @@ body {
         rgb(var(--page));
 }
 
-/* Chips / tags */
+/* Chips / tags: 작은 강조 레이블 스타일 */
 .bg-chip {
     background-color: rgba(var(--moing-deep), 0.9);
 }
@@ -73,7 +74,7 @@ body {
     border: 1px solid rgba(var(--moing-white), 0.25);
 }
 
-/* Buttons */
+/* Buttons: 프라이머리/고스트 등 CTA 버튼 프리셋 */
 .btn {
     display: inline-flex;
     align-items: center;
@@ -117,7 +118,7 @@ body {
     background: rgba(var(--moing-accent), 0.3);
 }
 
-/* Cards */
+/* Cards: 유리감(blur) + 여백/섀도우 */
 .card {
     padding: 1rem;
     border-radius: 0.9rem;
@@ -176,7 +177,8 @@ body {
     animation-delay: 500ms;
 }
 
-/* Avatar frame with optional image slot */
+/* Avatar frame with optional image slot
+    - width/height는 Tailwind 유틸로 제어 (여기선 지정하지 않음) */
 .avatar-frame {
     position: relative;
     border-radius: 9999px;
@@ -208,7 +210,7 @@ body {
     border-radius: 9999px;
 }
 
-/* Header / Footer surface */
+/* Header / Footer surface: 글래스모피즘 배경 */
 .surface {
     background: rgba(255, 255, 255, 0.7);
     -webkit-backdrop-filter: blur(10px);

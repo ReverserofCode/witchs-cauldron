@@ -1,3 +1,4 @@
+// 섹션 내 앵커 네비게이션(문서형 사이드 내비)
 import Link from 'next/link'
 
 type Item = { label: string; href: string }

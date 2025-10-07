@@ -1,4 +1,11 @@
-/** @type {import('tailwindcss').Config} */
+/**
+ * Tailwind 설정
+ * - content: purge 스캔 경로
+ * - theme.container: 중앙 정렬 및 반응형 패딩
+ * - extend.colors: Moing 팔레트 프리셋
+ * - extend.boxShadow: 브랜디드 섀도우 유틸리티
+ * @type {import('tailwindcss').Config}
+ */
 module.exports = {
   content: [
     "./app/**/*.{js,ts,jsx,tsx,mdx}",

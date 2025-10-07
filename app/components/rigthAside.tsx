@@ -1,3 +1,4 @@
+// 우측 사이드바: 태그/보조 정보 표시
 import type { ReactElement } from 'react'
 
 export default function RigthAside(): ReactElement {
