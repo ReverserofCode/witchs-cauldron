@@ -6,18 +6,17 @@ import { ReactElement } from 'react'
 
 export default function Page(): ReactElement {
   return (
-    <main className="container flex flex-col max-w-6xl gap-6 px-6 py-10 mx-auto md:flex-row">
+    <main className="container grid grid-cols-1 gap-6 px-6 py-10 md:grid-cols-[16rem_minmax(0,1fr)_16rem]">
       {/* Left Aside */}
       <LeftAside />
-      
       {/* Center Content Wrapper: 중앙 컬럼에 본문을 모아 배치 */}
-      <div className="flex-1 min-w-0">
+      <div className="min-w-0">
         {/* HERO */}
-        <section className="items-center grid-cols-1 gap-10 gridSection Main Main-container M md:grid-cols-2">
-        <div className="space-y-4">
+        <section className="grid items-center w-full gap-10 md:grid-cols-3">
+        <div className="space-y-4 md:col-span-2">
           <span className="chip">KR V-tuber • Moing</span>
           <h1 className="text-4xl font-extrabold leading-tight md:text-5xl">
-            The witch of the potion store
+            마녀의 포션 공방
           </h1>
           <p className="intro-text text-muted max-w-prose">
             <span className="block mb-2 text-lg font-light transition duration-300 transform">
@@ -42,14 +41,14 @@ export default function Page(): ReactElement {
           </div>
         </div>
         <div className="md:justify-self-end">
-          <div className="avatar-frame" aria-hidden>
+          <div className="avatar-frame relative w-36 h-36 md:w-52 md:h-52" aria-hidden>
             <div className="glow" />
             {/* Next.js 권장: 로컬 자산은 정적 import 사용. public 폴더가 아니라도 동작합니다. */}
             <Image
               src={profileImg}
               alt="Moing"
               fill
-              sizes="(min-width: 768px) 280px, 60vw"
+              sizes="(min-width: 768px) 208px, 144px"
               className="object-cover"
               priority
             />

@@ -179,8 +179,6 @@ body {
 /* Avatar frame with optional image slot */
 .avatar-frame {
     position: relative;
-    width: 280px;
-    height: 280px;
     border-radius: 9999px;
     overflow: hidden;
     background: radial-gradient(circle at 50% 45%, rgba(var(--moing-primary), 0.35), rgba(var(--moing-deep), 0.15) 60%, transparent 70%);
