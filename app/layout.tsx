@@ -21,10 +21,12 @@ interface RootLayoutProps { children: ReactNode }
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <html lang="ko" suppressHydrationWarning>
-      <body className={`${inter.className} min-h-dvh bg-[#7B68EE] text-ink antialiased`}>
+      <body className={`${inter.className} min-h-screen bg-[#7B68EE] text-ink antialiased flex flex-col`}>
         <GlobalNav />
-        {children}
-        <Footer />7B68EE
+        <main className="flex flex-col flex-1">
+          {children}
+        </main>
+        <Footer />
       </body>
     </html>
   )

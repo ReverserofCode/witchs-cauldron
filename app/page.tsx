@@ -24,8 +24,8 @@ export default function Page(): ReactElement {
           <h1 className="text-4xl font-extrabold leading-tight md:text-5xl">
             마녀의 포션 공방
           </h1>
-          <p className="intro-text text-muted max-w-prose">
-            <span className="block mb-2 text-lg font-light transition duration-300 transform">
+          <p className="text-white intro-text max-w-prose">
+            <span className="block mb-2 text-xl font-light transition duration-300 transform">
               포션을 만들면 폭발하거나, 고백하게 만드는 재앙 제조기. “진짜 감기약 맞아요?” 음... 아마도요.
             </span>
             <span className="block text-lg font-light opacity-0 animate-fade-in animation-delay-200">
@@ -35,15 +35,6 @@ export default function Page(): ReactElement {
           <div className="flex flex-wrap gap-3 pt-2">
             <a className="btn btn-primary" href="#about">바로 둘러보기</a>
             <a className="btn btn-ghost" href="#contact">문의하기</a>
-          </div>
-          <div className="flex flex-wrap gap-3 pt-4">
-            {[
-              { label: 'Dangerous' },
-              { label: 'Love' },
-              { label: 'Healing' },
-            ].map((p) => (
-              <span key={p.label} className="chip">● {p.label}</span>
-            ))}
           </div>
         </div>
         {/* 아바타 프레임: Tailwind로 크기 제어 (globals.css의 고정 w/h 제거됨) */}
@@ -63,13 +54,6 @@ export default function Page(): ReactElement {
         </div>
         </section>
 
-        {/* ABOUT */}
-        {/* 브랜드 팔레트 카드 */}
-        <section id="about" className="grid gap-6 mt-16 md:grid-cols-3">
-          <Card title="Primary" value="#9F6AF8" />
-          <Card title="Accent" value="#DBCEF7" />
-          <Card title="Deep" value="#5E4E75" />
-        </section>
       </div>
 
       {/* Right Aside */}

@@ -24,18 +24,18 @@ module.exports = {
     extend: {
       colors: {
         moing: {
-          primary: '#A020F0',
-          accent: '#DBCEF7',
-          deep: '#5E4E75',
-          pink: '#B9A8CB',
-          gold: '#CCC5D2',
-          black: '#170D2B',
+          primary: '#A020F0', // 메인 컬러 (rgb(160,32,240))
+          accent: '#ADD8E6',  // 밝은 하이라이트 (rgb(173,216,230))
+          deep: '#191970',    // 딥/배경 (rgb(25,25,112))
+          pink: '#A020F0',    // 핑크도 메인과 통일
+          gold: '#ADD8E6',    // 골드도 밝은 하이라이트로 통일
+          black: '#191970',   // 블랙도 딥 컬러로 통일
           white: '#FFFFFF',
         },
       },
       boxShadow: {
-        'moing-md': '0 10px 24px rgba(160,32,240,0.22)',
-        'moing-deep': '0 10px 24px rgba(94,78,117,0.18)',
+        'moing-md': '0 10px 24px rgba(160,32,240,0.22)', // #A020F0 기반
+        'moing-deep': '0 10px 24px rgba(25,25,112,0.18)', // #191970 기반
       },
     },
   },

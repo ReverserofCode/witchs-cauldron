@@ -87,9 +87,9 @@ function NavIcon({ name, className }: { name: string; className?: string }) {
 export default function GlobalNav({ brand, items = defaultItems }: GlobalNavProps) {
   return (
     <header className="sticky top-0 z-50 surface">
-      <div className="container flex items-center justify-between gap-4 py-3 md:gap-6 md:py-4">
+      <div className="container flex items-center justify-between gap-4 py-3 md:gap-4 md:py-2">
         <Link href="/" aria-label="홈으로 이동" className="flex items-center gap-3 text-xl font-extrabold md:gap-4 md:text-2xl text-ink">
-          <Image src="/icon.svg" alt="Moing" width={40} height={40} />
+          <Image src="/mainPage/favicon_moing.png" alt="Moing" width={40} height={40} />
           {brand ?? <span>마녀의 포션공방</span>}
         </Link>
 
