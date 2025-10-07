@@ -21,10 +21,10 @@ interface RootLayoutProps { children: ReactNode }
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <html lang="ko" suppressHydrationWarning>
-      <body className={`${inter.className} min-h-dvh bg-page text-ink antialiased`}>
+      <body className={`${inter.className} min-h-dvh bg-[#7B68EE] text-ink antialiased`}>
         <GlobalNav />
         {children}
-        <Footer />
+        <Footer />7B68EE
       </body>
     </html>
   )

@@ -11,7 +11,7 @@ import { ReactElement } from 'react'
 export default function Page(): ReactElement {
   return (
     // grid-cols: md 이상에서 좌/우 16rem 고정 + 중앙 유동
-    <main className="container grid grid-cols-1 gap-6 px-6 py-10 md:grid-cols-[16rem_minmax(0,1fr)_16rem]">
+  <main className="container grid grid-cols-1 gap-6 py-10 md:grid-cols-[16rem_minmax(0,1fr)_16rem]">
       {/* Left Aside */}
       <LeftAside />
       {/* Center Content Wrapper: 중앙 컬럼에 본문을 모아 배치 */}
@@ -48,7 +48,7 @@ export default function Page(): ReactElement {
         </div>
         {/* 아바타 프레임: Tailwind로 크기 제어 (globals.css의 고정 w/h 제거됨) */}
         <div className="md:justify-self-end">
-          <div className="avatar-frame relative w-36 h-36 md:w-52 md:h-52" aria-hidden>
+          <div className="relative avatar-frame w-36 h-36 md:w-52 md:h-52" aria-hidden>
             <div className="glow" />
             {/* Next.js 권장: 로컬 자산은 정적 import 사용. public 폴더가 아니라도 동작합니다. */}
             <Image

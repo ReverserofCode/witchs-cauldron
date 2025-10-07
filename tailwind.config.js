@@ -24,7 +24,7 @@ module.exports = {
     extend: {
       colors: {
         moing: {
-          primary: '#9F6AF8',
+          primary: '#A020F0',
           accent: '#DBCEF7',
           deep: '#5E4E75',
           pink: '#B9A8CB',
@@ -34,7 +34,7 @@ module.exports = {
         },
       },
       boxShadow: {
-        'moing-md': '0 10px 24px rgba(159,106,248,0.22)',
+        'moing-md': '0 10px 24px rgba(160,32,240,0.22)',
         'moing-deep': '0 10px 24px rgba(94,78,117,0.18)',
       },
     },

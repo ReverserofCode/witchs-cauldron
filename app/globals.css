@@ -12,21 +12,38 @@
     - white:   #FFFFFF
 */
 :root {
-    /* RGB tokens */
-    --moing-primary: 159 106 248;
-    --moing-accent: 219 206 247;
-    --moing-deep: 94 78 117;
-    --moing-pink: 185 168 203;
-    --moing-gold: 204 197 210;
-    --moing-black: 23 13 43;
+    /* RGB tokens (updated palette)
+         #7B68EE  primary (vibrant purple)
+         #A020F0  magenta/purple accent
+         #ADD8E6  light sky accent
+         #FFFFFF  white
+         #191970  midnight deep
+     */
+    --moing-primary: 160 32 240;
+    /* #A020F0 */
+    --moing-accent: 173 216 230;
+    /* #ADD8E6 */
+    --moing-deep: 25 25 112;
+    /* #191970 */
+    --moing-pink: 160 32 240;
+    /* #A020F0 */
+    --moing-gold: 173 216 230;
+    /* repurposed to light sky */
+    --moing-black: 25 25 112;
+    /* use midnight as dark base */
     --moing-white: 255 255 255;
+    /* #FFFFFF */
 
     /* Semantic */
     --ink: var(--moing-black);
-    --ink-muted: 110 108 130;
-    --page: 250 249 255;
-    --shadow-primary: 159 106 248;
-    --shadow-deep: 94 78 117;
+    --ink-muted: 160 160 190;
+    /* muted text tuned for midnight base */
+    --page: 25 25 112;
+    /* keep very light bg base */
+    --shadow-primary: 160 32 240;
+    /* primary shadow tint updated */
+    --shadow-deep: 25 25 112;
+    /* deep shadow tint */
 
     color-scheme: light;
 }
@@ -51,10 +68,19 @@ body {
 /* App background: Moing gradient with soft paper */
 .bg-page {
     background:
-        radial-gradient(1200px 800px at 80% -10%, rgba(var(--moing-primary), 0.25), transparent 55%),
+        radial-gradient(1200px 800px at 80% -10%, rgba(var(--moing-primary), 0.28), transparent 55%),
         radial-gradient(800px 600px at -10% 10%, rgba(var(--moing-accent), 0.35), transparent 60%),
-        linear-gradient(180deg, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0.95)),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.80), rgba(255, 255, 255, 0.92)),
         rgb(var(--page));
+}
+
+/* Optional: Darker page with midnight base */
+.bg-page-midnight {
+    background:
+        radial-gradient(1200px 800px at 80% -10%, rgba(var(--moing-primary), 0.20), transparent 55%),
+        radial-gradient(800px 600px at -10% 10%, rgba(var(--moing-accent), 0.22), transparent 60%),
+        linear-gradient(180deg, rgba(25, 25, 112, 0.35), rgba(25, 25, 112, 0.55)),
+        rgb(var(--moing-deep));
 }
 
 /* Chips / tags: 작은 강조 레이블 스타일 */
