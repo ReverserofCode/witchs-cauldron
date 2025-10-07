@@ -15,7 +15,7 @@ export default function Page(): ReactElement {
       {/* Left Aside */}
       <LeftAside />
       {/* Center Content Wrapper: 중앙 컬럼에 본문을 모아 배치 */}
-      <div className="min-w-0 container">
+      <div className="container min-w-0">
         {/* HERO */}
         {/* 텍스트 2, 이미지 1 비율의 그리드 */}
         <section className="grid items-center w-full gap-10 md:grid-cols-3">
@@ -24,10 +24,9 @@ export default function Page(): ReactElement {
             <h1 className="text-4xl font-extrabold leading-tight md:text-5xl">
               마녀의 포션 공방
             </h1>
-            <p className="text-white intro-text max-w-prose">
-              <span className="block mb-2 text-xl font-light transition duration-300 transform">
-                포션을 만들면 폭발하거나, 고백하게 만드는 재앙 제조기. “진짜 감기약 맞아요?” 음... 아마도요.
-              </span>
+            <p className="text-xl font-light text-white transition duration-300 transform intro-text max-w-prose">
+              포션을 만들면 폭발하거나, 고백하게 만드는 재앙 제조기.<br />
+              “진짜 감기약 맞아요?” 음... 아마도요.
               <span className="block text-lg font-light opacity-0 animate-fade-in animation-delay-200">
                 모잉 팬 사이트에 오신 걸 환영합니다.
               </span>
