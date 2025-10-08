@@ -12,6 +12,7 @@
 - 샘플 경로:
   - `/` 홈 페이지
   - `/api/health` 헬스체크 API (200 응답 시 정상)
+- 기본 폰트: [Noto Sans KR](https://fonts.google.com/specimen/Noto+Sans+KR) (SIL Open Font License)
 
 ## 개발 환경 실행
 
@@ -83,7 +84,6 @@ docker exec -it witchs-cauldron-frontend npx tsc --noEmit
 
 - `app/` Next.js App Router 소스
 - `app/api/health/route.ts` 헬스체크 엔드포인트
-- `app/test/page.tsx` 테스트 페이지
 - `postcss.config.js` Tailwind v4 PostCSS 설정
 
 <!-- gpt-codex 관련 내용은 프로젝트에서 제거되었습니다. 필요 시 별도 백엔드 연동 섹션을 새로 추가하세요. -->

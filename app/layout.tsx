@@ -5,11 +5,15 @@
 import { Metadata } from 'next'
 import { ReactNode } from 'react'
 import './globals.css'
-import { Inter } from 'next/font/google'
+import { Noto_Sans_KR } from 'next/font/google'
 import GlobalNav from './components/globalNav'
 import Footer from './components/footer'
 
-const inter = Inter({ subsets: ['latin'] })
+const notoSansKr = Noto_Sans_KR({
+  subsets: ['latin'],
+  weight: ['400', '500', '700'],
+  display: 'swap',
+})
 
 export const metadata: Metadata = {
   title: "Moing | Witch's Cauldron",
@@ -21,7 +25,7 @@ interface RootLayoutProps { children: ReactNode }
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <html lang="ko" suppressHydrationWarning>
-      <body className={`${inter.className} min-h-screen bg-[#7B68EE] text-ink antialiased flex flex-col`}>
+      <body className={`${notoSansKr.className} min-h-screen bg-[#7B68EE] text-ink antialiased flex flex-col`}>
         <GlobalNav />
         <main className="flex flex-col flex-1">
           {children}
