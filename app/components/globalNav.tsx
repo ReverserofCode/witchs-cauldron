@@ -13,72 +13,52 @@ interface GlobalNavProps {
 }
 
 const defaultItems: NavItem[] = [
-  { label: '치지직', href: '/' },
-  { label: '유튜브', href: '/about' },
-  { label: '팬카페', href: '/services' },
-  { label: '디스코드', href: '/contact' },
+  { label: '치지직', href: 'https://chzzk.naver.com/1d333ff175b4db5bd06f87a88579ec1e' },
+  { label: '유튜브', href: 'https://www.youtube.com/channel/UCHzre37UF4o64HRhp-7CDzQ' },
+  { label: '유튜브 다시보기', href: 'https://www.youtube.com/@fullmoing'},
+  { label: '팬카페', href: 'https://cafe.naver.com/moinge' },
 ]
 
 function NavIcon({ name, className }: { name: string; className?: string }) {
   switch (name) {
     case '유튜브':
+      // 공식 유튜브 로고 스타일
       return (
-        <svg
-          viewBox="0 0 24 24"
-          aria-hidden="true"
-          className={className}
-          fill="currentColor"
-        >
-          <rect x="2" y="5" width="20" height="14" rx="3" />
-          <path d="M10 9.5v5l5-2.5-5-2.5z" fill="#fff" />
+        <svg viewBox="0 0 24 24" aria-hidden="true" className={className} fill="none">
+          <rect x="2" y="5" width="20" height="14" rx="4" fill="#FF0000" />
+          <polygon points="10,9 16,12 10,15" fill="#fff" />
         </svg>
       )
-    case '디스코드':
+    case '유튜브 다시보기':
+      // 긴 장편 다시보기: 플레이+시계 조합 아이콘
       return (
-        <svg
-          viewBox="0 0 24 24"
-          aria-hidden="true"
-          className={className}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.6"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="M7 7c3-1.5 7-1.5 10 0 1.7 1 3 3 3 5.2 0 1.8-1 3.4-2.6 4.4-.7-.8-1.5-1.5-2.4-2 .3-.3.6-.8.7-1.3-.6.4-1.3.7-2 .8-.7-.1-1.4-.4-2-.8.1.5.4 1 .7 1.3-.9.5-1.7 1.2-2.4 2C5 15.6 4 14 4 12.2 4 10 5.3 8 7 7z" />
-          <circle cx="9.5" cy="12" r="1" fill="currentColor" />
-          <circle cx="14.5" cy="12" r="1" fill="currentColor" />
+        <svg viewBox="0 0 24 24" aria-hidden="true" className={className} fill="none">
+          <circle cx="12" cy="12" r="10" fill="#FF0000" />
+          <polygon points="11,9 16,12 11,15" fill="#fff" />
+          <circle cx="12" cy="12" r="7" stroke="#fff" strokeWidth="1.5" fill="none" />
+          <rect x="11.7" y="8" width="1.6" height="5" rx="0.8" fill="#fff" transform="rotate(30 12.5 10.5)" />
         </svg>
       )
     case '팬카페':
+      // 네이버 카페(잎사귀) 느낌 SVG
       return (
-        <svg
-          viewBox="0 0 24 24"
-          aria-hidden="true"
-          className={className}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.6"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="M4 8a4 4 0 0 1 6-3.5A4 4 0 0 1 20 8c0 5-8 8.5-8 8.5S4 13 4 8z" />
+        <svg viewBox="0 0 24 24" aria-hidden="true" className={className} fill="none">
+          <ellipse cx="12" cy="12" rx="8" ry="6" fill="#21C531" />
+          <path d="M12 18c-2-2-2-6 0-8 2 2 2 6 0 8z" fill="#fff" />
         </svg>
       )
     case '치지직':
-    default:
+      // 치지직 번개 느낌 SVG
       return (
-        <svg
-          viewBox="0 0 24 24"
-          aria-hidden="true"
-          className={className}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.8"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <polygon points="5,12 12,5 12,10 19,3 12,14 12,10 5,17" />
+        <svg viewBox="0 0 24 24" aria-hidden="true" className={className} fill="none">
+          <polygon points="13,2 3,14 11,14 9,22 21,8 13,8" fill="#FFD600" stroke="#FFD600" strokeWidth="1.2" />
+        </svg>
+      )
+    default:
+      // 기본 아이콘(동그라미)
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true" className={className} fill="currentColor">
+          <circle cx="12" cy="12" r="8" />
         </svg>
       )
   }
@@ -100,15 +80,29 @@ export default function GlobalNav({ brand, items = defaultItems }: GlobalNavProp
             <ul className="items-center hidden gap-2 md:gap-3 md:flex">
               {items.map((item) => (
                 <li key={item.href}>
-                  <Link
-                    className="px-3 py-2 md:px-4 md:py-3 text-ink hover:text-[rgb(var(--moing-deep))] rounded-md hover:bg-[rgba(var(--moing-accent),0.35)]"
-                    href={item.href}
-                    aria-label={item.label}
-                    title={item.label}
-                  >
-                    <NavIcon name={item.label} className="w-5 h-5 md:w-6 md:h-6" />
-                    <span className="sr-only">{item.label}</span>
-                  </Link>
+                  {item.href.startsWith('http') ? (
+                    <a
+                      className="px-3 py-2 md:px-4 md:py-3 text-ink hover:text-[rgb(var(--moing-deep))] rounded-md hover:bg-[rgba(var(--moing-accent),0.35)]"
+                      href={item.href}
+                      aria-label={item.label}
+                      title={item.label}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <NavIcon name={item.label} className="w-5 h-5 md:w-6 md:h-6" />
+                      <span className="sr-only">{item.label}</span>
+                    </a>
+                  ) : (
+                    <Link
+                      className="px-3 py-2 md:px-4 md:py-3 text-ink hover:text-[rgb(var(--moing-deep))] rounded-md hover:bg-[rgba(var(--moing-accent),0.35)]"
+                      href={item.href}
+                      aria-label={item.label}
+                      title={item.label}
+                    >
+                      <NavIcon name={item.label} className="w-5 h-5 md:w-6 md:h-6" />
+                      <span className="sr-only">{item.label}</span>
+                    </Link>
+                  )}
                 </li>
               ))}
             </ul>
