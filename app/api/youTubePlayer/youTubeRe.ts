@@ -6,10 +6,11 @@ if (!YOUTUBE_API_KEY) {
   throw new Error("YOUTUBE_API_KEY 환경변수가 설정되어 있지 않습니다.");
 }
 
-const MAX_RESULTS = 5;
+const MAX_RESULTS = 4;
 const CHANNEL_HANDLES = {
   moing: "moing",
   fullmoing: "fullmoing",
+  moingFan: "모잉수제문어포션",
 } as const;
 
 type ChannelKey = keyof typeof CHANNEL_HANDLES;
@@ -108,7 +109,7 @@ export async function GET() {
       acc[key] = videos;
       return acc;
     },
-    { moing: [], fullmoing: [] }
+    { moing: [], fullmoing: [], moingFan: [] }
   );
 
   return NextResponse.json(response);

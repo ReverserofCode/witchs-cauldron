@@ -41,7 +41,7 @@ export default function Page(): ReactElement {
                   <div className="space-y-4 text-white">
                     <span className="chip">KR V-tuber • Moing</span>
                     <h1 className="text-4xl font-extrabold leading-tight md:text-5xl">마녀의 포션 공방</h1>
-                    <p className="max-w-prose text-xl font-light">
+                    <p className="text-xl font-light max-w-prose">
                       포션을 만들면 폭발하거나, 고백하게 만드는 재앙 제조기.
                       <br />
                       “진짜 감기약 맞아요?” 음... 아마도요.
@@ -52,7 +52,7 @@ export default function Page(): ReactElement {
                   </div>
                   <div className="profile-avatar justify-self-end">
                     <div className="relative h-36 w-36 md:h-52 md:w-52" aria-hidden>
-                      <div className="avatar-frame h-full w-full">
+                      <div className="w-full h-full avatar-frame">
                         <div className="glow" />
                         <Image
                           src={profileImg}
@@ -83,9 +83,9 @@ export default function Page(): ReactElement {
                 {profileStats.map((stat) => (
                   <div
                     key={stat.title}
-                    className="flex items-center justify-between rounded-2xl border border-white/60 bg-white/75 px-4 py-4 shadow-sm"
+                    className="flex items-center justify-between px-4 py-4 border shadow-sm rounded-2xl border-white/60 bg-white/75"
                   >
-                    <dt className="text-sm font-semibold uppercase tracking-wide text-purple-700/90">
+                    <dt className="text-sm font-semibold tracking-wide uppercase text-purple-700/90">
                       {stat.title}
                     </dt>
                     <dd className="text-sm font-extrabold text-purple-900/90">{stat.value}</dd>
@@ -99,7 +99,6 @@ export default function Page(): ReactElement {
           <div className="mt-16 space-y-12">
             <ScheduleSection />
             <YouTubeVideosSection />
-            <YouTubeShortsSection />
           </div>
         </div>
     {/* Right Aside */}

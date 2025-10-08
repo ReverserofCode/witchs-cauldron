@@ -16,6 +16,7 @@ interface VideoItem {
 interface ApiResponse {
   moing: VideoItem[];
   fullmoing: VideoItem[];
+  moingFan: VideoItem[];
 }
 
 export default function YouTubeVideosSection() {
@@ -53,6 +54,11 @@ export default function YouTubeVideosSection() {
         title: "모잉 다시보기 (Full) 최신 영상",
         description: "1시간 이상 길이의 다시보기(@fullmoing)",
       },
+      {
+        key: "moingFan" as const,
+        title: "모잉 팬 채널 최신 영상",
+        description: "팬 채널(@모잉수제문어포션)의 하이라이트",
+      },
     ],
     []
   );
@@ -62,7 +68,7 @@ export default function YouTubeVideosSection() {
       tone="neutral"
       eyebrow="YouTube Hub"
       title="최신 유튜브 영상"
-      description="모잉 공식 채널과 다시보기 채널의 최신 영상들을 확인해 보세요."
+  description="모잉 공식·다시보기·팬 채널의 최신 영상을 한눈에 확인해 보세요."
       bodyClassName="space-y-6"
     >
       {loading && <div className="text-sm text-purple-900/70">불러오는 중...</div>}
@@ -81,7 +87,7 @@ export default function YouTubeVideosSection() {
                   <h3 className="text-lg font-semibold text-purple-900/90">{title}</h3>
                   <p className="text-xs text-purple-800/70">{description}</p>
                 </div>
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                   {items.map((video) => (
                     <VideoCard key={video.videoId} video={video} aspect="video" />
                   ))}

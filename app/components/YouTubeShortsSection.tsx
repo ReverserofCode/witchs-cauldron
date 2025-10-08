@@ -26,7 +26,7 @@ export default function YouTubeShortsSection() {
         return res.json();
       })
       .then((data: ShortItem[]) => {
-        setShorts(Array.isArray(data) ? data.slice(0, 5) : []);
+        setShorts(Array.isArray(data) ? data.slice(0, 4) : []);
         setLoading(false);
       })
       .catch(() => {
@@ -47,7 +47,7 @@ export default function YouTubeShortsSection() {
       {error && <div className="rounded-xl border border-red-200 bg-red-50/80 p-3 text-sm text-red-600">{error}</div>}
 
       {!loading && !error && (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {shorts.length === 0 && (
             <div className="rounded-xl border border-dashed border-purple-200/60 bg-white/70 p-4 text-sm text-purple-800/70">
               표시할 쇼츠가 없습니다.
