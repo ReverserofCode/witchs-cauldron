@@ -51,6 +51,23 @@ export default function Page(): ReactElement {
               />
             </div>
           </div>
+          {/* 각 쇼츠 및 영상들은 5개 까지 배치할 예정 */}
+          {/* 유튜브 쇼츠 API 활용, 모잉 키리누키 채널의 쇼츠를 최신 순으로 배치 */}
+          <div className='youTubeShorts'>
+            
+          </div>
+          {/* 유튜브 모잉 공식 유튜브 채널의 영상을 최신 순으로 배치 */}
+          <div className='youTubeVideos'>
+            
+          </div>
+          {/* 유튜브 다시보기 채널의 영상 제공 */}
+          <div className='youTubeRe'>
+            
+          </div>
+          {/* 치지직 다시보기 최신순으로 제공 */}
+          <div className='chzzkPlayer'>
+            
+          </div>
         </section>
       </div>
       {/* Right Aside */}
