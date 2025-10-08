@@ -13,6 +13,7 @@ export async function GET(request: Request) {
   const diagnosticsFlag = requestUrl.searchParams.get("diagnostics");
   const isDebugMode = debugFlag === "1" || diagnosticsFlag === "1";
 
+  // 환경 변수로 CSV URL을 주입할 수 있지만, 비어 있으면 schedule.tsx가 기본 시트로 대체한다.
   const csvUrl = process.env.BROADCAST_SCHEDULE_CSV_URL;
   const hasEnvUrl = Boolean(csvUrl && csvUrl.trim());
 

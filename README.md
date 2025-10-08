@@ -71,6 +71,14 @@ docker exec -it witchs-cauldron-frontend npx tsc --noEmit
 - `npm run build`: 빌드
 - `npm run start`: 프로덕션 서버
 
+## 방송 일정 연동
+
+- API 엔드포인트: `/api/broadCastSchedule`
+- 기본값: 환경 변수 `BROADCAST_SCHEDULE_CSV_URL`가 비어 있으면 프로젝트에 내장된 구글 시트(편집 링크)를 자동으로 사용합니다.
+- URL 정규화: 편집/보기 링크를 전달해도 내부에서 CSV export URL로 변환하므로 별도의 "Publish to web" 주소를 기억할 필요가 없습니다.
+- 맞춤 시트를 사용하려면 컨테이너 환경 변수에 `BROADCAST_SCHEDULE_CSV_URL`을 설정하세요. (예: `docker compose`의 `environment` 항목)
+- 디버깅: `/api/broadCastSchedule?diagnostics=1` 또는 `?debug=1`로 호출하면 각 단계(정규화 → 다운로드 → 파싱) 결과가 JSON으로 반환됩니다. 환경 변수가 비어 있을 경우 기본 시트를 사용했다는 `hint`가 포함됩니다.
+
 ## 디렉터리
 
 - `app/` Next.js App Router 소스

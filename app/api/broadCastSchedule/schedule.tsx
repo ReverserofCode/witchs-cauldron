@@ -3,6 +3,11 @@
 // - Parses the CSV into calendar-friendly JSON
 // 구글 시트 주소 : https://docs.google.com/spreadsheets/d/1Gb0zwlzL-CGf9QP3iuY1oD-dhaUEowhUz4EFgTXg1I8/edit?pli=1&gid=250902752#gid=250902752
 
+// 기본 방송 일정표는 공개 편집 링크만 알고 있어도 재생산할 수 있도록
+// 시트 ID 및 gid(워크시트 탭)를 상수로 유지한다.
+// - DEFAULT_SHEET_EDIT_URL은 구글 시트의 일반적인 편집 URL이다.
+// - DEFAULT_SHEET_CSV_URL은 동일한 문서를 CSV export URL로 강제한 버전이다.
+//   (실제로는 아래 normalizeGoogleSheetsUrl에서 재생성되므로 참고용)
 const DEFAULT_SHEET_ID = '1Gb0zwlzL-CGf9QP3iuY1oD-dhaUEowhUz4EFgTXg1I8'
 const DEFAULT_SHEET_GID = '250902752'
 const DEFAULT_SHEET_EDIT_URL = `https://docs.google.com/spreadsheets/d/${DEFAULT_SHEET_ID}/edit#gid=${DEFAULT_SHEET_GID}`
@@ -74,6 +79,13 @@ export interface ScheduleDiagnostics {
 	errorStatus?: number
 }
 
+/**
+ * 방송 일정 CSV의 최종 URL을 계산한다.
+ *
+ * 1. 환경 변수가 주어지면 이를 우선 사용하고, 구글 시트 URL이라면 CSV export 형태로 정규화한다.
+ * 2. 환경 변수가 비어 있으면 기본 시트(DEFAULT_SHEET_*)를 사용한다.
+ * 3. 추가 진단을 위해 원본 URL, 변환 여부, 참고 메모를 반환한다.
+ */
 export function resolveScheduleSource(rawUrl?: string): ScheduleSourceInfo {
 	const trimmed = rawUrl?.trim()
 	if (trimmed) {
@@ -103,6 +115,17 @@ export function resolveScheduleSource(rawUrl?: string): ScheduleSourceInfo {
 	}
 }
 
+/**
+ * 구글 시트 공유 링크(편집/미리보기/Export)를 CSV export URL로 통일한다.
+ *
+ * 변환 규칙
+ * - docs.google.com이 아니면 그대로 반환한다.
+ * - 이미 /export?format=csv 형태면 그대로 두고 메모만 추가한다.
+ * - 편집 URL(/edit, /view 등)은 /export?format=csv로 변경하고 gid를 그대로 전파한다.
+ * - gid 정보가 search 혹은 hash에 없으면 undefined로 두지만 URL 자체는 유효하다.
+ *
+ * 반환값에는 추후 진단에서 활용할 수 있도록 변환 단계에 대한 notes가 포함된다.
+ */
 function normalizeGoogleSheetsUrl(url: string): NormalizedSheetUrl {
 	const notes: string[] = []
 	try {
@@ -113,10 +136,12 @@ function normalizeGoogleSheetsUrl(url: string): NormalizedSheetUrl {
 			return { csvUrl: url, wasConverted: false, notes }
 		}
 
+		// 구글 시트 편집 URL은 /d/<sheetId>/ 형태를 가진다. 여기서 시트 ID를 추출한다.
 		const sheetIdMatch = parsed.pathname.match(/\/d\/([a-zA-Z0-9-_]+)/)
 		const sheetId = sheetIdMatch?.[1]
 		let gid = parsed.searchParams.get('gid') ?? undefined
 		if (!gid && parsed.hash) {
+			// 일부 공유 링크는 #gid= 으로 워크시트 탭을 전달하므로 hash에서도 탐색한다.
 			const hashMatch = parsed.hash.match(/gid=([0-9]+)/)
 			if (hashMatch) {
 				gid = hashMatch[1]
@@ -135,6 +160,7 @@ function normalizeGoogleSheetsUrl(url: string): NormalizedSheetUrl {
 					notes,
 				}
 			}
+			// /export 이지만 다른 포맷이라면 format=csv로 덮어써 준다.
 			parsed.searchParams.set('format', 'csv')
 			notes.push('export-format-adjusted')
 			return {
@@ -151,6 +177,7 @@ function normalizeGoogleSheetsUrl(url: string): NormalizedSheetUrl {
 			return { csvUrl: url, wasConverted: false, notes }
 		}
 
+		// 편집 링크를 /export?format=csv 로 바꾸어 fetch가 바로 CSV를 받도록 한다.
 		const exportUrl = new URL(`https://docs.google.com/spreadsheets/d/${sheetId}/export`)
 		exportUrl.searchParams.set('format', 'csv')
 		if (gid) {
@@ -189,7 +216,10 @@ type SheetRow = Record<string, string>
 /**
  * Fetch and parse a published Google Sheets CSV into a calendar-ready payload.
  *
- * @param csvUrl URL from "File → Share → Publish to web" (format: CSV)
+ * 인자로 명시한 URL이 없으면 `resolveScheduleSource`가 기본 시트를 사용한다.
+ * 환경 변수가 편집 URL이라도 `normalizeGoogleSheetsUrl`이 CSV export 링크로 바꾼다.
+ *
+ * @param csvUrl `BROADCAST_SCHEDULE_CSV_URL` 등으로 전달된 원본 URL(선택)
  * @param options Optional revalidation window for Next.js fetch caching
  */
 export async function fetchScheduleFromPublishedCsv(
@@ -245,6 +275,12 @@ export async function fetchScheduleFromPublishedCsv(
 	}
 }
 
+/**
+ * 진단 모드: 일정 CSV 파이프라인의 각 단계를 실행하고 결과를 기록한다.
+ *
+ * 이 함수 역시 입력 URL이 비어 있어도 기본 시트를 대상으로 동작한다.
+ * 각 단계는 성공/실패 여부와 메타데이터(예: 노출된 CSV URL)를 포함하여 반환한다.
+ */
 export async function diagnoseSchedule(
 	csvUrl?: string,
 	options: FetchScheduleOptions = {}
