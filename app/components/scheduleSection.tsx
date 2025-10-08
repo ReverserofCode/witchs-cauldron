@@ -10,17 +10,20 @@ interface ScheduleSectionProps {
   limit?: number
 }
 
-interface GroupedEvents {
-  dateLabel: string
+interface WeekColumn {
   isoDate: string
-  items: ScheduleEvent[]
+  dateLabel: string
+  weekdayLabel: string
+  events: ScheduleEvent[]
+  isWeekend: boolean
 }
-
 const SCHEDULE_ENDPOINT = '/api/broadCastSchedule'
+const MAX_EVENTS_PER_DAY = 4
+const DAYS_TO_SHOW = 4
 
 export default function ScheduleSection({
   className,
-  limit = 12,
+  limit = MAX_EVENTS_PER_DAY,
 }: ScheduleSectionProps) {
   const [status, setStatus] = useState<ScheduleStatus>('idle')
   const [events, setEvents] = useState<ScheduleEvent[]>([])
@@ -30,6 +33,16 @@ export default function ScheduleSection({
     'idle'
   )
   const [diagnoseError, setDiagnoseError] = useState<string | null>(null)
+  const [weekRange, setWeekRange] = useState<{ start: string; end: string } | null>(null)
+
+  const clampedLimit = useMemo(() => {
+    if (typeof limit !== 'number' || Number.isNaN(limit)) {
+      return MAX_EVENTS_PER_DAY
+    }
+
+    const integral = Math.trunc(limit)
+    return Math.max(1, Math.min(integral, MAX_EVENTS_PER_DAY))
+  }, [limit])
 
   useEffect(() => {
     let cancelled = false
@@ -52,8 +65,12 @@ export default function ScheduleSection({
 
         const data = (await res.json()) as ScheduleFeed
         if (!cancelled) {
-          const upcoming = filterUpcoming(data.events)
-          setEvents(upcoming.slice(0, limit))
+          const { events: upcomingWeek, range } = selectEventsForWeek(
+            data.events,
+            DAYS_TO_SHOW
+          )
+          setEvents(upcomingWeek)
+          setWeekRange(range)
           setStatus('ready')
         }
       } catch (err) {
@@ -69,9 +86,7 @@ export default function ScheduleSection({
     return () => {
       cancelled = true
     }
-  }, [limit])
-
-  const grouped = useMemo(() => groupEventsByDate(events), [events])
+  }, [])
 
   const handleRunDiagnostics = async () => {
     setDiagnoseStatus('running')
@@ -95,13 +110,13 @@ export default function ScheduleSection({
 
       setDiagnostics(payload.diagnostics)
 
-      if (payload.feed?.events?.length) {
-        const upcoming = filterUpcoming(payload.feed.events)
-        if (upcoming.length > 0) {
-          setEvents(upcoming.slice(0, limit))
-          setStatus('ready')
-        }
-      }
+      const { events: upcomingWeek, range } = selectEventsForWeek(
+        payload.feed?.events ?? [],
+        DAYS_TO_SHOW
+      )
+      setEvents(upcomingWeek)
+      setWeekRange(range)
+      setStatus('ready')
 
       setDiagnoseStatus('ready')
     } catch (err) {
@@ -109,6 +124,18 @@ export default function ScheduleSection({
       setDiagnoseError(err instanceof Error ? err.message : '진단 실행 중 오류가 발생했습니다.')
     }
   }
+
+  const weekColumns = useMemo<WeekColumn[]>(
+    () => buildWeekColumns(events, weekRange?.start, clampedLimit),
+    [events, weekRange?.start, clampedLimit]
+  )
+
+  const hasAnyEvents = useMemo(
+    () => weekColumns.some((day) => day.events.length > 0),
+    [weekColumns]
+  )
+
+  const weekRangeLabel = useMemo(() => formatWeekRangeLabel(weekRange), [weekRange])
 
   return (
     <section
@@ -126,14 +153,14 @@ export default function ScheduleSection({
           라이브 일정표
         </h2>
         <p className="text-sm text-purple-900/70">
-          웹에 게시된 구글 시트를 기반으로 자동 동기화됩니다. 최대 {limit}개의 다가오는 일정을 표시합니다.
+          웹에 게시된 구글 시트를 기반으로 자동 동기화됩니다. 오늘부터 4일간의 방송을 보여주며 하루당 최대 {clampedLimit}개의 방송을 표시합니다.
         </p>
       </header>
 
       <div className="relative">
         {status === 'loading' && <ScheduleSkeleton />}
         {status === 'error' && (
-          <div className="space-y-3 rounded-2xl border border-red-200 bg-red-50/80 p-4 text-sm text-red-700">
+          <div className="p-4 space-y-3 text-sm text-red-700 border border-red-200 rounded-2xl bg-red-50/80">
             <div>
               일정 정보를 불러오지 못했습니다.
               <br />
@@ -144,7 +171,7 @@ export default function ScheduleSection({
                 type="button"
                 onClick={handleRunDiagnostics}
                 disabled={diagnoseStatus === 'running'}
-                className="inline-flex items-center gap-2 rounded-full bg-white/70 px-3 py-1 font-semibold text-purple-800 shadow-sm transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex items-center gap-2 px-3 py-1 font-semibold text-purple-800 transition rounded-full shadow-sm bg-white/70 hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {diagnoseStatus === 'running' ? '진단 실행 중...' : '자동 진단 실행'}
               </button>
@@ -152,7 +179,7 @@ export default function ScheduleSection({
                 href={`${SCHEDULE_ENDPOINT}?debug=1`}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center rounded-full border border-purple-300/70 px-3 py-1 font-semibold text-purple-800 transition hover:bg-purple-100/60"
+                className="inline-flex items-center px-3 py-1 font-semibold text-purple-800 transition border rounded-full border-purple-300/70 hover:bg-purple-100/60"
               >
                 API 응답 열기
               </a>
@@ -162,57 +189,82 @@ export default function ScheduleSection({
             )}
           </div>
         )}
-        {status === 'ready' && grouped.length === 0 && (
-          <div className="p-6 text-sm text-center border rounded-2xl border-white/60 bg-white/80 text-purple-900/70">
-            예정된 일정이 없습니다. 잠시 후 다시 확인해 주세요.
-          </div>
-        )}
-        {status === 'ready' && grouped.length > 0 && (
-          <ul className="space-y-5">
-            {grouped.map((group) => (
-              <li key={group.isoDate} className="p-4 border shadow-sm rounded-2xl border-white/60 bg-white/80">
-                <div className="flex items-center justify-between mb-3">
-                  <div>
-                    <p className="text-xs tracking-wide uppercase text-purple-700/70">{group.dateLabel}</p>
-                    <p className="text-lg font-bold text-purple-900/90">
-                      {formatDate(group.isoDate, { weekday: 'long' })}
-                    </p>
-                  </div>
-                  <div className="px-3 py-1 text-xs font-semibold text-purple-700 bg-purple-100 rounded-full">
-                    {group.items.length}개의 이벤트
-                  </div>
-                </div>
+        {status === 'ready' && (
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-purple-800/70">
+              {weekRangeLabel && <span>{weekRangeLabel}</span>}
+              {!hasAnyEvents && (
+                <span className="font-medium text-purple-700">
+                  이번 주에는 예정된 방송이 없습니다.
+                </span>
+              )}
+            </div>
 
-                <ul className="space-y-3">
-                  {group.items.map((event) => (
-                    <li
-                      key={event.id}
-                      className="flex flex-col gap-2 rounded-xl border border-purple-100/80 bg-white/90 px-4 py-3 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-                    >
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <div className="text-base font-semibold text-purple-900/95">{event.title}</div>
-                        <span className="rounded-full bg-purple-200/60 px-2.5 py-1 text-xs font-semibold text-purple-800">
-                          {formatTimeRange(event.start, event.end)}
-                        </span>
-                      </div>
-                      <div className="flex flex-wrap items-center gap-3 text-xs text-purple-800/80">
-                        <span>{formatDate(event.start, { dateStyle: 'medium' })}</span>
-                        {event.platform && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2 py-0.5 font-medium text-purple-700">
-                            <span className="h-1.5 w-1.5 rounded-full bg-purple-600" aria-hidden />
-                            {event.platform}
-                          </span>
-                        )}
-                      </div>
-                      {event.description && (
-                        <p className="text-sm text-purple-900/75">{event.description}</p>
+            <div className="overflow-x-auto">
+              <ul className="grid min-w-[560px] grid-cols-4 gap-4">
+                {weekColumns.map((day) => (
+                  <li
+                    key={day.isoDate}
+                    className={`flex min-h-[200px] flex-col rounded-2xl border p-4 shadow-sm transition ${
+                      day.isWeekend
+                        ? 'border-purple-300/70 bg-purple-50/80'
+                        : 'border-white/60 bg-white/80'
+                    }`}
+                  >
+                    <header className="flex flex-col gap-1 mb-3">
+                      <span
+                        className={`text-xs font-semibold tracking-wide uppercase ${
+                          day.isWeekend ? 'text-purple-800' : 'text-purple-700/70'
+                        }`}
+                      >
+                        {day.weekdayLabel}
+                      </span>
+                      <span
+                        className={`text-lg font-bold ${
+                          day.isWeekend ? 'text-purple-900' : 'text-purple-900/90'
+                        }`}
+                      >
+                        {day.dateLabel}
+                      </span>
+                    </header>
+
+                    <div className="flex flex-col flex-1 gap-2">
+                      {day.events.length > 0 ? (
+                        day.events.map((event) => (
+                          <article
+                            key={event.id}
+                            className="px-3 py-2 text-xs text-purple-900 border shadow-sm rounded-xl border-purple-100/70 bg-white/90"
+                          >
+                            <p className="font-semibold text-purple-900/95 line-clamp-2">
+                              {event.title}
+                            </p>
+                            <p className="mt-1 text-[11px] font-medium text-purple-700/80">
+                              {formatTimeRange(event.start, event.end)}
+                            </p>
+                            {event.platform && (
+                              <p className="mt-1 inline-flex items-center gap-1 text-[11px] font-medium text-purple-700">
+                                <span className="h-1.5 w-1.5 rounded-full bg-purple-600" aria-hidden />
+                                {event.platform}
+                              </p>
+                            )}
+                            {event.description && (
+                              <p className="mt-1 line-clamp-2 text-[11px] text-purple-800/80">
+                                {event.description}
+                              </p>
+                            )}
+                          </article>
+                        ))
+                      ) : (
+                        <p className="flex items-center justify-center flex-1 px-3 py-6 text-xs text-center border border-dashed rounded-xl border-purple-200/60 bg-white/60 text-purple-700/70">
+                          일정 없음
+                        </p>
                       )}
-                    </li>
-                  ))}
-                </ul>
-              </li>
-            ))}
-          </ul>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
         )}
         {diagnostics && (
           <DiagnosticsPanel diagnostics={diagnostics} status={diagnoseStatus} />
@@ -222,53 +274,129 @@ export default function ScheduleSection({
   )
 }
 
-function filterUpcoming(events: ScheduleEvent[]): ScheduleEvent[] {
-  const now = Date.now()
-  return events
+function selectEventsForWeek(
+  events: ScheduleEvent[],
+  daysToShow: number
+): { events: ScheduleEvent[]; range: { start: string; end: string } } {
+  const start = startOfDay(new Date())
+  const end = addDays(start, daysToShow)
+  const startMs = start.getTime()
+  const endMs = end.getTime()
+
+  const filtered = events
     .filter((event) => {
-      const start = Date.parse(event.start)
-      if (Number.isNaN(start)) {
+      const eventStart = Date.parse(event.start)
+      if (Number.isNaN(eventStart)) {
         return false
       }
-      if (start >= now) {
-        return true
-      }
-      if (event.end) {
-        const end = Date.parse(event.end)
-        if (!Number.isNaN(end) && end >= now) {
-          return true
-        }
-      }
-      return false
+
+      const eventEndParsed = event.end ? Date.parse(event.end) : Number.NaN
+      const eventEnd = Number.isNaN(eventEndParsed) ? eventStart : eventEndParsed
+
+      const startsInRange = eventStart >= startMs && eventStart < endMs
+      const endsInRange = eventEnd >= startMs && eventEnd < endMs
+      const spansRange = eventStart < startMs && eventEnd >= startMs
+
+      return startsInRange || endsInRange || spansRange
     })
     .sort((a, b) => Date.parse(a.start) - Date.parse(b.start))
+
+  return {
+    events: filtered,
+    range: {
+      start: start.toISOString(),
+      end: end.toISOString(),
+    },
+  }
 }
 
-function groupEventsByDate(events: ScheduleEvent[]): GroupedEvents[] {
-  const formatter = new Intl.DateTimeFormat('ko-KR', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  })
-
-  const groups = new Map<string, GroupedEvents>()
+function buildWeekColumns(
+  events: ScheduleEvent[],
+  rangeStartIso: string | undefined,
+  limitPerDay: number
+): WeekColumn[] {
+  const start = rangeStartIso ? startOfDay(new Date(rangeStartIso)) : startOfDay(new Date())
+  const dateKeyedEvents = new Map<string, ScheduleEvent[]>()
 
   events.forEach((event) => {
-    const date = new Date(event.start)
-    const isoDate = date.toISOString().split('T')[0]
-    const existing = groups.get(isoDate)
-    if (existing) {
-      existing.items.push(event)
+    const eventDate = new Date(event.start)
+    if (Number.isNaN(eventDate.getTime())) {
+      return
+    }
+    const key = formatDateKey(eventDate)
+    const bucket = dateKeyedEvents.get(key)
+    if (bucket) {
+      bucket.push(event)
     } else {
-      groups.set(isoDate, {
-        isoDate,
-        dateLabel: formatter.format(date),
-        items: [event],
-      })
+      dateKeyedEvents.set(key, [event])
     }
   })
 
-  return Array.from(groups.values()).sort((a, b) => (a.isoDate < b.isoDate ? -1 : 1))
+  const dateFormatter = new Intl.DateTimeFormat('ko-KR', {
+    month: 'numeric',
+    day: 'numeric',
+  })
+  const weekdayFormatter = new Intl.DateTimeFormat('ko-KR', {
+    weekday: 'short',
+  })
+
+  return Array.from({ length: DAYS_TO_SHOW }).map((_, index) => {
+    const currentDate = addDays(start, index)
+    const key = formatDateKey(currentDate)
+    const bucket = dateKeyedEvents.get(key) ?? []
+    const sorted = bucket.slice().sort((a, b) => Date.parse(a.start) - Date.parse(b.start))
+    const limited = sorted.slice(0, limitPerDay)
+    const isWeekend = [0, 6].includes(currentDate.getDay())
+
+    return {
+      isoDate: key,
+      dateLabel: dateFormatter.format(currentDate),
+      weekdayLabel: weekdayFormatter.format(currentDate),
+      events: limited,
+      isWeekend,
+    }
+  })
+}
+
+function startOfDay(date: Date): Date {
+  const copy = new Date(date)
+  copy.setHours(0, 0, 0, 0)
+  return copy
+}
+
+function addDays(date: Date, amount: number): Date {
+  const copy = new Date(date)
+  copy.setDate(copy.getDate() + amount)
+  return copy
+}
+
+function formatDateKey(date: Date): string {
+  const year = date.getFullYear()
+  const month = `${date.getMonth() + 1}`.padStart(2, '0')
+  const day = `${date.getDate()}`.padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+function formatWeekRangeLabel(range: { start: string; end: string } | null): string {
+  if (!range) {
+    return ''
+  }
+
+  try {
+    const start = new Date(range.start)
+    const exclusiveEnd = new Date(range.end)
+    if (Number.isNaN(start.getTime()) || Number.isNaN(exclusiveEnd.getTime())) {
+      return ''
+    }
+    const inclusiveEnd = addDays(exclusiveEnd, -1)
+    const formatter = new Intl.DateTimeFormat('ko-KR', {
+      month: 'numeric',
+      day: 'numeric',
+    })
+    return `${formatter.format(start)} ~ ${formatter.format(inclusiveEnd)}`
+  } catch {
+    return ''
+  }
 }
 
 function formatDate(dateLike: string, options?: Intl.DateTimeFormatOptions): string {
@@ -316,7 +444,7 @@ function DiagnosticsPanel({
   status: 'idle' | 'running' | 'ready' | 'error'
 }) {
   return (
-    <div className="relative mt-8 space-y-4 rounded-3xl border border-purple-200/80 bg-white/70 p-5 text-sm text-purple-900">
+    <div className="relative p-5 mt-8 space-y-4 text-sm text-purple-900 border rounded-3xl border-purple-200/80 bg-white/70">
       <header className="flex flex-col gap-1">
         <h3 className="text-base font-bold text-purple-900/95">진단 로그</h3>
         <p className="text-xs text-purple-800/70">
@@ -326,7 +454,7 @@ function DiagnosticsPanel({
           {status === 'idle' && '최근 진단 결과입니다.'}
         </p>
         {!diagnostics.ok && diagnostics.errorMessage && (
-          <p className="mt-2 rounded-2xl bg-red-50/80 p-3 text-xs text-red-600">
+          <p className="p-3 mt-2 text-xs text-red-600 rounded-2xl bg-red-50/80">
             {diagnostics.errorMessage}
           </p>
         )}
@@ -336,7 +464,7 @@ function DiagnosticsPanel({
         {diagnostics.steps.map((step) => (
           <li
             key={step.id}
-            className="rounded-2xl border border-purple-100/80 bg-white/90 p-4 shadow-sm"
+            className="p-4 border shadow-sm rounded-2xl border-purple-100/80 bg-white/90"
           >
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
@@ -357,13 +485,13 @@ function DiagnosticsPanel({
             </div>
 
             {step.metadata && (
-              <pre className="mt-2 whitespace-pre-wrap break-words rounded-2xl bg-purple-50/70 p-3 text-xs text-purple-900/80">
+              <pre className="p-3 mt-2 text-xs break-words whitespace-pre-wrap rounded-2xl bg-purple-50/70 text-purple-900/80">
                 {formatMetadataDisplay(step.metadata)}
               </pre>
             )}
 
             {step.error && (
-              <p className="mt-2 rounded-2xl bg-red-50/80 p-2 text-xs text-red-600">
+              <p className="p-2 mt-2 text-xs text-red-600 rounded-2xl bg-red-50/80">
                 {step.error}
               </p>
             )}
@@ -408,14 +536,20 @@ function formatMetadataDisplay(metadata: Record<string, unknown>): string {
 
 function ScheduleSkeleton() {
   return (
-    <div className="space-y-4">
-      {Array.from({ length: 3 }).map((_, index) => (
-        <div key={index} className="p-4 space-y-3 border rounded-2xl border-purple-100/80 bg-white/70">
-          <div className="w-32 h-4 rounded-full animate-pulse bg-purple-200/60" />
-          <div className="w-full h-5 rounded-full animate-pulse bg-purple-200/70" />
-          <div className="w-2/3 h-5 rounded-full animate-pulse bg-purple-200/50" />
-        </div>
-      ))}
+    <div className="overflow-x-auto">
+      <div className="grid min-w-[560px] grid-cols-4 gap-4">
+        {Array.from({ length: DAYS_TO_SHOW }).map((_, index) => (
+          <div
+            key={index}
+            className="flex flex-col gap-3 p-4 border rounded-2xl border-purple-100/80 bg-white/70"
+          >
+            <div className="w-20 h-4 rounded-full animate-pulse bg-purple-200/60" />
+            <div className="w-full h-5 rounded-full animate-pulse bg-purple-200/70" />
+            <div className="w-3/4 h-5 rounded-full animate-pulse bg-purple-200/50" />
+            <div className="w-4/5 h-5 rounded-full animate-pulse bg-purple-200/40" />
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
