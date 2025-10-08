@@ -6,9 +6,19 @@ import Image from 'next/image'
 import profileImg from '../public/mainPage/Profile.png'
 import LeftAside from './components/leftAside'
 import RigthAside from './components/rigthAside'
+import ScheduleSection from './components/scheduleSection'
 import { ReactElement } from 'react'
 
 export default function Page(): ReactElement {
+  const profileStats = [
+    { title: 'Name', value: 'MOING' },
+    { title: 'Height', value: '155' },
+    { title: 'Age', value: '99' },
+    { title: 'Weight', value: '44' },
+    { title: 'MBTI', value: 'INFP' },
+    { title: 'Birthday', value: '3/14' },
+  ] as const
+
   return (
     // grid-cols: md 이상에서 좌/우 16rem 고정 + 중앙 유동
     <main className="grid grid-cols-1 gap-6 py-10 md:grid-cols-[16rem_minmax(0,1fr)_16rem] w-full">
@@ -18,8 +28,9 @@ export default function Page(): ReactElement {
       <div className="container min-w-0">
         {/* HERO */}
         {/* 텍스트 2, 이미지 1 비율의 그리드 */}
-        <section className="grid items-center w-full gap-10 md:grid-cols-3">
-          <div className="space-y-4 md:col-span-2">
+        {/* 초기 소개용 섹션 */}
+        <section className="Intro-section grid w-full gap-10 items-start md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+          <div className="space-y-4">
             <span className="chip">KR V-tuber • Moing</span>
             <h1 className="text-4xl font-extrabold leading-tight md:text-5xl">
               마녀의 포션 공방
@@ -31,13 +42,40 @@ export default function Page(): ReactElement {
                 모잉 팬 사이트에 오신 걸 환영합니다.
               </span>
             </p>
-            <div className="flex flex-wrap gap-3 pt-2">
-              <a className="btn btn-primary" href="#about">바로 둘러보기</a>
-              <a className="btn btn-ghost" href="#contact">문의하기</a>
-            </div>
+            <section
+              aria-labelledby="profile-stats-title"
+              className="relative p-6 mt-10 overflow-hidden border shadow-xl rounded-3xl border-white/30 bg-gradient-to-br from-purple-300/40 via-purple-200/40 to-white/60"
+            >
+              <div className="absolute w-56 h-56 rounded-full pointer-events-none -right-20 -top-24 bg-purple-300/40 blur-3xl" />
+              <div className="absolute bottom-0 w-20 h-20 rounded-full pointer-events-none left-6 bg-purple-200/50 blur-2xl" />
+              <header className="relative flex flex-col gap-1 mb-6 text-left">
+                <span className="text-sm font-semibold uppercase tracking-[0.2em] text-purple-700/80">
+                  Character Profile
+                </span>
+                <h2 id="profile-stats-title" className="text-2xl font-black text-purple-900/90">
+                  설정 카드
+                </h2>
+              </header>
+              <div className="relative grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {profileStats.map((stat) => (
+                  <div
+                    key={stat.title}
+                    className="flex items-center justify-between px-4 py-4 border shadow-sm rounded-2xl border-white/60 bg-white/70 backdrop-blur"
+                  >
+                    <dt className="text-sm font-semibold tracking-wide uppercase text-purple-700/90">
+                      {stat.title}
+                    </dt>
+                    <dd className="text-sm font-extrabold text-purple-900/90">
+                      {stat.value}
+                    </dd>
+                  </div>
+                ))}
+              </div>
+            </section>
           </div>
+
           {/* 아바타 프레임: Tailwind로 크기 제어 (globals.css의 고정 w/h 제거됨) */}
-          <div className="md:justify-self-end">
+          <div className="profile-avatar md:justify-self-end">
             <div className="relative avatar-frame w-36 h-36 md:w-52 md:h-52" aria-hidden>
               <div className="glow" />
               {/* Next.js 권장: 로컬 자산은 정적 import 사용. public 폴더가 아니라도 동작합니다. */}
@@ -51,36 +89,32 @@ export default function Page(): ReactElement {
               />
             </div>
           </div>
-          {/* 각 쇼츠 및 영상들은 5개 까지 배치할 예정 */}
-          {/* 유튜브 쇼츠 API 활용, 모잉 키리누키 채널의 쇼츠를 최신 순으로 배치 */}
-          <div className='youTubeShorts'>
-            
-          </div>
-          {/* 유튜브 모잉 공식 유튜브 채널의 영상을 최신 순으로 배치 */}
-          <div className='youTubeVideos'>
-            
-          </div>
-          {/* 유튜브 다시보기 채널의 영상 제공 */}
-          <div className='youTubeRe'>
-            
-          </div>
-          {/* 치지직 다시보기 최신순으로 제공 */}
-          <div className='chzzkPlayer'>
-            
-          </div>
         </section>
+
+        <div className="mt-16">
+          <ScheduleSection />
+        </div>
+
+        {/* 각 쇼츠 및 영상들은 5개 까지 배치할 예정 */}
+        {/* 유튜브 쇼츠 API 활용, 모잉 키리누키 채널의 쇼츠를 최신 순으로 배치 */}
+        <div className="youTubeShorts">
+
+        </div>
+        {/* 유튜브 모잉 공식 유튜브 채널의 영상을 최신 순으로 배치 */}
+        <div className="youTubeVideos">
+
+        </div>
+        {/* 유튜브 다시보기 채널의 영상 제공 */}
+        <div className="youTubeRe">
+
+        </div>
+        {/* 치지직 다시보기 최신순으로 제공 */}
+        <div className="chzzkPlayer">
+
+        </div>
       </div>
       {/* Right Aside */}
       <RigthAside />
     </main>
-  )
-}
-
-function Card({ title, value }: { title: string; value: string }) {
-  return (
-    <div className="card">
-      <div className="card-title">{title}</div>
-      <div className="card-value">{value}</div>
-    </div>
   )
 }
