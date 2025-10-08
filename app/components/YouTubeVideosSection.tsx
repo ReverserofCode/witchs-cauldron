@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import VideoCard from "./VideoCard";
+import SectionCard from "./sectionCard";
 
 interface VideoItem {
   videoId: string;
@@ -57,29 +58,28 @@ export default function YouTubeVideosSection() {
   );
 
   return (
-    <section className="mb-12 space-y-8">
-      <div className="space-y-2">
-        <h2 className="text-2xl font-bold text-ink">최신 유튜브 영상</h2>
-        <p className="text-sm text-ink/70">
-          모잉 공식 채널과 다시보기 채널의 최신 영상들을 확인해 보세요.
-        </p>
-      </div>
-
-      {loading && <div className="text-sm text-ink/70">불러오는 중...</div>}
-      {error && <div className="text-sm text-red-500">{error}</div>}
+    <SectionCard
+      tone="neutral"
+      eyebrow="YouTube Hub"
+      title="최신 유튜브 영상"
+      description="모잉 공식 채널과 다시보기 채널의 최신 영상들을 확인해 보세요."
+      bodyClassName="space-y-6"
+    >
+      {loading && <div className="text-sm text-purple-900/70">불러오는 중...</div>}
+      {error && <div className="rounded-xl border border-red-200 bg-red-50/80 p-3 text-sm text-red-600">{error}</div>}
 
       {!loading && !error && videos && (
-        <div className="space-y-10">
+        <div className="space-y-8">
           {sections.map(({ key, title, description }) => {
             const items = videos?.[key] ?? [];
             if (!items.length) {
               return null;
             }
             return (
-              <div key={key} className="space-y-4">
-                <div>
-                  <h3 className="text-xl font-semibold text-ink">{title}</h3>
-                  <p className="text-xs text-ink/60">{description}</p>
+              <div key={key} className="space-y-3">
+                <div className="flex flex-col gap-1">
+                  <h3 className="text-lg font-semibold text-purple-900/90">{title}</h3>
+                  <p className="text-xs text-purple-800/70">{description}</p>
                 </div>
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
                   {items.map((video) => (
@@ -91,6 +91,6 @@ export default function YouTubeVideosSection() {
           })}
         </div>
       )}
-    </section>
+    </SectionCard>
   );
 }

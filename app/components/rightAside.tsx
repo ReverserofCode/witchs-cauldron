@@ -3,6 +3,7 @@
 // 우측 사이드바: 추가 정보나 배너 영역
 import Image from 'next/image'
 import { type ReactElement } from 'react'
+import SectionCard from './sectionCard'
 
 interface RightAsideProps {
     className?: string
@@ -10,9 +11,12 @@ interface RightAsideProps {
 
 export default function RightAside({ className }: RightAsideProps = {}): ReactElement {
     return (
-        <aside
-            aria-label="보조 정보 배너"
-            className={`flex h-full w-full min-h-[24rem] items-center justify-center overflow-hidden rounded-3xl bg-[#7B68EE] ${className ?? ''}`}
+        <SectionCard
+            as="aside"
+            tone="dimmed"
+            className={`flex h-full min-h-[24rem] items-center justify-center ${className ?? ''}`}
+            bodyClassName="items-center justify-center gap-0"
+            header={null}
         >
             <Image
                 src="/rightAside/leftSide.png"
@@ -21,8 +25,8 @@ export default function RightAside({ className }: RightAsideProps = {}): ReactEl
                 height={384}
                 priority
                 sizes="(min-width: 1024px) 240px, 80vw"
-                className="block h-auto w-full max-w-none"
+                className="h-auto w-full max-w-none"
             />
-        </aside>
+        </SectionCard>
     )
 }

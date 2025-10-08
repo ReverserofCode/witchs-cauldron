@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import VideoCard from "./VideoCard";
+import SectionCard from "./sectionCard";
 
 interface ShortItem {
   videoId: string;
@@ -35,21 +36,22 @@ export default function YouTubeShortsSection() {
   }, []);
 
   return (
-    <section className="mb-12 space-y-8 youTubeShorts">
-      <div className="space-y-2">
-        <h2 className="text-2xl font-bold text-ink">최신 팬 채널 유튜브</h2>
-        <p className="text-sm text-ink/70">
-          팬 채널에서 제작한 모잉 키리누키 채널 영상을 빠르게 확인해 보세요.
-        </p>
-      </div>
-
-      {loading && <div className="text-sm text-ink/70">불러오는 중...</div>}
-      {error && <div className="text-sm text-red-500">{error}</div>}
+    <SectionCard
+      tone="neutral"
+      eyebrow="Community Clips"
+      title="최신 팬 채널 유튜브"
+      description="팬 채널에서 제작한 모잉 키리누키 채널 영상을 빠르게 확인해 보세요."
+      bodyClassName="space-y-4"
+    >
+      {loading && <div className="text-sm text-purple-900/70">불러오는 중...</div>}
+      {error && <div className="rounded-xl border border-red-200 bg-red-50/80 p-3 text-sm text-red-600">{error}</div>}
 
       {!loading && !error && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           {shorts.length === 0 && (
-            <div className="text-sm text-ink/60">표시할 쇼츠가 없습니다.</div>
+            <div className="rounded-xl border border-dashed border-purple-200/60 bg-white/70 p-4 text-sm text-purple-800/70">
+              표시할 쇼츠가 없습니다.
+            </div>
           )}
 
           {shorts.map((short) => (
@@ -57,6 +59,6 @@ export default function YouTubeShortsSection() {
           ))}
         </div>
       )}
-    </section>
+    </SectionCard>
   );
 }

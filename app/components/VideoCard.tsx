@@ -26,7 +26,7 @@ export default function VideoCard({ video, aspect = "video" }: VideoCardProps) {
       href={url}
       target="_blank"
       rel="noopener noreferrer"
-      className="flex flex-col overflow-hidden transition-transform duration-200 bg-white/80 rounded-xl shadow-sm hover:shadow-md hover:-translate-y-1"
+      className="flex flex-col overflow-hidden rounded-2xl border border-white/60 bg-white/80 shadow-sm backdrop-blur transition-transform duration-200 hover:-translate-y-1 hover:shadow-lg"
       title={title}
     >
       <div className="relative w-full overflow-hidden">

@@ -3,6 +3,7 @@
 // 좌측 사이드바: 네비게이션 없는 배너 표시 전용
 import Image from 'next/image'
 import { type ReactElement } from 'react'
+import SectionCard from './sectionCard'
 
 interface LeftAsideProps {
     className?: string
@@ -10,9 +11,12 @@ interface LeftAsideProps {
 
 export default function LeftAside({ className }: LeftAsideProps = {}): ReactElement {
     return (
-        <aside
-            aria-label="프로모션 배너"
-            className={`flex h-full w-full min-h-[24rem] items-center justify-center overflow-hidden rounded-3xl bg-[#7B68EE] ${className ?? ''}`}
+        <SectionCard
+            as="aside"
+            tone="dimmed"
+            className={`flex h-full min-h-[24rem] items-center justify-center ${className ?? ''}`}
+            bodyClassName="items-center justify-center gap-0"
+            header={null}
         >
             <Image
                 src="/leftAside/leftSide.png"
@@ -21,8 +25,8 @@ export default function LeftAside({ className }: LeftAsideProps = {}): ReactElem
                 height={384}
                 priority
                 sizes="(min-width: 1024px) 240px, 80vw"
-                className="block w-full h-auto max-w-none"
+                className="h-auto w-full max-w-none"
             />
-        </aside>
+        </SectionCard>
     )
 }

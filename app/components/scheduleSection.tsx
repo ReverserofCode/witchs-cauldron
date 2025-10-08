@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import SectionCard from './sectionCard'
 import type { ScheduleDiagnostics, ScheduleEvent, ScheduleFeed } from '../api/broadCastSchedule/schedule'
 
 type ScheduleStatus = 'idle' | 'loading' | 'ready' | 'error'
@@ -138,139 +139,121 @@ export default function ScheduleSection({
   const weekRangeLabel = useMemo(() => formatWeekRangeLabel(weekRange), [weekRange])
 
   return (
-    <section
-      aria-labelledby="schedule-section-title"
-      className={`relative overflow-hidden rounded-3xl border border-white/30 bg-white/60 p-6 shadow-lg backdrop-blur ${className ?? ''}`}
+    <SectionCard
+      id="schedule-section"
+      className={className}
+      tone="lavender"
+      eyebrow="Broadcast Schedule"
+      title="라이브 일정표"
+      description={`웹에 게시된 구글 시트를 기반으로 자동 동기화됩니다. 오늘부터 4일간의 방송을 보여주며 하루당 최대 ${clampedLimit}개의 방송을 표시합니다.`}
+      bodyClassName="relative"
     >
-      <div className="absolute rounded-full inset-x-10 -top-24 h-44 bg-purple-300/30 blur-3xl" aria-hidden />
-      <div className="absolute bottom-0 w-24 h-24 rounded-full right-6 bg-purple-200/40 blur-2xl" aria-hidden />
-
-      <header className="relative flex flex-col gap-2 mb-6">
-        <span className="text-sm font-semibold uppercase tracking-[0.2em] text-purple-700/80">
-          Broadcast Schedule
-        </span>
-        <h2 id="schedule-section-title" className="text-2xl font-black text-purple-900/90">
-          라이브 일정표
-        </h2>
-        <p className="text-sm text-purple-900/70">
-          웹에 게시된 구글 시트를 기반으로 자동 동기화됩니다. 오늘부터 4일간의 방송을 보여주며 하루당 최대 {clampedLimit}개의 방송을 표시합니다.
-        </p>
-      </header>
-
-      <div className="relative">
-        {status === 'loading' && <ScheduleSkeleton />}
-        {status === 'error' && (
-          <div className="p-4 space-y-3 text-sm text-red-700 border border-red-200 rounded-2xl bg-red-50/80">
-            <div>
-              일정 정보를 불러오지 못했습니다.
-              <br />
-              {error}
-            </div>
-            <div className="flex flex-wrap gap-2 text-xs">
-              <button
-                type="button"
-                onClick={handleRunDiagnostics}
-                disabled={diagnoseStatus === 'running'}
-                className="inline-flex items-center gap-2 px-3 py-1 font-semibold text-purple-800 transition rounded-full shadow-sm bg-white/70 hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {diagnoseStatus === 'running' ? '진단 실행 중...' : '자동 진단 실행'}
-              </button>
-              <a
-                href={`${SCHEDULE_ENDPOINT}?debug=1`}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center px-3 py-1 font-semibold text-purple-800 transition border rounded-full border-purple-300/70 hover:bg-purple-100/60"
-              >
-                API 응답 열기
-              </a>
-            </div>
-            {diagnoseStatus === 'error' && diagnoseError && (
-              <p className="text-sm text-red-600">{diagnoseError}</p>
+      {status === 'loading' && <ScheduleSkeleton />}
+      {status === 'error' && (
+        <div className="space-y-3 rounded-2xl border border-red-200 bg-red-50/80 p-4 text-sm text-red-700">
+          <div>
+            일정 정보를 불러오지 못했습니다.
+            <br />
+            {error}
+          </div>
+          <div className="flex flex-wrap gap-2 text-xs">
+            <button
+              type="button"
+              onClick={handleRunDiagnostics}
+              disabled={diagnoseStatus === 'running'}
+              className="inline-flex items-center gap-2 rounded-full bg-white/70 px-3 py-1 font-semibold text-purple-800 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {diagnoseStatus === 'running' ? '진단 실행 중...' : '자동 진단 실행'}
+            </button>
+            <a
+              href={`${SCHEDULE_ENDPOINT}?debug=1`}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center rounded-full border border-purple-300/70 px-3 py-1 font-semibold text-purple-800 transition hover:bg-purple-100/60"
+            >
+              API 응답 열기
+            </a>
+          </div>
+          {diagnoseStatus === 'error' && diagnoseError && (
+            <p className="text-sm text-red-600">{diagnoseError}</p>
+          )}
+        </div>
+      )}
+      {status === 'ready' && (
+        <div className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-purple-800/70">
+            {weekRangeLabel && <span>{weekRangeLabel}</span>}
+            {!hasAnyEvents && (
+              <span className="font-medium text-purple-700">이번 주에는 예정된 방송이 없습니다.</span>
             )}
           </div>
-        )}
-        {status === 'ready' && (
-          <div className="space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-purple-800/70">
-              {weekRangeLabel && <span>{weekRangeLabel}</span>}
-              {!hasAnyEvents && (
-                <span className="font-medium text-purple-700">
-                  이번 주에는 예정된 방송이 없습니다.
-                </span>
-              )}
-            </div>
 
-            <div className="overflow-x-auto">
-              <ul className="grid min-w-[560px] grid-cols-4 gap-4">
-                {weekColumns.map((day) => (
-                  <li
-                    key={day.isoDate}
-                    className={`flex min-h-[200px] flex-col rounded-2xl border p-4 shadow-sm transition ${
-                      day.isWeekend
-                        ? 'border-purple-300/70 bg-purple-50/80'
-                        : 'border-white/60 bg-white/80'
-                    }`}
-                  >
-                    <header className="flex flex-col gap-1 mb-3">
-                      <span
-                        className={`text-xs font-semibold tracking-wide uppercase ${
-                          day.isWeekend ? 'text-purple-800' : 'text-purple-700/70'
-                        }`}
-                      >
-                        {day.weekdayLabel}
-                      </span>
-                      <span
-                        className={`text-lg font-bold ${
-                          day.isWeekend ? 'text-purple-900' : 'text-purple-900/90'
-                        }`}
-                      >
-                        {day.dateLabel}
-                      </span>
-                    </header>
+          <div className="overflow-x-auto">
+            <ul className="grid min-w-[560px] grid-cols-4 gap-4">
+              {weekColumns.map((day) => (
+                <li
+                  key={day.isoDate}
+                  className={`flex min-h-[200px] flex-col rounded-2xl border p-4 shadow-sm transition ${
+                    day.isWeekend
+                      ? 'border-purple-300/70 bg-purple-50/80'
+                      : 'border-white/60 bg-white/80'
+                  }`}
+                >
+                  <header className="mb-3 flex flex-col gap-1">
+                    <span
+                      className={`text-xs font-semibold uppercase tracking-wide ${
+                        day.isWeekend ? 'text-purple-800' : 'text-purple-700/70'
+                      }`}
+                    >
+                      {day.weekdayLabel}
+                    </span>
+                    <span
+                      className={`text-lg font-bold ${
+                        day.isWeekend ? 'text-purple-900' : 'text-purple-900/90'
+                      }`}
+                    >
+                      {day.dateLabel}
+                    </span>
+                  </header>
 
-                    <div className="flex flex-col flex-1 gap-2">
-                      {day.events.length > 0 ? (
-                        day.events.map((event) => (
-                          <article
-                            key={event.id}
-                            className="px-3 py-2 text-xs text-purple-900 border shadow-sm rounded-xl border-purple-100/70 bg-white/90"
-                          >
-                            <p className="font-semibold text-purple-900/95 line-clamp-2">
-                              {event.title}
+                  <div className="flex flex-1 flex-col gap-2">
+                    {day.events.length > 0 ? (
+                      day.events.map((event) => (
+                        <article
+                          key={event.id}
+                          className="rounded-xl border border-purple-100/70 bg-white/90 px-3 py-2 text-xs text-purple-900 shadow-sm"
+                        >
+                          <p className="line-clamp-2 font-semibold text-purple-900/95">{event.title}</p>
+                          <p className="mt-1 text-[11px] font-medium text-purple-700/80">
+                            {formatTimeRange(event.start, event.end)}
+                          </p>
+                          {event.platform && (
+                            <p className="mt-1 inline-flex items-center gap-1 text-[11px] font-medium text-purple-700">
+                              <span className="h-1.5 w-1.5 rounded-full bg-purple-600" aria-hidden />
+                              {event.platform}
                             </p>
-                            <p className="mt-1 text-[11px] font-medium text-purple-700/80">
-                              {formatTimeRange(event.start, event.end)}
+                          )}
+                          {event.description && (
+                            <p className="mt-1 line-clamp-2 text-[11px] text-purple-800/80">
+                              {event.description}
                             </p>
-                            {event.platform && (
-                              <p className="mt-1 inline-flex items-center gap-1 text-[11px] font-medium text-purple-700">
-                                <span className="h-1.5 w-1.5 rounded-full bg-purple-600" aria-hidden />
-                                {event.platform}
-                              </p>
-                            )}
-                            {event.description && (
-                              <p className="mt-1 line-clamp-2 text-[11px] text-purple-800/80">
-                                {event.description}
-                              </p>
-                            )}
-                          </article>
-                        ))
-                      ) : (
-                        <p className="flex items-center justify-center flex-1 px-3 py-6 text-xs text-center border border-dashed rounded-xl border-purple-200/60 bg-white/60 text-purple-700/70">
-                          일정 없음
-                        </p>
-                      )}
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </div>
+                          )}
+                        </article>
+                      ))
+                    ) : (
+                      <p className="flex flex-1 items-center justify-center rounded-xl border border-dashed border-purple-200/60 bg-white/60 px-3 py-6 text-center text-xs text-purple-700/70">
+                        일정 없음
+                      </p>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
           </div>
-        )}
-        {diagnostics && (
-          <DiagnosticsPanel diagnostics={diagnostics} status={diagnoseStatus} />
-        )}
-      </div>
-    </section>
+        </div>
+      )}
+      {diagnostics && <DiagnosticsPanel diagnostics={diagnostics} status={diagnoseStatus} />}
+    </SectionCard>
   )
 }
 
