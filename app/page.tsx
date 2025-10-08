@@ -9,6 +9,8 @@ import RigthAside from './components/rightAside'
 import ScheduleSection from './components/scheduleSection'
 import TodayBroadcastStatusCard from './components/todayBroadcastStatusCard'
 import { ReactElement } from 'react'
+import YouTubeShortsSection from './components/YouTubeShortsSection'
+import YouTubeVideosSection from './components/YouTubeVideosSection'
 
 export default function Page(): ReactElement {
   const profileStats = [
@@ -102,20 +104,12 @@ export default function Page(): ReactElement {
             <ScheduleSection />
           </div>
 
+          {/* 유튜브 공식 채널과 다시보기 채널 영상 */}
+          {/* 치지직 다시보기 최신순으로 제공 */}
+          <YouTubeVideosSection />
           {/* 각 쇼츠 및 영상들은 5개 까지 배치할 예정 */}
           {/* 유튜브 쇼츠 API 활용, 모잉 키리누키 채널의 쇼츠를 최신 순으로 배치 */}
-          <div className="youTubeShorts">
-
-          </div>
-          {/* 유튜브 모잉 공식 유튜브 채널의 영상을 최신 순으로 배치 */}
-          <div className="youTubeVideos">
-
-          </div>
-          {/* 유튜브 다시보기 채널의 영상 제공 */}
-          <div className="youTubeRe">
-
-          </div>
-          {/* 치지직 다시보기 최신순으로 제공 */}
+          <YouTubeShortsSection />
           <div className="chzzkPlayer">
 
           </div>
