@@ -5,7 +5,7 @@
 import Image from 'next/image'
 import profileImg from '../public/mainPage/Profile.png'
 import LeftAside from './components/leftAside'
-import RigthAside from './components/rigthAside'
+import RigthAside from './components/rightAside'
 import ScheduleSection from './components/scheduleSection'
 import TodayBroadcastStatusCard from './components/todayBroadcastStatusCard'
 import { ReactElement } from 'react'
