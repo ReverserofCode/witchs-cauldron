@@ -3,14 +3,65 @@
 // 우측 사이드바: 추가 정보나 배너 영역
 import Image from 'next/image'
 import Link from 'next/link'
-import { type ReactElement } from 'react'
+import { type ReactElement, useEffect, useMemo, useState } from 'react'
 import SectionCard from './sectionCard'
+import type { ScheduleEvent, ScheduleFeed } from '../api/broadCastSchedule/schedule'
+
+type FetchStatus = 'idle' | 'loading' | 'ready' | 'error'
+
+const SCHEDULE_ENDPOINT = '/api/broadCastSchedule'
+const MAX_VISIBLE_EVENTS = 3
 
 interface RightAsideProps {
     className?: string
 }
 
 export default function RightAside({ className }: RightAsideProps = {}): ReactElement {
+    const [status, setStatus] = useState<FetchStatus>('idle')
+    const [events, setEvents] = useState<ScheduleEvent[]>([])
+    const [error, setError] = useState<string | null>(null)
+
+    useEffect(() => {
+        let cancelled = false
+
+        async function loadSchedule() {
+            setStatus('loading')
+            setError(null)
+
+            try {
+                const response = await fetch(SCHEDULE_ENDPOINT, {
+                    headers: { accept: 'application/json' },
+                    cache: 'no-store',
+                })
+
+                if (!response.ok) {
+                    throw new Error(`일정 정보를 불러오지 못했습니다. (${response.status})`)
+                }
+
+                const payload = (await response.json()) as ScheduleFeed
+                if (cancelled) return
+
+                setEvents(selectUpcomingEvents(payload.events))
+                setStatus('ready')
+            } catch (err) {
+                if (cancelled) return
+                setError(err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.')
+                setStatus('error')
+            }
+        }
+
+        loadSchedule()
+
+        return () => {
+            cancelled = true
+        }
+    }, [])
+
+    const upcomingEvents = useMemo(() => selectUpcomingEvents(events, MAX_VISIBLE_EVENTS), [events])
+    const nextEventLabel = useMemo(() =>
+        upcomingEvents.length > 0 ? formatEventDateTime(upcomingEvents[0]) : null,
+    [upcomingEvents])
+
     return (
         <aside
             className={[
@@ -24,22 +75,44 @@ export default function RightAside({ className }: RightAsideProps = {}): ReactEl
                 bodyClassName="gap-3"
                 eyebrow="Schedule"
                 title="이번 주 생방송"
+                description={nextEventLabel ? `다음 방송 · ${nextEventLabel}` : undefined}
             >
-                <ul className="space-y-2 text-[11px] font-medium text-purple-950/80">
-                    <li className="flex items-center justify-between px-3 py-2 shadow-sm rounded-xl bg-purple-100/60">
-                        <span>화 • 21:00</span>
-                        <span>포션 실험 & 채팅</span>
-                    </li>
-                    <li className="flex items-center justify-between px-3 py-2 shadow-sm rounded-xl bg-purple-100/40">
-                        <span>목 • 20:30</span>
-                        <span>마녀 수업</span>
-                    </li>
-                    <li className="flex items-center justify-between px-3 py-2 shadow-sm rounded-xl bg-purple-100/30">
-                        <span>토 • 22:00</span>
-                        <span>비밀 야간방송</span>
-                    </li>
-                </ul>
-                <Link href="#schedule-section" className="justify-center w-full text-[11px] btn btn-primary">
+                {status === 'loading' && <ScheduleAsideSkeleton />}
+                {status === 'error' && error && (
+                    <p className="rounded-xl border border-red-200 bg-red-50/80 px-3 py-2 text-[11px] text-red-600">
+                        {error}
+                    </p>
+                )}
+                {status === 'ready' && upcomingEvents.length === 0 && (
+                    <p className="rounded-xl border border-dashed border-purple-200/60 bg-white/70 px-3 py-4 text-center text-[11px] text-purple-700/70">
+                        예정된 방송이 없습니다.
+                    </p>
+                )}
+                {status === 'ready' && upcomingEvents.length > 0 && (
+                    <ul className="space-y-2 text-[11px] text-purple-950/85">
+                        {upcomingEvents.map((event) => (
+                            <li
+                                key={event.id}
+                                className="flex items-start justify-between gap-2 rounded-xl bg-purple-100/40 px-3 py-2 shadow-sm"
+                            >
+                                <div className="flex flex-col gap-1">
+                                    <span className="font-semibold leading-snug text-purple-950/95 line-clamp-2">
+                                        {event.title}
+                                    </span>
+                                    <span className="text-[10px] font-medium text-purple-700/80">
+                                        {formatEventDateTime(event)}
+                                    </span>
+                                </div>
+                                {event.platform && (
+                                    <span className="mt-1 inline-flex shrink-0 items-center rounded-full bg-purple-200/80 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-purple-900/80">
+                                        {event.platform}
+                                    </span>
+                                )}
+                            </li>
+                        ))}
+                    </ul>
+                )}
+                <Link href="#schedule-section" className="btn btn-primary mt-2 w-full justify-center text-[11px]">
                     전체 일정 보기
                 </Link>
             </SectionCard>
@@ -66,14 +139,86 @@ export default function RightAside({ className }: RightAsideProps = {}): ReactEl
                     <p className="text-purple-900/60">디스코드에 참여하고 라이브 소식을 받아보세요.</p>
                 </div>
                 <div className="flex flex-col gap-1.5">
+                    {/* 디스코드 외에 다른 활성화 커뮤니티 없음 */}
                     <a href="https://discord.com/invite/DhuzudS" target="_blank" rel="noreferrer" className="justify-center w-full text-[11px] btn btn-ghost">
                         디스코드 입장하기
-                    </a>
-                    <a href="https://twitter.com" target="_blank" rel="noreferrer" className="justify-center w-full text-[11px] btn btn-ghost">
-                        트위터 팔로우
                     </a>
                 </div>
             </SectionCard>
         </aside>
+    )
+}
+
+function selectUpcomingEvents(allEvents: ScheduleEvent[], limit: number = MAX_VISIBLE_EVENTS): ScheduleEvent[] {
+    const now = Date.now()
+
+    const scored = allEvents
+        .map((event) => {
+            const start = Date.parse(event.start)
+            if (Number.isNaN(start)) {
+                return null
+            }
+            const end = event.end ? Date.parse(event.end) : Number.NaN
+            const normalizedEnd = Number.isNaN(end) ? start : end
+            const isUpcoming = start >= now || normalizedEnd >= now
+            return { event, start, normalizedEnd, isUpcoming }
+        })
+        .filter((value): value is NonNullable<typeof value> => Boolean(value))
+        .sort((a, b) => a.start - b.start)
+
+    const upcoming = scored.filter((item) => item.isUpcoming)
+    const source = upcoming.length > 0 ? upcoming : scored
+
+    return source.slice(0, limit).map((item) => item.event)
+}
+
+function formatEventDateTime(event: ScheduleEvent): string {
+    const start = Date.parse(event.start)
+    if (Number.isNaN(start)) {
+        return '시간 미정'
+    }
+
+    const startDate = new Date(start)
+    const formatter = new Intl.DateTimeFormat('ko-KR', {
+        month: 'numeric',
+        day: 'numeric',
+        weekday: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
+    })
+
+    if (!event.end) {
+        return formatter.format(startDate)
+    }
+
+    const end = Date.parse(event.end)
+    if (Number.isNaN(end)) {
+        return formatter.format(startDate)
+    }
+
+    const endDate = new Date(end)
+    const endFormatter = new Intl.DateTimeFormat('ko-KR', {
+        hour: '2-digit',
+        minute: '2-digit',
+    })
+
+    return `${formatter.format(startDate)} · ${endFormatter.format(endDate)}`
+}
+
+function ScheduleAsideSkeleton(): ReactElement {
+    return (
+        <ul className="space-y-2">
+            {Array.from({ length: MAX_VISIBLE_EVENTS }).map((_, index) => (
+                <li
+                    key={index}
+                    className="flex animate-pulse items-center justify-between rounded-xl bg-purple-100/30 px-3 py-2"
+                >
+                    <div className="flex w-full flex-col gap-2">
+                        <span className="h-4 w-full rounded-full bg-purple-200/60" />
+                        <span className="h-3 w-2/3 rounded-full bg-purple-200/50" />
+                    </div>
+                </li>
+            ))}
+        </ul>
     )
 }

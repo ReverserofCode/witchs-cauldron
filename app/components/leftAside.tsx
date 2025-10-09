@@ -19,7 +19,7 @@ export default function LeftAside({ className }: LeftAsideProps = {}): ReactElem
         >
             <SectionCard
                 tone="lavender"
-                className="h-full rounded-2xl border-white/40 bg-white/60 shadow-md shadow-purple-900/10"
+                className="h-full shadow-md rounded-2xl border-white/40 bg-white/60 shadow-purple-900/10"
                 bodyClassName="gap-5"
                 eyebrow="Fan Art"
                 title="마녀의 작업실"
@@ -36,8 +36,8 @@ export default function LeftAside({ className }: LeftAsideProps = {}): ReactElem
                     />
                 </div>
                 <a
-                    href="/mainPage/모잉 설정.webp"
-                    className="btn btn-ghost w-full justify-center text-xs"
+                    href="/leftAside/leftSide.png"
+                    className="justify-center w-full text-xs btn btn-ghost"
                     download
                 >
                     배경화면 다운로드
