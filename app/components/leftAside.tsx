@@ -73,7 +73,7 @@ export default function LeftAside({ className, images }: LeftAsideProps = {}): R
                 bodyClassName="gap-5"
                 eyebrow="Fan Art"
                 title="마녀의 작업실"
-                description="팬 블렌드 벽지를 다운로드하고 데스크톱을 꾸며보세요."
+                description="팬 아트 갤러리를 감상하고 다운로드해 보세요."
             >
                 <div className="flex flex-col gap-6">
                     {gallery.map((item, index) => (
