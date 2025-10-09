@@ -104,7 +104,6 @@ export default function TodayBroadcastStatusCard({ className }: TodayBroadcastSt
         </span>
       }
       bodyClassName="gap-8"
-      footer="데이터는 최신 구글 시트 기준으로 자동 동기화됩니다."
     >
       <div className="flex flex-col gap-4">
         {status !== 'ready' && (
