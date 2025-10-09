@@ -126,7 +126,7 @@ export default function RightAside({ className }: RightAsideProps = {}): ReactEl
             >
                 <div className="relative overflow-hidden border shadow-lg rounded-2xl border-white/40 bg-white/60 shadow-purple-900/15">
                     <Image
-                        src="/rightAside/leftSide.png"
+                        src="/rightAside/rightSide.png"
                         alt="모잉 커뮤니티"
                         width={320}
                         height={180}
