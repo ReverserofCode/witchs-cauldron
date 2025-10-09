@@ -20,7 +20,7 @@ export default function Page(): ReactElement {
     { title: 'Age', value: '99' },
     { title: 'Weight', value: '44' },
     { title: 'MBTI', value: 'INFP' },
-    { title: 'Birthday', value: '3/14' },
+    { title: 'Birth', value: '3/14' },
   ] as const
 
   return (
@@ -85,10 +85,10 @@ export default function Page(): ReactElement {
                     key={stat.title}
                     className="flex items-center justify-between px-4 py-4 border shadow-sm rounded-2xl border-white/60 bg-white/75"
                   >
-                    <dt className="text-sm font-semibold tracking-wide uppercase text-purple-700/90">
+                    <dt className="text-xs font-semibold tracking-wide uppercase text-purple-700/90">
                       {stat.title}
                     </dt>
-                    <dd className="text-sm font-extrabold text-purple-900/90">{stat.value}</dd>
+                    <dd className="text-xs font-extrabold text-purple-900/90">{stat.value}</dd>
                   </div>
                 ))}
               </SectionCard>

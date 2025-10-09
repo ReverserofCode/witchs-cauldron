@@ -150,7 +150,7 @@ export default function ScheduleSection({
     >
       {status === 'loading' && <ScheduleSkeleton />}
       {status === 'error' && (
-        <div className="space-y-3 rounded-2xl border border-red-200 bg-red-50/80 p-4 text-sm text-red-700">
+        <div className="p-4 space-y-3 text-xs text-red-700 border border-red-200 rounded-2xl bg-red-50/80">
           <div>
             일정 정보를 불러오지 못했습니다.
             <br />
@@ -161,7 +161,7 @@ export default function ScheduleSection({
               type="button"
               onClick={handleRunDiagnostics}
               disabled={diagnoseStatus === 'running'}
-              className="inline-flex items-center gap-2 rounded-full bg-white/70 px-3 py-1 font-semibold text-purple-800 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex items-center gap-2 px-3 py-1 font-semibold text-purple-800 transition rounded-full bg-white/70 hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
             >
               {diagnoseStatus === 'running' ? '진단 실행 중...' : '자동 진단 실행'}
             </button>
@@ -169,7 +169,7 @@ export default function ScheduleSection({
               href={`${SCHEDULE_ENDPOINT}?debug=1`}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center rounded-full border border-purple-300/70 px-3 py-1 font-semibold text-purple-800 transition hover:bg-purple-100/60"
+              className="inline-flex items-center px-3 py-1 font-semibold text-purple-800 transition border rounded-full border-purple-300/70 hover:bg-purple-100/60"
             >
               API 응답 열기
             </a>
@@ -199,7 +199,7 @@ export default function ScheduleSection({
                       : 'border-white/60 bg-white/80'
                   }`}
                 >
-                  <header className="mb-3 flex flex-col gap-1">
+                  <header className="flex flex-col gap-1 mb-3">
                     <span
                       className={`text-xs font-semibold uppercase tracking-wide ${
                         day.isWeekend ? 'text-purple-800' : 'text-purple-700/70'
@@ -216,14 +216,14 @@ export default function ScheduleSection({
                     </span>
                   </header>
 
-                  <div className="flex flex-1 flex-col gap-2">
+                  <div className="flex flex-col flex-1 gap-2">
                     {day.events.length > 0 ? (
                       day.events.map((event) => (
                         <article
                           key={event.id}
-                          className="rounded-xl border border-purple-100/70 bg-white/90 px-3 py-2 text-xs text-purple-900 shadow-sm"
+                          className="px-3 py-2 text-xs text-purple-900 border shadow-sm rounded-xl border-purple-100/70 bg-white/90"
                         >
-                          <p className="line-clamp-2 font-semibold text-purple-900/95">{event.title}</p>
+                          <p className="font-semibold line-clamp-2 text-purple-900/95">{event.title}</p>
                           <p className="mt-1 text-[11px] font-medium text-purple-700/80">
                             {formatTimeRange(event.start, event.end)}
                           </p>
@@ -241,7 +241,7 @@ export default function ScheduleSection({
                         </article>
                       ))
                     ) : (
-                      <p className="flex flex-1 items-center justify-center rounded-xl border border-dashed border-purple-200/60 bg-white/60 px-3 py-6 text-center text-xs text-purple-700/70">
+                      <p className="flex items-center justify-center flex-1 px-3 py-6 text-xs text-center border border-dashed rounded-xl border-purple-200/60 bg-white/60 text-purple-700/70">
                         일정 없음
                       </p>
                     )}

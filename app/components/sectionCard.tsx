@@ -62,9 +62,9 @@ export default function SectionCard({
     >
       <div
         aria-hidden
-        className="pointer-events-none absolute left-1/2 top-0 h-48 w-56 -translate-x-1/2 rounded-full bg-white/20 blur-3xl"
+        className="absolute top-0 w-56 h-48 -translate-x-1/2 rounded-full pointer-events-none left-1/2 bg-white/20 blur-3xl"
       />
-      <div aria-hidden className="pointer-events-none absolute -bottom-24 right-0 h-40 w-40 rounded-full bg-purple-300/25 blur-3xl" />
+      <div aria-hidden className="absolute right-0 w-40 h-40 rounded-full pointer-events-none -bottom-24 bg-purple-300/25 blur-3xl" />
 
       <div className="relative flex flex-col gap-6">
         {header ?? (
@@ -80,7 +80,7 @@ export default function SectionCard({
                   {title}
                 </HeadingTag>
               )}
-              {description && <p className="text-sm text-purple-900/70">{description}</p>}
+              {description && <p className="text-xs text-purple-900/70">{description}</p>}
               {actions && <div className="flex flex-wrap gap-3 pt-2">{actions}</div>}
             </header>
           )
