@@ -93,7 +93,7 @@ export default function RightAside({ className }: RightAsideProps = {}): ReactEl
                         {upcomingEvents.map((event) => (
                             <li
                                 key={event.id}
-                                className="flex items-start justify-between gap-2 rounded-xl bg-purple-100/40 px-3 py-2 shadow-sm"
+                                className="flex items-start justify-between gap-2 px-3 py-2 shadow-sm rounded-xl bg-purple-100/40"
                             >
                                 <div className="flex flex-col gap-1">
                                     <span className="font-semibold leading-snug text-purple-950/95 line-clamp-2">
@@ -113,7 +113,7 @@ export default function RightAside({ className }: RightAsideProps = {}): ReactEl
                     </ul>
                 )}
                 <Link href="#schedule-section" className="btn btn-primary mt-2 w-full justify-center text-[11px]">
-                    전체 일정 보기
+                    주간 일정 보기
                 </Link>
             </SectionCard>
 
@@ -122,7 +122,7 @@ export default function RightAside({ className }: RightAsideProps = {}): ReactEl
                 className="shadow-md rounded-2xl border-white/40 bg-gradient-to-br from-purple-100/70 via-white/70 to-white/90 shadow-purple-900/15"
                 bodyClassName="gap-4"
                 eyebrow="Community"
-                title="모잉과 연결되기"
+                title="모잉 디스코드"
             >
                 <div className="relative overflow-hidden border shadow-lg rounded-2xl border-white/40 bg-white/60 shadow-purple-900/15">
                     <Image
@@ -211,11 +211,11 @@ function ScheduleAsideSkeleton(): ReactElement {
             {Array.from({ length: MAX_VISIBLE_EVENTS }).map((_, index) => (
                 <li
                     key={index}
-                    className="flex animate-pulse items-center justify-between rounded-xl bg-purple-100/30 px-3 py-2"
+                    className="flex items-center justify-between px-3 py-2 animate-pulse rounded-xl bg-purple-100/30"
                 >
-                    <div className="flex w-full flex-col gap-2">
-                        <span className="h-4 w-full rounded-full bg-purple-200/60" />
-                        <span className="h-3 w-2/3 rounded-full bg-purple-200/50" />
+                    <div className="flex flex-col w-full gap-2">
+                        <span className="w-full h-4 rounded-full bg-purple-200/60" />
+                        <span className="w-2/3 h-3 rounded-full bg-purple-200/50" />
                     </div>
                 </li>
             ))}
