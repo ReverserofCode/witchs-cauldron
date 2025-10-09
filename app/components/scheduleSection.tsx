@@ -150,8 +150,8 @@ export default function ScheduleSection({
     >
       {status === 'loading' && <ScheduleSkeleton />}
       {status === 'error' && (
-        <div className="p-4 space-y-3 text-xs text-red-700 border border-red-200 rounded-2xl bg-red-50/80">
-          <div>
+        <div className="p-4 space-y-3 text-xs text-red-700 border border-red-200 rounded-2xl bg-red-50/80 typography-small">
+          <div className="typography-small">
             일정 정보를 불러오지 못했습니다.
             <br />
             {error}
@@ -184,7 +184,7 @@ export default function ScheduleSection({
           <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-purple-800/70">
             {weekRangeLabel && <span>{weekRangeLabel}</span>}
             {!hasAnyEvents && (
-              <span className="font-medium text-purple-700">이번 주에는 예정된 방송이 없습니다.</span>
+              <span className="font-medium text-purple-700 typography-small">이번 주에는 예정된 방송이 없습니다.</span>
             )}
           </div>
 
@@ -223,25 +223,27 @@ export default function ScheduleSection({
                           key={event.id}
                           className="px-3 py-2 text-xs text-purple-900 border shadow-sm rounded-xl border-purple-100/70 bg-white/90"
                         >
-                          <p className="font-semibold line-clamp-2 text-purple-900/95">{event.title}</p>
-                          <p className="mt-1 text-[11px] font-medium text-purple-700/80">
+                          <p className="font-semibold text-purple-900/95 line-clamp-2 typography-body">
+                            {event.title}
+                          </p>
+                          <p className="mt-1 text-[11px] font-medium text-purple-700/80 typography-small">
                             {formatTimeRange(event.start, event.end)}
                           </p>
                           {event.platform && (
-                            <p className="mt-1 inline-flex items-center gap-1 text-[11px] font-medium text-purple-700">
+                            <p className="mt-1 inline-flex items-center gap-1 text-[11px] font-medium text-purple-700 typography-small">
                               <span className="h-1.5 w-1.5 rounded-full bg-purple-600" aria-hidden />
                               {event.platform}
                             </p>
                           )}
                           {event.description && (
-                            <p className="mt-1 line-clamp-2 text-[11px] text-purple-800/80">
+                            <p className="mt-1 text-[11px] text-purple-800/80 line-clamp-2 typography-small">
                               {event.description}
                             </p>
                           )}
                         </article>
                       ))
                     ) : (
-                      <p className="flex items-center justify-center flex-1 px-3 py-6 text-xs text-center border border-dashed rounded-xl border-purple-200/60 bg-white/60 text-purple-700/70">
+                      <p className="flex items-center justify-center flex-1 px-3 py-6 text-xs text-center border border-dashed rounded-xl border-purple-200/60 bg-white/60 text-purple-700/70 typography-small">
                         일정 없음
                       </p>
                     )}

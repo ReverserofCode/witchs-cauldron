@@ -71,8 +71,12 @@ export default function YouTubeVideosSection() {
   description="모잉 공식·다시보기·팬 채널의 최신 영상을 한눈에 확인해 보세요."
       bodyClassName="space-y-6"
     >
-      {loading && <div className="text-sm text-purple-900/70">불러오는 중...</div>}
-      {error && <div className="rounded-xl border border-red-200 bg-red-50/80 p-3 text-sm text-red-600">{error}</div>}
+      {loading && <div className="text-sm text-purple-900/70 typography-body">불러오는 중...</div>}
+      {error && (
+        <div className="rounded-xl border border-red-200 bg-red-50/80 p-3 text-sm text-red-600 typography-body">
+          {error}
+        </div>
+      )}
 
       {!loading && !error && videos && (
         <div className="space-y-8">
@@ -84,8 +88,8 @@ export default function YouTubeVideosSection() {
             return (
               <div key={key} className="space-y-3">
                 <div className="flex flex-col gap-1">
-                  <h3 className="text-lg font-semibold text-purple-900/90">{title}</h3>
-                  <p className="text-xs text-purple-800/70">{description}</p>
+                  <h3 className="text-lg font-semibold text-purple-900/90 typography-heading">{title}</h3>
+                  <p className="text-xs text-purple-800/70 typography-small">{description}</p>
                 </div>
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                   {items.map((video) => (

@@ -65,6 +65,36 @@ body {
     color: rgb(var(--ink-muted));
 }
 
+/* Typography helpers: 한국어 줄바꿈 개선 및 가독성 향상 */
+.typography-heading {
+    word-break: keep-all;
+    line-height: 1.15;
+    letter-spacing: -0.015em;
+}
+
+.typography-lead {
+    word-break: keep-all;
+    overflow-wrap: break-word;
+    hyphens: auto;
+    line-height: 1.7;
+    letter-spacing: -0.01em;
+}
+
+.typography-body {
+    word-break: keep-all;
+    overflow-wrap: break-word;
+    hyphens: auto;
+    line-height: 1.65;
+    letter-spacing: -0.008em;
+}
+
+.typography-small {
+    word-break: keep-all;
+    overflow-wrap: break-word;
+    hyphens: auto;
+    line-height: 1.5;
+}
+
 /* App background: Moing gradient with soft paper */
 .bg-page {
     background:

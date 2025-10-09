@@ -76,11 +76,13 @@ export default function SectionCard({
                 </span>
               )}
               {title && (
-                <HeadingTag className="text-2xl font-black leading-tight text-current">
+                <HeadingTag className="text-2xl font-black text-current typography-heading">
                   {title}
                 </HeadingTag>
               )}
-              {description && <p className="text-xs text-purple-900/70">{description}</p>}
+              {description && (
+                <p className="text-xs text-purple-900/70 typography-small">{description}</p>
+              )}
               {actions && <div className="flex flex-wrap gap-3 pt-2">{actions}</div>}
             </header>
           )

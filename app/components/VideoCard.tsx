@@ -43,8 +43,8 @@ export default function VideoCard({ video, aspect = "video" }: VideoCardProps) {
         )}
       </div>
       <div className="flex flex-col flex-1 gap-2 p-3">
-        <p className="text-sm font-semibold text-ink line-clamp-2">{title}</p>
-        <div className="mt-auto text-[11px] text-ink/60">
+        <p className="text-sm font-semibold text-ink line-clamp-2 typography-body">{title}</p>
+        <div className="mt-auto text-[11px] text-ink/60 typography-small">
           <span className="block">{displayChannel}</span>
           {displayDate && <span>{displayDate}</span>}
         </div>

@@ -43,13 +43,17 @@ export default function YouTubeShortsSection() {
       description="팬 채널에서 제작한 모잉 키리누키 채널 영상을 빠르게 확인해 보세요."
       bodyClassName="space-y-4"
     >
-      {loading && <div className="text-sm text-purple-900/70">불러오는 중...</div>}
-      {error && <div className="rounded-xl border border-red-200 bg-red-50/80 p-3 text-sm text-red-600">{error}</div>}
+      {loading && <div className="text-sm text-purple-900/70 typography-body">불러오는 중...</div>}
+      {error && (
+        <div className="rounded-xl border border-red-200 bg-red-50/80 p-3 text-sm text-red-600 typography-body">
+          {error}
+        </div>
+      )}
 
       {!loading && !error && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {shorts.length === 0 && (
-            <div className="rounded-xl border border-dashed border-purple-200/60 bg-white/70 p-4 text-sm text-purple-800/70">
+            <div className="rounded-xl border border-dashed border-purple-200/60 bg-white/70 p-4 text-sm text-purple-800/70 typography-body">
               표시할 쇼츠가 없습니다.
             </div>
           )}

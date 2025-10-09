@@ -38,17 +38,17 @@ export default function Page(): ReactElement {
               tone="dimmed"
               header={
                 <div className="grid items-center gap-10 md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
-                  <div className="space-y-4 text-white">
+                  <div className="space-y-5 text-white">
                     <span className="chip">KR V-tuber • Moing</span>
-                    <h1 className="text-4xl font-extrabold leading-tight md:text-5xl">마녀의 포션 공방</h1>
-                    <p className="text-xl font-light max-w-prose">
-                      포션을 만들면 폭발하거나, 고백하게 만드는 재앙 제조기.
-                      <br />
-                      “진짜 감기약 맞아요?” 음... 아마도요.
-                      <span className="block text-lg font-light opacity-0 animate-fade-in animation-delay-200">
+                    <h1 className="text-4xl font-extrabold md:text-5xl typography-heading">마녀의 포션 공방</h1>
+                    <div className="space-y-3">
+                      <p className="max-w-prose text-lg font-light typography-lead">
+                        포션을 만들면 폭발하거나, 고백하게 만드는 재앙 제조기. “진짜 감기약 맞아요?” 음... 아마도요.
+                      </p>
+                      <p className="text-lg font-light opacity-0 typography-lead animate-fade-in animation-delay-200">
                         모잉 팬 사이트에 오신 걸 환영합니다.
-                      </span>
-                    </p>
+                      </p>
+                    </div>
                   </div>
                   <div className="profile-avatar justify-self-end">
                     <div className="relative h-36 w-36 md:h-52 md:w-52" aria-hidden>
@@ -68,7 +68,7 @@ export default function Page(): ReactElement {
                 </div>
               }
             >
-              <p className="text-sm text-purple-100/90">
+              <p className="text-sm text-purple-100/90 typography-body">
                 팬 여러분이 가장 궁금해하는 정보, 최신 방송 일정, 그리고 하이라이트 영상들을 한 곳에 모았습니다.
               </p>
             </SectionCard>

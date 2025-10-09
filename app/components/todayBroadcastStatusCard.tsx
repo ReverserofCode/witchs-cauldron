@@ -103,36 +103,36 @@ export default function TodayBroadcastStatusCard(): ReactElement {
       bodyClassName="justify-between gap-6"
       footer="데이터는 최신 구글 시트 기준으로 자동 동기화됩니다."
     >
-      <div className="flex flex-col justify-center flex-1 gap-3 text-sm text-purple-900">
+      <div className="flex flex-col justify-center flex-1 gap-3 text-sm text-purple-900 typography-body">
         {status === 'loading' && <LoadingState />}
         {status === 'error' && (
-          <p className="leading-relaxed text-red-700">
+          <p className="leading-relaxed text-red-700 typography-body">
             상태를 불러오지 못했습니다.
             <br />
             {error}
           </p>
         )}
         {status === 'ready' && events.length === 0 && (
-          <p className="font-medium leading-relaxed text-purple-800/80">
+          <p className="font-medium leading-relaxed text-purple-800/80 typography-body">
             오늘은 예정된 방송이 없습니다. 휴식을 즐겨보세요!
           </p>
         )}
         {status === 'ready' && firstEvent && (
           <div className="space-y-2">
-            <p className="font-semibold text-purple-900/90">다음 방송</p>
-            <p className="text-base font-bold text-purple-900/95">{firstEvent.title}</p>
-            <p className="text-xs font-medium text-purple-700/80">
+            <p className="font-semibold text-purple-900/90 typography-body">다음 방송</p>
+            <p className="text-base font-bold text-purple-900/95 typography-heading">{firstEvent.title}</p>
+            <p className="text-xs font-medium text-purple-700/80 typography-small">
               {formatTime(firstEvent.start)}
               {firstEvent.end ? ` ~ ${formatTime(firstEvent.end)}` : ''}
             </p>
             {firstEvent.platform && (
-              <p className="inline-flex items-center gap-1 text-xs font-semibold text-purple-700">
+              <p className="inline-flex items-center gap-1 text-xs font-semibold text-purple-700 typography-small">
                 <span className="h-1.5 w-1.5 rounded-full bg-purple-600" aria-hidden />
                 {firstEvent.platform}
               </p>
             )}
             {firstEvent.description && (
-              <p className="text-xs text-purple-700/80 line-clamp-3">{firstEvent.description}</p>
+              <p className="text-xs text-purple-700/80 line-clamp-3 typography-small">{firstEvent.description}</p>
             )}
           </div>
         )}
