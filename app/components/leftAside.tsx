@@ -11,23 +11,38 @@ interface LeftAsideProps {
 
 export default function LeftAside({ className }: LeftAsideProps = {}): ReactElement {
     return (
-        <SectionCard
-            as="aside"
-            tone="dimmed"
-            className={`flex h-full min-h-[24rem] flex-col overflow-hidden p-0 ${className ?? ''}`}
-            bodyClassName="flex-1 h-full gap-0"
-            header={null}
+        <aside
+            className={[
+                'flex h-full w-full max-w-xs flex-col gap-5 rounded-3xl border border-white/15 bg-white/10 p-5 shadow-lg shadow-purple-950/20 backdrop-blur-lg lg:max-w-[220px] xl:max-w-[240px]',
+                className,
+            ].filter(Boolean).join(' ')}
         >
-            <div className="relative flex-1 min-h-full">
-                <Image
-                    src="/leftAside/leftSide.png"
-                    alt="라이브 방송 배너"
-                    fill
-                    priority
-                    sizes="(min-width: 1024px) 240px, 80vw"
-                    className="object-cover w-full h-full"
-                />
-            </div>
-        </SectionCard>
+            <SectionCard
+                tone="lavender"
+                className="h-full rounded-2xl border-white/40 bg-white/60 shadow-md shadow-purple-900/10"
+                bodyClassName="gap-6"
+                eyebrow="Fan Art"
+                title="마녀의 작업실"
+                description="팬 블렌드 벽지를 다운로드하고 데스크톱을 꾸며보세요."
+            >
+                <div className="relative aspect-[3/4] overflow-hidden rounded-2xl border border-white/40 shadow-lg shadow-purple-900/20">
+                    <Image
+                        src="/leftAside/leftSide.png"
+                        alt="마녀의 작업실 벽지"
+                        fill
+                        sizes="(min-width: 1280px) 240px, (min-width: 1024px) 200px, 100vw"
+                        className="object-cover"
+                        priority
+                    />
+                </div>
+                <a
+                    href="/mainPage/모잉 설정.webp"
+                    className="btn btn-ghost w-full justify-center text-xs"
+                    download
+                >
+                    배경화면 다운로드
+                </a>
+            </SectionCard>
+        </aside>
     )
 }
