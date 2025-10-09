@@ -74,7 +74,7 @@ export default function RightAside({ className }: RightAsideProps = {}): ReactEl
                 className="shadow-md rounded-2xl border-white/40 bg-white/70 shadow-purple-900/10"
                 bodyClassName="gap-3"
                 eyebrow="Schedule"
-                title="이번 주 생방송"
+                title="빠른 방송 일정"
                 description={nextEventLabel ? `다음 방송 · ${nextEventLabel}` : undefined}
             >
                 {status === 'loading' && <ScheduleAsideSkeleton />}
@@ -113,7 +113,7 @@ export default function RightAside({ className }: RightAsideProps = {}): ReactEl
                     </ul>
                 )}
                 <Link href="#schedule-section" className="btn btn-primary mt-2 w-full justify-center text-[11px]">
-                    주간 일정 보기
+                    일정 보기
                 </Link>
             </SectionCard>
 

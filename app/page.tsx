@@ -99,7 +99,7 @@ export default function Page(): ReactElement {
               </div>
             </div>
 
-            <div className="mt-2 space-y-10">
+            <div className="mt-1 space-y-10">
               <ScheduleSection />
               <YouTubeVideosSection />
               {/* 적절한 쇼츠 채널이 없어 임시 폐쇄  */}

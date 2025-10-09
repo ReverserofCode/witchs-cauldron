@@ -78,6 +78,7 @@ export default function GlobalNav({ brand, items = defaultItems }: GlobalNavProp
 
           <nav aria-label="글로벌 내비게이션">
             <ul className="items-center hidden gap-2 md:gap-3 md:flex">
+              <span>커뮤니티 바로가기</span>
               {items.map((item) => (
                 <li key={item.href}>
                   {item.href.startsWith('http') ? (
