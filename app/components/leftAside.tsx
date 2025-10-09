@@ -13,14 +13,14 @@ export default function LeftAside({ className }: LeftAsideProps = {}): ReactElem
     return (
         <aside
             className={[
-                'flex h-full w-full max-w-xs flex-col gap-5 rounded-3xl border border-white/15 bg-white/10 p-5 shadow-lg shadow-purple-950/20 backdrop-blur-lg lg:max-w-[220px] xl:max-w-[240px]',
+                'flex h-full w-full max-w-[200px] flex-col gap-4 rounded-3xl border border-white/15 bg-white/10 p-4 shadow-lg shadow-purple-950/20 backdrop-blur-lg lg:max-w-[220px] xl:max-w-[240px]',
                 className,
             ].filter(Boolean).join(' ')}
         >
             <SectionCard
                 tone="lavender"
                 className="h-full rounded-2xl border-white/40 bg-white/60 shadow-md shadow-purple-900/10"
-                bodyClassName="gap-6"
+                bodyClassName="gap-5"
                 eyebrow="Fan Art"
                 title="마녀의 작업실"
                 description="팬 블렌드 벽지를 다운로드하고 데스크톱을 꾸며보세요."
