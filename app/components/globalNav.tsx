@@ -73,7 +73,7 @@ export default function GlobalNav({ brand, items = defaultItems }: GlobalNavProp
             <span className="inline-block w-10 h-10 overflow-hidden rounded-full">
               <Image src="/mainPage/favicon_moing.png" alt="Moing" width={40} height={40} className="object-cover w-full h-full" />
             </span>
-            {brand ?? <span>마녀의 포션공방</span>}
+            {brand ?? <span>마녀의 포션 공방</span>}
           </Link>
 
           <nav aria-label="글로벌 내비게이션">
