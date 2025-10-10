@@ -25,7 +25,7 @@ export default async function Page(): Promise<ReactElement> {
       : ''
   const liveChipLabel = liveStatus.isLive ? `실시간 방송 중${viewerText}` : '현재 오프라인'
   const liveStatusDescription = liveStatus.error
-    ? '방송 상태를 확인하지 못했습니다. 잠시 후 다시 확인해 주세요.'
+    ? '다음 방송을 기다려주세요.'
     : liveStatus.isLive
     ? '모잉이 지금도 마법을 선보이는 중입니다!'
     : '다음 방송을 기다려주세요.'

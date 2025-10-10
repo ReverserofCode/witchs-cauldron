@@ -152,8 +152,8 @@ export default function LeftSidebar({ className, images }: LeftSidebarProps = {}
         tone="neutral"
         className="shadow-md rounded-2xl border-white/40 bg-white/80 shadow-purple-900/10"
         bodyClassName="gap-3"
-        eyebrow="Today"
-        title="오늘의 첫 방송"
+        eyebrow="Schedule"
+        title="가까운 방송"
         description={nextEventLabel}
       >
         {scheduleStatus === "loading" && <ScheduleAsideSkeleton />}
@@ -211,17 +211,7 @@ export default function LeftSidebar({ className, images }: LeftSidebarProps = {}
           <YouTubeSectionStatus tone="error">{topVideoError}</YouTubeSectionStatus>
         )}
         {topVideoStatus === "ready" && topVideo && <QuickVideoItem label="지난달 1위" video={topVideo} />}
-        <div className="grid gap-2 text-[11px]">
-          <a href="#featured-latest" className="btn btn-ghost h-8 justify-center text-[11px]">
-            최신 영상 섹션으로 이동
-          </a>
-          <a href="#featured-top" className="btn btn-ghost h-8 justify-center text-[11px]">
-            최다 조회수 섹션으로 이동
-          </a>
-        </div>
       </SectionCard>
-
-      
 
       {gallery.length > 0 && (
         <SectionCard

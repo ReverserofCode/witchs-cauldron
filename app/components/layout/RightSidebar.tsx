@@ -88,7 +88,7 @@ export default function RightSidebar({ className, images }: RightSidebarProps = 
         className="shadow-md rounded-2xl border-white/40 bg-white/88 shadow-purple-900/10"
         bodyClassName="gap-3"
         eyebrow="Community"
-        title="모잉 커뮤니티"
+        title="커뮤니티"
         description="팬들과 함께하는 공식 채널"
       >
         <ul className="flex flex-col gap-2 text-[11px] text-purple-900/85">
