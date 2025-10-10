@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { YOUTUBE_API_KEY, resolveChannelId } from "./shared";
+import { YOUTUBE_API_KEY, resolveChannelMetadata } from "./shared";
 
 const MAX_RESULTS = 4;
 const CHANNEL_HANDLES = {
@@ -19,38 +19,49 @@ interface VideoItem {
   url: string;
 }
 
-async function fetchLatestVideos(channelId: string): Promise<VideoItem[]> {
+async function fetchLatestVideos(playlistId: string): Promise<VideoItem[]> {
   const params = new URLSearchParams({
-    channelId,
-    part: "snippet",
-    order: "date",
+    playlistId,
+    part: "snippet,contentDetails",
     maxResults: String(MAX_RESULTS),
-    type: "video",
   });
   params.set("key", YOUTUBE_API_KEY);
 
   const res = await fetch(
-    `https://www.googleapis.com/youtube/v3/search?${params.toString()}`,
+    `https://www.googleapis.com/youtube/v3/playlistItems?${params.toString()}`,
     { next: { revalidate: 60 } }
   );
 
   if (!res.ok) {
-    console.error("영상 조회 실패", channelId, await res.text());
+    console.error("영상 조회 실패", playlistId, await res.text());
     return [];
   }
 
   const data = await res.json();
 
-  return (data.items ?? [])
-    .filter((item: any) => item.id?.videoId && item.id.kind === "youtube#video")
-    .map((item: any) => ({
-      videoId: item.id.videoId,
-      title: item.snippet.title,
-      publishedAt: item.snippet.publishedAt,
-      thumbnail: item.snippet.thumbnails?.medium?.url ?? "",
-      channelTitle: item.snippet.channelTitle,
-      url: `https://www.youtube.com/watch?v=${item.id.videoId}`,
-    }));
+  return ((data.items ?? []) as Array<Record<string, any>>)
+    .map<VideoItem | null>((item) => {
+      const snippet = item.snippet;
+      const videoId =
+        snippet?.resourceId?.videoId ?? item.contentDetails?.videoId;
+      if (!videoId || !snippet) {
+        return null;
+      }
+
+      return {
+        videoId,
+        title: snippet.title,
+        publishedAt: snippet.publishedAt,
+        thumbnail: snippet.thumbnails?.medium?.url ?? "",
+        channelTitle: snippet.channelTitle,
+        url: `https://www.youtube.com/watch?v=${videoId}`,
+      } satisfies VideoItem;
+    })
+    .filter((value): value is VideoItem => value !== null)
+    .sort(
+      (a: VideoItem, b: VideoItem) =>
+        Date.parse(b.publishedAt) - Date.parse(a.publishedAt)
+    );
 }
 
 export async function GET() {
@@ -58,12 +69,12 @@ export async function GET() {
 
   const results = await Promise.all(
     entries.map(async ([key, handle]) => {
-      const channelId = await resolveChannelId(handle);
-      if (!channelId) {
+      const metadata = await resolveChannelMetadata(handle);
+      if (!metadata) {
         return [key, [] as VideoItem[]] as const;
       }
 
-      const videos = await fetchLatestVideos(channelId);
+      const videos = await fetchLatestVideos(metadata.uploadsPlaylistId);
       return [key, videos] as const;
     })
   );

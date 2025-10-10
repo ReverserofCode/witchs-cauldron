@@ -2,93 +2,173 @@
 // 목표 채널: https://www.youtube.com/@%EB%AA%A8%EC%9E%89%EC%88%98%EC%A0%9C%EB%AC%B8%EC%96%B4%ED%8F%AC%EC%85%98
 
 import { NextResponse } from "next/server";
+import {
+  YOUTUBE_API_KEY,
+  resolveChannelMetadata,
+} from "../youTubePlayer/shared";
 
-const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY ?? ""; // 환경변수에 API 키 저장 필요
-if (!YOUTUBE_API_KEY) {
-  throw new Error("YOUTUBE_API_KEY 환경변수가 설정되어 있지 않습니다.");
-}
 const CHANNEL_HANDLE = "모잉수제문어포션"; // @ 제외한 YouTube 채널 핸들
 const MAX_RESULTS = 12;
-let cachedChannelId: string | null = null;
+const MAX_LOOKAHEAD = 40; // 쇼츠만 필터링하므로 넉넉히 가져와서 추리는 방식
 
-async function resolveChannelId(): Promise<string | null> {
-  if (cachedChannelId) return cachedChannelId;
+interface PlaylistItemSnippet {
+  videoId: string;
+  title: string;
+  publishedAt: string;
+  thumbnail: string;
+  channelTitle: string;
+}
 
-  const params = new URLSearchParams({ part: "id", forHandle: CHANNEL_HANDLE });
-  params.set("key", YOUTUBE_API_KEY);
-
-  const res = await fetch(
-    `https://www.googleapis.com/youtube/v3/channels?${params.toString()}`
-  );
-
-  if (!res.ok) {
-    console.error("YouTube channels API 실패", await res.text());
-    return null;
+function parseIsoDurationToSeconds(duration: string): number {
+  const match = duration.match(/^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/);
+  if (!match) {
+    return Number.POSITIVE_INFINITY;
   }
 
-  const data = await res.json();
-  const channelId: string | undefined = data.items?.[0]?.id;
-  if (channelId) {
-    cachedChannelId = channelId;
-    return channelId;
+  const hours = Number(match[1] ?? 0);
+  const minutes = Number(match[2] ?? 0);
+  const seconds = Number(match[3] ?? 0);
+  return hours * 3600 + minutes * 60 + seconds;
+}
+
+async function fetchRecentPlaylistItems(
+  playlistId: string
+): Promise<PlaylistItemSnippet[]> {
+  const collected: PlaylistItemSnippet[] = [];
+  let pageToken: string | undefined;
+
+  do {
+    const params = new URLSearchParams({
+      playlistId,
+      part: "snippet,contentDetails",
+      maxResults: "50",
+    });
+    if (pageToken) {
+      params.set("pageToken", pageToken);
+    }
+    params.set("key", YOUTUBE_API_KEY);
+
+    const res = await fetch(
+      `https://www.googleapis.com/youtube/v3/playlistItems?${params.toString()}`,
+      { next: { revalidate: 60 } }
+    );
+
+    if (!res.ok) {
+      console.error(
+        "유튜브 업로드 플레이리스트 조회 실패",
+        playlistId,
+        await res.text()
+      );
+      break;
+    }
+
+    const data = await res.json();
+    const items = (data.items ?? []) as Array<Record<string, any>>;
+
+    for (const item of items) {
+      const snippet = item.snippet;
+      const videoId =
+        snippet?.resourceId?.videoId ?? item.contentDetails?.videoId;
+      if (!snippet || !videoId) {
+        continue;
+      }
+
+      collected.push({
+        videoId,
+        title: snippet.title as string,
+        publishedAt: snippet.publishedAt as string,
+        thumbnail: snippet.thumbnails?.medium?.url ?? "",
+        channelTitle: snippet.channelTitle as string,
+      });
+    }
+
+    pageToken = data.nextPageToken;
+
+    if (!pageToken || collected.length >= MAX_LOOKAHEAD) {
+      break;
+    }
+  } while (true);
+
+  return collected;
+}
+
+async function fetchVideoDurations(
+  videoIds: string[]
+): Promise<Record<string, number>> {
+  if (videoIds.length === 0) {
+    return {};
   }
 
-  return null;
+  const uniqueIds = Array.from(new Set(videoIds));
+  const durations: Record<string, number> = {};
+  const chunkSize = 50;
+
+  for (let index = 0; index < uniqueIds.length; index += chunkSize) {
+    const chunk = uniqueIds.slice(index, index + chunkSize);
+    const params = new URLSearchParams({
+      id: chunk.join(","),
+      part: "contentDetails",
+    });
+    params.set("key", YOUTUBE_API_KEY);
+
+    const res = await fetch(
+      `https://www.googleapis.com/youtube/v3/videos?${params.toString()}`,
+      { next: { revalidate: 60 } }
+    );
+
+    if (!res.ok) {
+      console.error("유튜브 영상 상세 조회 실패", await res.text());
+      continue;
+    }
+
+    const data = await res.json();
+    for (const item of data.items ?? []) {
+      const id = item.id;
+      const durationIso = item.contentDetails?.duration as string | undefined;
+      if (typeof id === "string" && typeof durationIso === "string") {
+        durations[id] = parseIsoDurationToSeconds(durationIso);
+      }
+    }
+  }
+
+  return durations;
 }
 
 export async function GET() {
-  if (!YOUTUBE_API_KEY) {
-    return NextResponse.json(
-      { error: "YOUTUBE_API_KEY 환경변수가 설정되어 있지 않습니다." },
-      { status: 500 }
-    );
-  }
-
-  const channelId = await resolveChannelId();
-  if (!channelId) {
+  const metadata = await resolveChannelMetadata(CHANNEL_HANDLE);
+  if (!metadata) {
     return NextResponse.json(
       { error: "채널 정보를 찾을 수 없습니다." },
       { status: 404 }
     );
   }
 
-  const params = new URLSearchParams({
-    channelId,
-    part: "snippet",
-    order: "date",
-    maxResults: String(MAX_RESULTS),
-    type: "video",
-  });
-  params.set("key", YOUTUBE_API_KEY);
+  const playlistItems = await fetchRecentPlaylistItems(
+    metadata.uploadsPlaylistId
+  );
 
-  const apiUrl = `https://www.googleapis.com/youtube/v3/search?${params.toString()}`;
-
-  const res = await fetch(apiUrl);
-  if (!res.ok) {
-    return NextResponse.json(
-      { error: "YouTube API 호출 실패" },
-      { status: 500 }
-    );
+  if (playlistItems.length === 0) {
+    return NextResponse.json([]);
   }
-  const data = await res.json();
 
-  // Shorts만 필터링 (videoId가 있고, /shorts/ 링크가 있는 경우)
-  const shorts = data.items
-    .filter((item: any) => {
-      // Shorts는 videoId로 /shorts/ 링크를 만들 수 있음
-      return item.id?.videoId && item.snippet?.title;
+  const durations = await fetchVideoDurations(
+    playlistItems.map((item) => item.videoId)
+  );
+
+  const shortsOnly = playlistItems
+    .filter((item) => {
+      const duration = durations[item.videoId];
+      return Number.isFinite(duration) && duration <= 65; // 60초 + 여유
     })
-    .map((item: any) => ({
-      videoId: item.id.videoId,
-      title: item.snippet.title,
-      publishedAt: item.snippet.publishedAt,
-      thumbnail: item.snippet.thumbnails.medium.url,
-      channelTitle: item.snippet.channelTitle,
-      url: `https://www.youtube.com/shorts/${item.id.videoId}`,
+    .slice(0, MAX_RESULTS)
+    .map((item) => ({
+      videoId: item.videoId,
+      title: item.title,
+      publishedAt: item.publishedAt,
+      thumbnail: item.thumbnail,
+      channelTitle: item.channelTitle,
+      url: `https://www.youtube.com/shorts/${item.videoId}`,
     }));
-
-  // Shorts URL 패턴만 남기기 (혹시 일반 영상이 섞여있을 경우)
-  const shortsOnly = shorts.filter((s: any) => s.url.includes("/shorts/"));
 
   return NextResponse.json(shortsOnly);
 }

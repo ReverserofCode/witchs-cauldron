@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { YOUTUBE_API_KEY, resolveChannelId } from "../shared";
+import { YOUTUBE_API_KEY, resolveChannelMetadata } from "../shared";
 
 const CHANNEL_HANDLES = ["moing", "fullmoing"] as const;
 type ChannelHandle = (typeof CHANNEL_HANDLES)[number];
@@ -43,13 +43,13 @@ export async function GET() {
   }> = [];
 
   for (const handle of CHANNEL_HANDLES) {
-    const channelId = await resolveChannelId(handle);
-    if (!channelId) {
+    const metadata = await resolveChannelMetadata(handle);
+    if (!metadata) {
       continue;
     }
 
     const channelVideos = await fetchChannelVideos(
-      channelId,
+      metadata.uploadsPlaylistId,
       monthStart,
       nextMonthStart
     );
@@ -110,7 +110,7 @@ export async function GET() {
 }
 
 async function fetchChannelVideos(
-  channelId: string,
+  playlistId: string,
   monthStart: Date,
   nextMonthStart: Date
 ): Promise<
@@ -123,61 +123,82 @@ async function fetchChannelVideos(
     url: string;
   }>
 > {
-  const searchParams = new URLSearchParams({
-    channelId,
-    part: "snippet",
-    order: "viewCount",
-    maxResults: "10",
-    type: "video",
-    publishedAfter: monthStart.toISOString(),
-    publishedBefore: nextMonthStart.toISOString(),
-  });
-  searchParams.set("key", YOUTUBE_API_KEY);
+  const collected: Array<{
+    videoId: string;
+    title: string;
+    thumbnail: string;
+    channelTitle: string;
+    publishedAt: string;
+    url: string;
+  }> = [];
 
-  const searchRes = await fetch(
-    `https://www.googleapis.com/youtube/v3/search?${searchParams.toString()}`,
-    { next: { revalidate: 300 } }
-  );
+  let pageToken: string | undefined;
 
-  if (!searchRes.ok) {
-    console.error(
-      "조회수 상위 영상 조회 실패",
-      channelId,
-      await searchRes.text()
+  do {
+    const params = new URLSearchParams({
+      playlistId,
+      part: "snippet,contentDetails",
+      maxResults: "50",
+    });
+    if (pageToken) {
+      params.set("pageToken", pageToken);
+    }
+    params.set("key", YOUTUBE_API_KEY);
+
+    const res = await fetch(
+      `https://www.googleapis.com/youtube/v3/playlistItems?${params.toString()}`,
+      { next: { revalidate: 300 } }
     );
-    return [];
-  }
 
-  const searchData = await searchRes.json();
-  const filteredItems = (searchData.items ?? []).filter((item: any) => {
-    if (!item.id?.videoId) {
-      return false;
+    if (!res.ok) {
+      console.error(
+        "업로드 플레이리스트 조회 실패",
+        playlistId,
+        await res.text()
+      );
+      break;
     }
 
-    const publishedAt = item.snippet?.publishedAt;
-    if (!publishedAt) {
-      return false;
+    const data = await res.json();
+    const items = (data.items ?? []) as Array<Record<string, any>>;
+
+    for (const item of items) {
+      const snippet = item.snippet;
+      const videoId =
+        snippet?.resourceId?.videoId ?? item.contentDetails?.videoId;
+      const publishedAt = snippet?.publishedAt;
+
+      if (!videoId || !snippet || !publishedAt) {
+        continue;
+      }
+
+      const publishedTime = Date.parse(publishedAt);
+      if (
+        Number.isNaN(publishedTime) ||
+        publishedTime < monthStart.getTime() ||
+        publishedTime >= nextMonthStart.getTime()
+      ) {
+        continue;
+      }
+
+      collected.push({
+        videoId,
+        title: snippet.title as string,
+        thumbnail: snippet.thumbnails?.medium?.url ?? "",
+        channelTitle: snippet.channelTitle as string,
+        publishedAt,
+        url: `https://www.youtube.com/watch?v=${videoId}`,
+      });
     }
 
-    const publishedTime = Date.parse(publishedAt);
-    if (Number.isNaN(publishedTime)) {
-      return false;
+    pageToken = data.nextPageToken;
+
+    if (!pageToken || collected.length >= 50) {
+      break;
     }
+  } while (true);
 
-    return (
-      publishedTime >= monthStart.getTime() &&
-      publishedTime < nextMonthStart.getTime()
-    );
-  });
-
-  return filteredItems.map((item: any) => ({
-    videoId: item.id.videoId as string,
-    title: item.snippet.title as string,
-    thumbnail: item.snippet.thumbnails?.medium?.url ?? "",
-    channelTitle: item.snippet.channelTitle as string,
-    publishedAt: item.snippet.publishedAt as string,
-    url: `https://www.youtube.com/watch?v=${item.id.videoId}`,
-  }));
+  return collected;
 }
 
 async function fetchVideoViewCounts(
