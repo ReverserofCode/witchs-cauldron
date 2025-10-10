@@ -6,8 +6,7 @@ import { Metadata } from 'next'
 import { ReactNode } from 'react'
 import './globals.css'
 import { Noto_Sans_KR } from 'next/font/google'
-import Header from './components/header'
-import Footer from './components/footer'
+import { Header, Footer } from '@/app/components/layout'
 
 const notoSansKr = Noto_Sans_KR({
   subsets: ['latin'],

@@ -1,9 +1,9 @@
 "use client";
 
-import SectionCard from "./sectionCard";
+import { SectionCard } from "@/app/components/cards";
 import YouTubeCategorySection from "./YouTubeCategorySection";
-import YouTubeSectionStatus from "./YouTubeSectionStatus";
-import { useYouTubeVideos } from "../hooks/useYouTubeVideos";
+import { YouTubeSectionStatus } from "@/app/components/status";
+import { useYouTubeVideos } from "@/app/hooks/useYouTubeVideos";
 
 interface YouTubeFanVideosSectionProps {
   className?: string;
@@ -36,12 +36,7 @@ export default function YouTubeFanVideosSection({ className }: YouTubeFanVideosS
         <YouTubeSectionStatus tone="empty">현재 팬 채널 하이라이트 영상이 없습니다.</YouTubeSectionStatus>
       )}
 
-      {isReady && videos.length > 0 && (
-        <YouTubeCategorySection
-          description="모잉수제문어포션"
-          videos={videos}
-        />
-      )}
+      {isReady && videos.length > 0 && <YouTubeCategorySection description="모잉수제문어포션" videos={videos} />}
     </SectionCard>
   );
 }

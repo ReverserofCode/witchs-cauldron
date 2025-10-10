@@ -1,17 +1,19 @@
 "use client";
 
-import SectionCard from "./sectionCard";
+import { SectionCard } from "@/app/components/cards";
 import YouTubeCategorySection from "./YouTubeCategorySection";
-import YouTubeSectionStatus from "./YouTubeSectionStatus";
-import { useYouTubeVideos } from "../hooks/useYouTubeVideos";
+import { YouTubeSectionStatus } from "@/app/components/status";
+import { useYouTubeVideos } from "@/app/hooks/useYouTubeVideos";
 
-interface YouTubeFullMoingVideosSectionProps {
+interface YouTubeOfficialVideosSectionProps {
   className?: string;
 }
 
-export default function YouTubeFullMoingVideosSection({ className }: YouTubeFullMoingVideosSectionProps = {}) {
+export default function YouTubeOfficialVideosSection({
+  className,
+}: YouTubeOfficialVideosSectionProps = {}) {
   const { data, error, status } = useYouTubeVideos();
-  const videos = data?.fullmoing ?? [];
+  const videos = data?.moing ?? [];
   const isLoading = status === "idle" || status === "loading";
   const isError = status === "error";
   const isReady = status === "ready";
@@ -21,8 +23,8 @@ export default function YouTubeFullMoingVideosSection({ className }: YouTubeFull
       className={className}
       tone="neutral"
       eyebrow="YouTube Hub"
-      title="모잉 다시보기 (Full) 최신 영상"
-      description="1시간 이상 길이의 다시보기(@fullmoing)"
+      title="공식 채널 최신 영상"
+      description="공식 채널(@moing)의 최신 업로드"
       bodyClassName="space-y-6"
     >
       {isLoading && <YouTubeSectionStatus tone="info">불러오는 중...</YouTubeSectionStatus>}
@@ -33,12 +35,10 @@ export default function YouTubeFullMoingVideosSection({ className }: YouTubeFull
       )}
 
       {isReady && !videos.length && (
-        <YouTubeSectionStatus tone="empty">현재 업로드된 다시보기 영상이 없습니다.</YouTubeSectionStatus>
+        <YouTubeSectionStatus tone="empty">현재 업로드된 영상이 없습니다.</YouTubeSectionStatus>
       )}
 
-      {isReady && videos.length > 0 && (
-        <YouTubeCategorySection videos={videos} />
-      )}
+      {isReady && videos.length > 0 && <YouTubeCategorySection videos={videos} />}
     </SectionCard>
   );
 }

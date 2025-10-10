@@ -1,7 +1,8 @@
 "use client";
+
 import { useEffect, useState } from "react";
-import VideoCard from "./VideoCard";
-import SectionCard from "./sectionCard";
+import VideoCard from "../cards/VideoCard";
+import SectionCard from "../cards/SectionCard";
 
 interface ShortItem {
   videoId: string;

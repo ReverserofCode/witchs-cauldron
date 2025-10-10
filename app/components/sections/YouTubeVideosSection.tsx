@@ -1,9 +1,9 @@
 "use client";
 
-import SectionCard from "./sectionCard";
+import { SectionCard } from "@/app/components/cards";
 import YouTubeCategorySection from "./YouTubeCategorySection";
-import YouTubeSectionStatus from "./YouTubeSectionStatus";
-import { useYouTubeVideos } from "../hooks/useYouTubeVideos";
+import { YouTubeSectionStatus } from "@/app/components/status";
+import { useYouTubeVideos } from "@/app/hooks/useYouTubeVideos";
 
 const CATEGORY_CONFIG = [
   {
@@ -37,9 +37,7 @@ export default function YouTubeVideosSection() {
       description="모잉 공식·다시보기·팬 채널의 최신 영상을 한눈에 확인해 보세요."
       bodyClassName="space-y-6"
     >
-      {isLoading && (
-        <YouTubeSectionStatus tone="info">불러오는 중...</YouTubeSectionStatus>
-      )}
+      {isLoading && <YouTubeSectionStatus tone="info">불러오는 중...</YouTubeSectionStatus>}
       {isError && (
         <YouTubeSectionStatus tone="error">
           {error ?? "유튜브 영상을 불러오지 못했습니다."}

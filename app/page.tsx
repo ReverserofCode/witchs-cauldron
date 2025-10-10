@@ -6,29 +6,28 @@ import Image from 'next/image'
 import { ReactElement } from 'react'
 import { getChzzkLiveStatus } from './api/chzzkPlayer/chzzkPlayer'
 import profileImg from '../public/mainPage/Profile.png'
-import LeftAside from './components/leftaside'
-import RightAside from './components/rightAside'
-import ScheduleSection from './components/scheduleSection'
-import SectionCard from './components/sectionCard'
-import YouTubeShortsSection from './components/YouTubeShortsSection'
-import YouTubeVideosSection from './components/YouTubeVideosSection'
-import LatestYouTubeVideoCard from './components/latestYouTubeVideoCard'
-import TopOfficialYouTubeVideoCard from './components/topOfficialYouTubeVideoCard'
-import YouTubeOfficialVideosSection from './components/YouTubeOfficialVideosSection'
-import YouTubeFullMoingVideosSection from './components/YouTubeFullMoingVideosSection'
-import YouTubeFanVideosSection from './components/YouTubeFanVideosSection'
+import { LeftSidebar, RightSidebar } from '@/app/components/layout'
+import { SectionCard, LatestYouTubeVideoCard, TopOfficialYouTubeVideoCard } from '@/app/components/cards'
+import {
+  ScheduleSection,
+  YouTubeOfficialVideosSection,
+  YouTubeFullMoingVideosSection,
+  YouTubeFanVideosSection,
+} from '@/app/components/sections'
 
 
 export default async function Page(): Promise<ReactElement> {
   const liveStatus = await getChzzkLiveStatus()
   const liveChipClass = `chip inline-flex items-center gap-1.5 border ${liveStatus.isLive ? 'bg-rose-500/90 border-rose-300/60 text-white' : 'bg-slate-700/80 border-slate-600/70 text-slate-100'}`
-  const liveChipLabel = liveStatus.isLive
-    ? `실시간 방송 중${typeof liveStatus.viewers === 'number'}`
-    : '현재 오프라인'
+  const viewerText =
+    liveStatus.isLive && typeof liveStatus.viewers === 'number' && Number.isFinite(liveStatus.viewers)
+      ? ` • ${liveStatus.viewers.toLocaleString()}명 시청중`
+      : ''
+  const liveChipLabel = liveStatus.isLive ? `실시간 방송 중${viewerText}` : '현재 오프라인'
   const liveStatusDescription = liveStatus.error
-    ? '방송이 오프라인 상태입니다.'
+    ? '방송 상태를 확인하지 못했습니다. 잠시 후 다시 확인해 주세요.'
     : liveStatus.isLive
-    ? '모잉이 마법을 선보이는 중입니다!'
+    ? '모잉이 지금도 마법을 선보이는 중입니다!'
     : '다음 방송을 기다려주세요.'
 
   return (
@@ -36,7 +35,7 @@ export default async function Page(): Promise<ReactElement> {
       <div className="w-full px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
         <div className="grid w-full grid-cols-1 gap-4 lg:grid-cols-[minmax(180px,0.7fr)_minmax(0,2.6fr)_minmax(180px,0.7fr)] xl:grid-cols-[minmax(200px,0.8fr)_minmax(0,2.4fr)_minmax(200px,0.8fr)] xl:gap-6">
           {/* Left Aside */}
-          <LeftAside className="hidden lg:flex lg:sticky lg:top-24" />
+          <LeftSidebar className="hidden lg:flex lg:sticky lg:top-24" />
           {/* Center Content Wrapper: 중앙 컬럼에 본문을 모아 배치 */}
           <div className="flex min-w-0 flex-col gap-14 text-[15px] leading-relaxed lg:px-3">
             {/* HERO */}
@@ -126,7 +125,7 @@ export default async function Page(): Promise<ReactElement> {
             </div>
           </div>
           {/* Right Aside */}
-          <RightAside className="hidden lg:flex lg:sticky lg:top-24" />
+          <RightSidebar className="hidden lg:flex lg:sticky lg:top-24" />
         </div>
       </div>
     </main>

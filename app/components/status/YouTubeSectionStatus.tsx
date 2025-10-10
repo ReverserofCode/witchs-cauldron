@@ -13,9 +13,7 @@ const toneClasses: Record<YouTubeSectionStatusProps["tone"], string> = {
 
 export default function YouTubeSectionStatus({ tone, children }: YouTubeSectionStatusProps) {
   return (
-    <div
-      className={`rounded-2xl border p-3 text-sm typography-body shadow-sm backdrop-blur-sm ${toneClasses[tone]}`}
-    >
+    <div className={`rounded-2xl border p-3 text-sm typography-body shadow-sm backdrop-blur-sm ${toneClasses[tone]}`}>
       {children}
     </div>
   );

@@ -1,142 +1,132 @@
-'use client'
+'use client';
 
-import { useEffect, useMemo, useState } from 'react'
-import SectionCard from './sectionCard'
-import type { ScheduleDiagnostics, ScheduleEvent, ScheduleFeed } from '../api/broadCastSchedule/schedule'
+import { useEffect, useMemo, useState } from 'react';
+import SectionCard from '../cards/SectionCard';
+import type { ScheduleDiagnostics, ScheduleEvent, ScheduleFeed } from '@/app/api/broadCastSchedule/schedule';
 
-type ScheduleStatus = 'idle' | 'loading' | 'ready' | 'error'
+type ScheduleStatus = 'idle' | 'loading' | 'ready' | 'error';
 
 interface ScheduleSectionProps {
-  className?: string
-  limit?: number
+  className?: string;
+  limit?: number;
 }
 
 interface WeekColumn {
-  isoDate: string
-  dateLabel: string
-  weekdayLabel: string
-  events: ScheduleEvent[]
-  isWeekend: boolean
+  isoDate: string;
+  dateLabel: string;
+  weekdayLabel: string;
+  events: ScheduleEvent[];
+  isWeekend: boolean;
 }
-const SCHEDULE_ENDPOINT = '/api/broadCastSchedule'
-const MAX_EVENTS_PER_DAY = 4
-const DAYS_TO_SHOW = 4
+
+const SCHEDULE_ENDPOINT = '/api/broadCastSchedule';
+const MAX_EVENTS_PER_DAY = 4;
+const DAYS_TO_SHOW = 4;
 
 export default function ScheduleSection({
   className,
   limit = MAX_EVENTS_PER_DAY,
 }: ScheduleSectionProps) {
-  const [status, setStatus] = useState<ScheduleStatus>('idle')
-  const [events, setEvents] = useState<ScheduleEvent[]>([])
-  const [error, setError] = useState<string | null>(null)
-  const [diagnostics, setDiagnostics] = useState<ScheduleDiagnostics | null>(null)
-  const [diagnoseStatus, setDiagnoseStatus] = useState<'idle' | 'running' | 'ready' | 'error'>(
-    'idle'
-  )
-  const [diagnoseError, setDiagnoseError] = useState<string | null>(null)
-  const [weekRange, setWeekRange] = useState<{ start: string; end: string } | null>(null)
+  const [status, setStatus] = useState<ScheduleStatus>('idle');
+  const [events, setEvents] = useState<ScheduleEvent[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [diagnostics, setDiagnostics] = useState<ScheduleDiagnostics | null>(null);
+  const [diagnoseStatus, setDiagnoseStatus] = useState<'idle' | 'running' | 'ready' | 'error'>('idle');
+  const [diagnoseError, setDiagnoseError] = useState<string | null>(null);
+  const [weekRange, setWeekRange] = useState<{ start: string; end: string } | null>(null);
 
   const clampedLimit = useMemo(() => {
     if (typeof limit !== 'number' || Number.isNaN(limit)) {
-      return MAX_EVENTS_PER_DAY
+      return MAX_EVENTS_PER_DAY;
     }
 
-    const integral = Math.trunc(limit)
-    return Math.max(1, Math.min(integral, MAX_EVENTS_PER_DAY))
-  }, [limit])
+    const integral = Math.trunc(limit);
+    return Math.max(1, Math.min(integral, MAX_EVENTS_PER_DAY));
+  }, [limit]);
 
   useEffect(() => {
-    let cancelled = false
+    let cancelled = false;
 
     async function loadSchedule() {
-      setStatus('loading')
-      setError(null)
-      setDiagnostics(null)
-      setDiagnoseStatus('idle')
-      setDiagnoseError(null)
+      setStatus('loading');
+      setError(null);
+      setDiagnostics(null);
+      setDiagnoseStatus('idle');
+      setDiagnoseError(null);
 
       try {
         const res = await fetch(SCHEDULE_ENDPOINT, {
           headers: { accept: 'application/json' },
-        })
+        });
 
         if (!res.ok) {
-          throw new Error(`요청이 실패했습니다. (${res.status})`)
+          throw new Error(`요청이 실패했습니다. (${res.status})`);
         }
 
-        const data = (await res.json()) as ScheduleFeed
+        const data = (await res.json()) as ScheduleFeed;
         if (!cancelled) {
-          const { events: upcomingWeek, range } = selectEventsForWeek(
-            data.events,
-            DAYS_TO_SHOW
-          )
-          setEvents(upcomingWeek)
-          setWeekRange(range)
-          setStatus('ready')
+          const { events: upcomingWeek, range } = selectEventsForWeek(data.events, DAYS_TO_SHOW);
+          setEvents(upcomingWeek);
+          setWeekRange(range);
+          setStatus('ready');
         }
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.')
-          setStatus('error')
+          setError(err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.');
+          setStatus('error');
         }
       }
     }
 
-    loadSchedule()
+    loadSchedule();
 
     return () => {
-      cancelled = true
-    }
-  }, [])
+      cancelled = true;
+    };
+  }, []);
 
   const handleRunDiagnostics = async () => {
-    setDiagnoseStatus('running')
-    setDiagnoseError(null)
+    setDiagnoseStatus('running');
+    setDiagnoseError(null);
 
     try {
       const res = await fetch(`${SCHEDULE_ENDPOINT}?debug=1`, {
         headers: { accept: 'application/json' },
         cache: 'no-store',
-      })
+      });
 
       if (!res.ok) {
-        throw new Error(`진단 요청이 실패했습니다. (${res.status})`)
+        throw new Error(`진단 요청이 실패했습니다. (${res.status})`);
       }
 
       const payload = (await res.json()) as {
-        diagnostics: ScheduleDiagnostics
-        feed: ScheduleFeed | null
-        hint?: string
-      }
+        diagnostics: ScheduleDiagnostics;
+        feed: ScheduleFeed | null;
+        hint?: string;
+      };
 
-      setDiagnostics(payload.diagnostics)
+      setDiagnostics(payload.diagnostics);
 
-      const { events: upcomingWeek, range } = selectEventsForWeek(
-        payload.feed?.events ?? [],
-        DAYS_TO_SHOW
-      )
-      setEvents(upcomingWeek)
-      setWeekRange(range)
-      setStatus('ready')
+      const { events: upcomingWeek, range } = selectEventsForWeek(payload.feed?.events ?? [], DAYS_TO_SHOW);
+      setEvents(upcomingWeek);
+      setWeekRange(range);
+      setStatus('ready');
 
-      setDiagnoseStatus('ready')
+      setDiagnoseStatus('ready');
     } catch (err) {
-      setDiagnoseStatus('error')
-      setDiagnoseError(err instanceof Error ? err.message : '진단 실행 중 오류가 발생했습니다.')
+      setDiagnoseStatus('error');
+      setDiagnoseError(err instanceof Error ? err.message : '진단 실행 중 오류가 발생했습니다.');
     }
-  }
+  };
 
   const weekColumns = useMemo<WeekColumn[]>(
     () => buildWeekColumns(events, weekRange?.start, clampedLimit),
     [events, weekRange?.start, clampedLimit]
-  )
+  );
 
-  const hasAnyEvents = useMemo(
-    () => weekColumns.some((day) => day.events.length > 0),
-    [weekColumns]
-  )
+  const hasAnyEvents = useMemo(() => weekColumns.some((day) => day.events.length > 0), [weekColumns]);
 
-  const weekRangeLabel = useMemo(() => formatWeekRangeLabel(weekRange), [weekRange])
+  const weekRangeLabel = useMemo(() => formatWeekRangeLabel(weekRange), [weekRange]);
 
   return (
     <SectionCard
@@ -183,9 +173,7 @@ export default function ScheduleSection({
         <div className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-purple-800/70">
             {weekRangeLabel && <span>{weekRangeLabel}</span>}
-            {!hasAnyEvents && (
-              <span className="font-medium text-purple-700 typography-small">이번 주에는 예정된 방송이 없습니다.</span>
-            )}
+            {!hasAnyEvents && <span className="font-medium text-purple-700 typography-small">이번 주에는 예정된 방송이 없습니다.</span>}
           </div>
 
           <div className="overflow-x-auto">
@@ -194,9 +182,7 @@ export default function ScheduleSection({
                 <li
                   key={day.isoDate}
                   className={`flex min-h-[200px] flex-col rounded-2xl border p-4 shadow-sm transition ${
-                    day.isWeekend
-                      ? 'border-purple-300/70 bg-purple-50/80'
-                      : 'border-white/60 bg-white/80'
+                    day.isWeekend ? 'border-purple-300/70 bg-purple-50/80' : 'border-white/60 bg-white/80'
                   }`}
                 >
                   <header className="flex flex-col gap-1 mb-3">
@@ -223,9 +209,7 @@ export default function ScheduleSection({
                           key={event.id}
                           className="px-3 py-2 text-xs text-purple-900 border shadow-sm rounded-xl border-purple-100/70 bg-white/90"
                         >
-                          <p className="font-semibold text-purple-900/95 line-clamp-2 typography-body">
-                            {event.title}
-                          </p>
+                          <p className="font-semibold text-purple-900/95 line-clamp-2 typography-body">{event.title}</p>
                           <p className="mt-1 text-[11px] font-medium text-purple-700/80 typography-small">
                             {formatTimeRange(event.start, event.end)}
                           </p>
@@ -236,9 +220,7 @@ export default function ScheduleSection({
                             </p>
                           )}
                           {event.description && (
-                            <p className="mt-1 text-[11px] text-purple-800/80 line-clamp-2 typography-small">
-                              {event.description}
-                            </p>
+                            <p className="mt-1 text-[11px] text-purple-800/80 line-clamp-2 typography-small">{event.description}</p>
                           )}
                         </article>
                       ))
@@ -256,35 +238,35 @@ export default function ScheduleSection({
       )}
       {diagnostics && <DiagnosticsPanel diagnostics={diagnostics} status={diagnoseStatus} />}
     </SectionCard>
-  )
+  );
 }
 
 function selectEventsForWeek(
   events: ScheduleEvent[],
   daysToShow: number
 ): { events: ScheduleEvent[]; range: { start: string; end: string } } {
-  const start = startOfDay(new Date())
-  const end = addDays(start, daysToShow)
-  const startMs = start.getTime()
-  const endMs = end.getTime()
+  const start = startOfDay(new Date());
+  const end = addDays(start, daysToShow);
+  const startMs = start.getTime();
+  const endMs = end.getTime();
 
   const filtered = events
     .filter((event) => {
-      const eventStart = Date.parse(event.start)
+      const eventStart = Date.parse(event.start);
       if (Number.isNaN(eventStart)) {
-        return false
+        return false;
       }
 
-      const eventEndParsed = event.end ? Date.parse(event.end) : Number.NaN
-      const eventEnd = Number.isNaN(eventEndParsed) ? eventStart : eventEndParsed
+      const eventEndParsed = event.end ? Date.parse(event.end) : Number.NaN;
+      const eventEnd = Number.isNaN(eventEndParsed) ? eventStart : eventEndParsed;
 
-      const startsInRange = eventStart >= startMs && eventStart < endMs
-      const endsInRange = eventEnd >= startMs && eventEnd < endMs
-      const spansRange = eventStart < startMs && eventEnd >= startMs
+      const startsInRange = eventStart >= startMs && eventStart < endMs;
+      const endsInRange = eventEnd >= startMs && eventEnd < endMs;
+      const spansRange = eventStart < startMs && eventEnd >= startMs;
 
-      return startsInRange || endsInRange || spansRange
+      return startsInRange || endsInRange || spansRange;
     })
-    .sort((a, b) => Date.parse(a.start) - Date.parse(b.start))
+    .sort((a, b) => Date.parse(a.start) - Date.parse(b.start));
 
   return {
     events: filtered,
@@ -292,7 +274,7 @@ function selectEventsForWeek(
       start: start.toISOString(),
       end: end.toISOString(),
     },
-  }
+  };
 }
 
 function buildWeekColumns(
@@ -300,38 +282,38 @@ function buildWeekColumns(
   rangeStartIso: string | undefined,
   limitPerDay: number
 ): WeekColumn[] {
-  const start = rangeStartIso ? startOfDay(new Date(rangeStartIso)) : startOfDay(new Date())
-  const dateKeyedEvents = new Map<string, ScheduleEvent[]>()
+  const start = rangeStartIso ? startOfDay(new Date(rangeStartIso)) : startOfDay(new Date());
+  const dateKeyedEvents = new Map<string, ScheduleEvent[]>();
 
   events.forEach((event) => {
-    const eventDate = new Date(event.start)
+    const eventDate = new Date(event.start);
     if (Number.isNaN(eventDate.getTime())) {
-      return
+      return;
     }
-    const key = formatDateKey(eventDate)
-    const bucket = dateKeyedEvents.get(key)
+    const key = formatDateKey(eventDate);
+    const bucket = dateKeyedEvents.get(key);
     if (bucket) {
-      bucket.push(event)
+      bucket.push(event);
     } else {
-      dateKeyedEvents.set(key, [event])
+      dateKeyedEvents.set(key, [event]);
     }
-  })
+  });
 
   const dateFormatter = new Intl.DateTimeFormat('ko-KR', {
     month: 'numeric',
     day: 'numeric',
-  })
+  });
   const weekdayFormatter = new Intl.DateTimeFormat('ko-KR', {
     weekday: 'short',
-  })
+  });
 
   return Array.from({ length: DAYS_TO_SHOW }).map((_, index) => {
-    const currentDate = addDays(start, index)
-    const key = formatDateKey(currentDate)
-    const bucket = dateKeyedEvents.get(key) ?? []
-    const sorted = bucket.slice().sort((a, b) => Date.parse(a.start) - Date.parse(b.start))
-    const limited = sorted.slice(0, limitPerDay)
-    const isWeekend = [0, 6].includes(currentDate.getDay())
+    const currentDate = addDays(start, index);
+    const key = formatDateKey(currentDate);
+    const bucket = dateKeyedEvents.get(key) ?? [];
+    const sorted = bucket.slice().sort((a, b) => Date.parse(a.start) - Date.parse(b.start));
+    const limited = sorted.slice(0, limitPerDay);
+    const isWeekend = [0, 6].includes(currentDate.getDay());
 
     return {
       isoDate: key,
@@ -339,94 +321,94 @@ function buildWeekColumns(
       weekdayLabel: weekdayFormatter.format(currentDate),
       events: limited,
       isWeekend,
-    }
-  })
+    };
+  });
 }
 
 function startOfDay(date: Date): Date {
-  const copy = new Date(date)
-  copy.setHours(0, 0, 0, 0)
-  return copy
+  const copy = new Date(date);
+  copy.setHours(0, 0, 0, 0);
+  return copy;
 }
 
 function addDays(date: Date, amount: number): Date {
-  const copy = new Date(date)
-  copy.setDate(copy.getDate() + amount)
-  return copy
+  const copy = new Date(date);
+  copy.setDate(copy.getDate() + amount);
+  return copy;
 }
 
 function formatDateKey(date: Date): string {
-  const year = date.getFullYear()
-  const month = `${date.getMonth() + 1}`.padStart(2, '0')
-  const day = `${date.getDate()}`.padStart(2, '0')
-  return `${year}-${month}-${day}`
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, '0');
+  const day = `${date.getDate()}`.padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 function formatWeekRangeLabel(range: { start: string; end: string } | null): string {
   if (!range) {
-    return ''
+    return '';
   }
 
   try {
-    const start = new Date(range.start)
-    const exclusiveEnd = new Date(range.end)
+    const start = new Date(range.start);
+    const exclusiveEnd = new Date(range.end);
     if (Number.isNaN(start.getTime()) || Number.isNaN(exclusiveEnd.getTime())) {
-      return ''
+      return '';
     }
-    const inclusiveEnd = addDays(exclusiveEnd, -1)
+    const inclusiveEnd = addDays(exclusiveEnd, -1);
     const formatter = new Intl.DateTimeFormat('ko-KR', {
       month: 'numeric',
       day: 'numeric',
-    })
-    return `${formatter.format(start)} ~ ${formatter.format(inclusiveEnd)}`
+    });
+    return `${formatter.format(start)} ~ ${formatter.format(inclusiveEnd)}`;
   } catch {
-    return ''
+    return '';
   }
 }
 
 function formatDate(dateLike: string, options?: Intl.DateTimeFormatOptions): string {
   try {
-    const date = new Date(dateLike)
+    const date = new Date(dateLike);
     if (Number.isNaN(date.getTime())) {
-      return dateLike
+      return dateLike;
     }
-    const formatter = new Intl.DateTimeFormat('ko-KR', options)
-    return formatter.format(date)
+    const formatter = new Intl.DateTimeFormat('ko-KR', options);
+    return formatter.format(date);
   } catch (error) {
-    console.warn('[ScheduleSection] Failed to format date', dateLike, error)
-    return dateLike
+    console.warn('[ScheduleSection] Failed to format date', dateLike, error);
+    return dateLike;
   }
 }
 
 function formatTimeRange(startISO: string, endISO?: string): string {
-  const start = new Date(startISO)
+  const start = new Date(startISO);
   if (Number.isNaN(start.getTime())) {
-    return '시간 미정'
+    return '시간 미정';
   }
 
   const timeFormatter = new Intl.DateTimeFormat('ko-KR', {
     hour: 'numeric',
     minute: '2-digit',
-  })
+  });
 
   if (!endISO) {
-    return timeFormatter.format(start)
+    return timeFormatter.format(start);
   }
 
-  const end = new Date(endISO)
+  const end = new Date(endISO);
   if (Number.isNaN(end.getTime())) {
-    return timeFormatter.format(start)
+    return timeFormatter.format(start);
   }
 
-  return `${timeFormatter.format(start)} - ${timeFormatter.format(end)}`
+  return `${timeFormatter.format(start)} - ${timeFormatter.format(end)}`;
 }
 
 function DiagnosticsPanel({
   diagnostics,
   status,
 }: {
-  diagnostics: ScheduleDiagnostics
-  status: 'idle' | 'running' | 'ready' | 'error'
+  diagnostics: ScheduleDiagnostics;
+  status: 'idle' | 'running' | 'ready' | 'error';
 }) {
   return (
     <div className="relative p-5 mt-8 space-y-4 text-sm text-purple-900 border rounded-3xl border-purple-200/80 bg-white/70">
@@ -439,18 +421,13 @@ function DiagnosticsPanel({
           {status === 'idle' && '최근 진단 결과입니다.'}
         </p>
         {!diagnostics.ok && diagnostics.errorMessage && (
-          <p className="p-3 mt-2 text-xs text-red-600 rounded-2xl bg-red-50/80">
-            {diagnostics.errorMessage}
-          </p>
+          <p className="p-3 mt-2 text-xs text-red-600 rounded-2xl bg-red-50/80">{diagnostics.errorMessage}</p>
         )}
       </header>
 
       <ul className="space-y-3">
         {diagnostics.steps.map((step) => (
-          <li
-            key={step.id}
-            className="p-4 border shadow-sm rounded-2xl border-purple-100/80 bg-white/90"
-          >
+          <li key={step.id} className="p-4 border shadow-sm rounded-2xl border-purple-100/80 bg-white/90">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
                 <p className="font-semibold text-purple-900/95">{step.label}</p>
@@ -460,9 +437,7 @@ function DiagnosticsPanel({
               </div>
               <span
                 className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${
-                  step.status === 'ok'
-                    ? 'bg-emerald-100 text-emerald-700'
-                    : 'bg-red-100 text-red-700'
+                  step.status === 'ok' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
                 }`}
               >
                 {step.status === 'ok' ? '성공' : '실패'}
@@ -476,9 +451,7 @@ function DiagnosticsPanel({
             )}
 
             {step.error && (
-              <p className="p-2 mt-2 text-xs text-red-600 rounded-2xl bg-red-50/80">
-                {step.error}
-              </p>
+              <p className="p-2 mt-2 text-xs text-red-600 rounded-2xl bg-red-50/80">{step.error}</p>
             )}
           </li>
         ))}
@@ -490,14 +463,14 @@ function DiagnosticsPanel({
         </p>
       )}
     </div>
-  )
+  );
 }
 
 function formatTimestamp(value: string): string {
   try {
-    const date = new Date(value)
+    const date = new Date(value);
     if (Number.isNaN(date.getTime())) {
-      return value
+      return value;
     }
     return new Intl.DateTimeFormat('ko-KR', {
       month: 'short',
@@ -505,17 +478,17 @@ function formatTimestamp(value: string): string {
       hour: 'numeric',
       minute: '2-digit',
       second: '2-digit',
-    }).format(date)
+    }).format(date);
   } catch {
-    return value
+    return value;
   }
 }
 
 function formatMetadataDisplay(metadata: Record<string, unknown>): string {
   try {
-    return JSON.stringify(metadata, null, 2)
+    return JSON.stringify(metadata, null, 2);
   } catch {
-    return String(metadata)
+    return String(metadata);
   }
 }
 
@@ -536,5 +509,5 @@ function ScheduleSkeleton() {
         ))}
       </div>
     </div>
-  )
+  );
 }

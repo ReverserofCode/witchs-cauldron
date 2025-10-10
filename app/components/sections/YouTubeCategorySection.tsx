@@ -1,5 +1,5 @@
-import VideoCard from "./VideoCard";
-import type { VideoItem } from "../hooks/useYouTubeVideos";
+import { VideoCard } from '@/app/components/cards';
+import type { VideoItem } from '@/app/hooks/useYouTubeVideos';
 
 interface YouTubeCategorySectionProps {
   title?: string;
@@ -39,12 +39,8 @@ function HeaderContent({ title, description }: { title?: string; description?: s
 
   return (
     <div className="flex flex-col gap-1">
-      {title && (
-        <h3 className="text-lg font-semibold text-purple-900/90 typography-heading">{title}</h3>
-      )}
-      {description && (
-        <p className="text-xs text-purple-800/70 typography-small">{description}</p>
-      )}
+      {title && <h3 className="text-lg font-semibold text-purple-900/90 typography-heading">{title}</h3>}
+      {description && <p className="text-xs text-purple-800/70 typography-small">{description}</p>}
     </div>
   );
 }

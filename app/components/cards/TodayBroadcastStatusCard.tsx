@@ -1,94 +1,94 @@
-'use client'
+'use client';
 
-import { useEffect, useMemo, useState, type ReactElement } from 'react'
-import SectionCard from './sectionCard'
-import type { ScheduleEvent, ScheduleFeed } from '../api/broadCastSchedule/schedule'
+import { useEffect, useMemo, useState, type ReactElement } from 'react';
+import SectionCard from './SectionCard';
+import type { ScheduleEvent, ScheduleFeed } from '@/app/api/broadCastSchedule/schedule';
 
-const SCHEDULE_ENDPOINT = '/api/broadCastSchedule'
+const SCHEDULE_ENDPOINT = '/api/broadCastSchedule';
 
-type LoadState = 'idle' | 'loading' | 'ready' | 'error'
+type LoadState = 'idle' | 'loading' | 'ready' | 'error';
 
 interface TodayBroadcastStatusCardProps {
-  className?: string
+  className?: string;
 }
 
 export default function TodayBroadcastStatusCard({ className }: TodayBroadcastStatusCardProps = {}): ReactElement {
-  const [status, setStatus] = useState<LoadState>('idle')
-  const [events, setEvents] = useState<ScheduleEvent[]>([])
-  const [error, setError] = useState<string | null>(null)
+  const [status, setStatus] = useState<LoadState>('idle');
+  const [events, setEvents] = useState<ScheduleEvent[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    let cancelled = false
+    let cancelled = false;
 
     async function loadToday() {
-      setStatus('loading')
-      setError(null)
+      setStatus('loading');
+      setError(null);
 
       try {
         const res = await fetch(SCHEDULE_ENDPOINT, {
           headers: { accept: 'application/json' },
-        })
+        });
 
         if (!res.ok) {
-          throw new Error(`요청이 실패했습니다. (${res.status})`)
+          throw new Error(`요청이 실패했습니다. (${res.status})`);
         }
 
-        const data = (await res.json()) as ScheduleFeed
+        const data = (await res.json()) as ScheduleFeed;
         if (!cancelled) {
-          const todayEvents = selectTodayEvents(data.events)
-          setEvents(todayEvents)
-          setStatus('ready')
+          const todayEvents = selectTodayEvents(data.events);
+          setEvents(todayEvents);
+          setStatus('ready');
         }
       } catch (err) {
         if (!cancelled) {
-          setStatus('error')
-          setError(err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.')
+          setStatus('error');
+          setError(err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.');
         }
       }
     }
 
-    loadToday()
+    loadToday();
 
     return () => {
-      cancelled = true
-    }
-  }, [])
+      cancelled = true;
+    };
+  }, []);
 
   const sortedEvents = useMemo(
     () => events.slice().sort((a, b) => Date.parse(a.start) - Date.parse(b.start)),
     [events]
-  )
+  );
 
-  const firstEvent = sortedEvents[0] ?? null
-  const remainingEvents = useMemo(() => sortedEvents.slice(1, 4), [sortedEvents])
+  const firstEvent = sortedEvents[0] ?? null;
+  const remainingEvents = useMemo(() => sortedEvents.slice(1, 4), [sortedEvents]);
 
   const statusBadge = useMemo(() => {
     if (status === 'loading') {
       return {
         label: '확인 중',
         className: 'bg-purple-100 text-purple-700',
-      }
+      } as const;
     }
 
     if (status === 'error') {
       return {
         label: '오류',
         className: 'bg-red-100 text-red-700',
-      }
+      } as const;
     }
 
     if (events.length > 0) {
       return {
         label: '진행 예정',
         className: 'bg-emerald-100 text-emerald-700',
-      }
+      } as const;
     }
 
     return {
       label: '휴방',
       className: 'bg-slate-200 text-slate-700',
-    }
-  }, [events.length, status])
+    } as const;
+  }, [events.length, status]);
 
   return (
     <SectionCard
@@ -138,7 +138,9 @@ export default function TodayBroadcastStatusCard({ className }: TodayBroadcastSt
                   <span className="inline-flex items-center gap-2 px-3 py-1 text-purple-800 rounded-full bg-purple-100/80">
                     {formatTimeRange(firstEvent.start, firstEvent.end)}
                   </span>
-                  <span className="text-[11px] font-medium text-purple-600">{formatDateLabel(firstEvent.start)}</span>
+                  <span className="text-[11px] font-medium text-purple-600">
+                    {formatDateLabel(firstEvent.start)}
+                  </span>
                   {firstEvent.platform && (
                     <span className="inline-flex items-center gap-1 text-purple-700/90">
                       <span className="h-1.5 w-1.5 rounded-full bg-purple-600" aria-hidden />
@@ -162,7 +164,9 @@ export default function TodayBroadcastStatusCard({ className }: TodayBroadcastSt
                       className="flex min-w-[170px] flex-col gap-2 rounded-2xl border border-purple-100/80 bg-white/90 p-3 text-xs text-purple-800/80 typography-small"
                     >
                       <div className="flex items-center justify-between text-[11px] text-purple-700/80">
-                        <span className="font-semibold text-purple-900/85">{formatTimeRange(event.start, event.end)}</span>
+                        <span className="font-semibold text-purple-900/85">
+                          {formatTimeRange(event.start, event.end)}
+                        </span>
                         {event.platform && (
                           <span className="inline-flex items-center gap-1">
                             <span className="h-1.5 w-1.5 rounded-full bg-purple-500" aria-hidden />
@@ -185,87 +189,87 @@ export default function TodayBroadcastStatusCard({ className }: TodayBroadcastSt
         )}
       </div>
     </SectionCard>
-  )
+  );
 }
 
 function selectTodayEvents(events: ScheduleEvent[]): ScheduleEvent[] {
-  const start = startOfDay(new Date())
-  const end = addDays(start, 1)
-  const startMs = start.getTime()
-  const endMs = end.getTime()
+  const start = startOfDay(new Date());
+  const end = addDays(start, 1);
+  const startMs = start.getTime();
+  const endMs = end.getTime();
 
   return events
     .filter((event) => {
-      const eventStart = Date.parse(event.start)
+      const eventStart = Date.parse(event.start);
       if (Number.isNaN(eventStart)) {
-        return false
+        return false;
       }
 
-      const eventEndParsed = event.end ? Date.parse(event.end) : Number.NaN
-      const eventEnd = Number.isNaN(eventEndParsed) ? eventStart : eventEndParsed
+      const eventEndParsed = event.end ? Date.parse(event.end) : Number.NaN;
+      const eventEnd = Number.isNaN(eventEndParsed) ? eventStart : eventEndParsed;
 
-      const startsToday = eventStart >= startMs && eventStart < endMs
-      const endsToday = eventEnd >= startMs && eventEnd < endMs
-      const spansToday = eventStart < startMs && eventEnd >= startMs
+      const startsToday = eventStart >= startMs && eventStart < endMs;
+      const endsToday = eventEnd >= startMs && eventEnd < endMs;
+      const spansToday = eventStart < startMs && eventEnd >= startMs;
 
-      return startsToday || endsToday || spansToday
+      return startsToday || endsToday || spansToday;
     })
-    .sort((a, b) => Date.parse(a.start) - Date.parse(b.start))
+    .sort((a, b) => Date.parse(a.start) - Date.parse(b.start));
 }
 
 function startOfDay(date: Date): Date {
-  const copy = new Date(date)
-  copy.setHours(0, 0, 0, 0)
-  return copy
+  const copy = new Date(date);
+  copy.setHours(0, 0, 0, 0);
+  return copy;
 }
 
 function addDays(date: Date, amount: number): Date {
-  const copy = new Date(date)
-  copy.setDate(copy.getDate() + amount)
-  return copy
+  const copy = new Date(date);
+  copy.setDate(copy.getDate() + amount);
+  return copy;
 }
 
 function formatTime(dateISO: string): string {
   try {
-    const date = new Date(dateISO)
+    const date = new Date(dateISO);
     if (Number.isNaN(date.getTime())) {
-      return '시간 미정'
+      return '시간 미정';
     }
 
     return new Intl.DateTimeFormat('ko-KR', {
       hour: 'numeric',
       minute: '2-digit',
-    }).format(date)
+    }).format(date);
   } catch {
-    return '시간 미정'
+    return '시간 미정';
   }
 }
 
 function formatTimeRange(startISO: string, endISO?: string): string {
-  const startFormatted = formatTime(startISO)
+  const startFormatted = formatTime(startISO);
   if (!endISO) {
-    return startFormatted
+    return startFormatted;
   }
-  const endFormatted = formatTime(endISO)
+  const endFormatted = formatTime(endISO);
   if (endFormatted === startFormatted) {
-    return startFormatted
+    return startFormatted;
   }
-  return `${startFormatted} ~ ${endFormatted}`
+  return `${startFormatted} ~ ${endFormatted}`;
 }
 
 function formatDateLabel(dateISO: string): string {
   try {
-    const date = new Date(dateISO)
+    const date = new Date(dateISO);
     if (Number.isNaN(date.getTime())) {
-      return ''
+      return '';
     }
     return new Intl.DateTimeFormat('ko-KR', {
       month: 'numeric',
       day: 'numeric',
       weekday: 'short',
-    }).format(date)
+    }).format(date);
   } catch {
-    return ''
+    return '';
   }
 }
 
@@ -276,7 +280,7 @@ function LoadingState() {
       <div className="w-3/4 h-5 rounded-full animate-pulse bg-purple-200/60" />
       <div className="w-1/2 h-4 rounded-full animate-pulse bg-purple-200/50" />
     </div>
-  )
+  );
 }
 
 function TimelineSkeleton() {
@@ -296,5 +300,5 @@ function TimelineSkeleton() {
         </li>
       ))}
     </ul>
-  )
+  );
 }

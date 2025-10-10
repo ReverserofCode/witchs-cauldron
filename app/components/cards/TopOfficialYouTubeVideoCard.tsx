@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import SectionCard from "./sectionCard";
+import SectionCard from "./SectionCard";
 import VideoCard from "./VideoCard";
 
 type TopVideo = {
@@ -20,7 +20,9 @@ interface TopOfficialYouTubeVideoCardProps {
   className?: string;
 }
 
-export default function TopOfficialYouTubeVideoCard({ className }: TopOfficialYouTubeVideoCardProps = {}) {
+export default function TopOfficialYouTubeVideoCard({
+  className,
+}: TopOfficialYouTubeVideoCardProps = {}) {
   const [state, setState] = useState<LoadState>("idle");
   const [video, setVideo] = useState<TopVideo | null>(null);
   const [error, setError] = useState<string | null>(null);

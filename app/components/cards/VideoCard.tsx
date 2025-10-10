@@ -21,9 +21,10 @@ export default function VideoCard({ video, aspect = "video" }: VideoCardProps) {
   const fallbackSrc = "/mainPage/SDCharacter.png";
   const displayChannel = channelTitle ?? "모잉 팬 채널";
   const displayDate = publishedAt ? new Date(publishedAt).toLocaleDateString("ko-KR") : null;
-  const displayViews = typeof viewCount === "number" && Number.isFinite(viewCount)
-    ? new Intl.NumberFormat("ko-KR").format(viewCount)
-    : null;
+  const displayViews =
+    typeof viewCount === "number" && Number.isFinite(viewCount)
+      ? new Intl.NumberFormat("ko-KR").format(viewCount)
+      : null;
 
   return (
     <a
