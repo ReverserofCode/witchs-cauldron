@@ -37,7 +37,10 @@ export default function YouTubeFanVideosSection({ className }: YouTubeFanVideosS
       )}
 
       {isReady && videos.length > 0 && (
-        <YouTubeCategorySection videos={videos} />
+        <YouTubeCategorySection
+          description="모잉수제문어포션"
+          videos={videos}
+        />
       )}
     </SectionCard>
   );

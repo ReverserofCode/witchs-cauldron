@@ -75,7 +75,7 @@ export default function RightAside({ className }: RightAsideProps = {}): ReactEl
                 bodyClassName="gap-3"
                 eyebrow="Schedule"
                 title="빠른 방송 일정"
-                description={nextEventLabel ? `다음 방송 · ${nextEventLabel}` : undefined}
+                description={nextEventLabel ? `${nextEventLabel}` : undefined}
             >
                 {status === 'loading' && <ScheduleAsideSkeleton />}
                 {status === 'error' && error && (
@@ -135,8 +135,7 @@ export default function RightAside({ className }: RightAsideProps = {}): ReactEl
                     /> */}
                 </div>
                 <div className="flex flex-col gap-1.5 text-[11px] text-purple-900/80">
-                    <p className="font-semibold">비밀 재료는 팬들과 함께 나눠요.</p>
-                    <p className="text-purple-900/60">디스코드에 참여하고 라이브 소식을 받아보세요.</p>
+                    <p className="font-semibold">디스코드에 참여하고 라이브 소식을 받아보세요.</p>
                 </div>
                 <div className="flex flex-col gap-1.5">
                     {/* 디스코드 외에 다른 활성화 커뮤니티 없음 */}
