@@ -125,14 +125,14 @@ export default function RightAside({ className }: RightAsideProps = {}): ReactEl
                 title="모잉 디스코드"
             >
                 <div className="relative overflow-hidden border shadow-lg rounded-2xl border-white/40 bg-white/60 shadow-purple-900/15">
-                    <Image
+                    {/* <Image
                         src="/rightAside/rightSide.png"
                         alt="모잉 커뮤니티"
                         width={320}
                         height={180}
                         className="object-cover w-full h-auto"
                         priority
-                    />
+                    /> */}
                 </div>
                 <div className="flex flex-col gap-1.5 text-[11px] text-purple-900/80">
                     <p className="font-semibold">비밀 재료는 팬들과 함께 나눠요.</p>

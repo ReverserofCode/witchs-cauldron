@@ -1,12 +1,12 @@
 // Root layout for the Next.js App Router.
 // - 전역 폰트/스타일 적용
-// - 공통 GlobalNav / Footer 래핑
+// - 공통 Header / Footer 래핑
 // - 페이지 본문은 {children}으로 주입
 import { Metadata } from 'next'
 import { ReactNode } from 'react'
 import './globals.css'
 import { Noto_Sans_KR } from 'next/font/google'
-import GlobalNav from './components/globalNav'
+import Header from './components/header'
 import Footer from './components/footer'
 
 const notoSansKr = Noto_Sans_KR({
@@ -26,7 +26,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <html lang="ko" suppressHydrationWarning>
       <body className={`${notoSansKr.className} min-h-screen bg-[#7B68EE] text-ink antialiased flex flex-col`}>
-        <GlobalNav />
+        <Header />
         <main className="flex flex-col flex-1">
           {children}
         </main>

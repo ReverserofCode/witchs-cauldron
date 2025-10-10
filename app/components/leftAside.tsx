@@ -18,23 +18,23 @@ interface LeftAsideProps {
 }
 
 const defaultImages: FanArtImage[] = [
-    {
-        src: '/leftAside/leftSide.png',
-        download: '/leftAside/leftSide.png',
-        alt: '마녀의 작업실 벽지 - 마법진 조명',
-        credit: 'Illust by 팬아트 크리에이터',
-    },
-    {
-        src: '/mainPage/SDCharacter.png',
-        download: '/mainPage/SDCharacter.png',
-        alt: 'SD 캐릭터 일러스트',
-        credit: 'Illust by Moing Studio',
-    },
-    {
-        src: '/mainPage/Profile.png',
-        download: '/mainPage/Profile.png',
-        alt: '프로필 일러스트',
-    },
+    // {
+    //     src: '/leftAside/leftSide.png',
+    //     download: '/leftAside/leftSide.png',
+    //     alt: '마녀의 작업실 벽지 - 마법진 조명',
+    //     credit: 'Illust by 팬아트 크리에이터',
+    // },
+    // {
+    //     src: '/mainPage/SDCharacter.png',
+    //     download: '/mainPage/SDCharacter.png',
+    //     alt: 'SD 캐릭터 일러스트',
+    //     credit: 'Illust by Moing Studio',
+    // },
+    // {
+    //     src: '/mainPage/Profile.png',
+    //     download: '/mainPage/Profile.png',
+    //     alt: '프로필 일러스트',
+    // },
 ]
 
 export default function LeftAside({ className, images }: LeftAsideProps = {}): ReactElement {
