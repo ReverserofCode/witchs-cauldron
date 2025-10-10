@@ -4,9 +4,10 @@
 // - ABOUT 섹션: 브랜드 컬러 카드
 import Image from 'next/image'
 import { ReactElement } from 'react'
+import { getChzzkLiveStatus } from './api/chzzkPlayer/chzzkPlayer'
 import profileImg from '../public/mainPage/Profile.png'
-import LeftAside from './components/leftAside'
-import RigthAside from './components/rightAside'
+import LeftAside from './components/leftaside'
+import RightAside from './components/rightAside'
 import ScheduleSection from './components/scheduleSection'
 import SectionCard from './components/sectionCard'
 import YouTubeShortsSection from './components/YouTubeShortsSection'
@@ -18,7 +19,17 @@ import YouTubeFullMoingVideosSection from './components/YouTubeFullMoingVideosSe
 import YouTubeFanVideosSection from './components/YouTubeFanVideosSection'
 
 
-export default function Page(): ReactElement {
+export default async function Page(): Promise<ReactElement> {
+  const liveStatus = await getChzzkLiveStatus()
+  const liveChipClass = `chip inline-flex items-center gap-1.5 border ${liveStatus.isLive ? 'bg-rose-500/90 border-rose-300/60 text-white' : 'bg-slate-700/80 border-slate-600/70 text-slate-100'}`
+  const liveChipLabel = liveStatus.isLive
+    ? `실시간 방송 중${typeof liveStatus.viewers === 'number'}`
+    : '현재 오프라인'
+  const liveStatusDescription = liveStatus.error
+    ? '방송이 오프라인 상태입니다.'
+    : liveStatus.isLive
+    ? '모잉이 마법을 선보이는 중입니다!'
+    : '다음 방송을 기다려주세요.'
 
   return (
     <main className="py-10 lg:py-16">
@@ -37,7 +48,18 @@ export default function Page(): ReactElement {
                 header={
                   <div className="grid items-center gap-8 md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
                     <div className="space-y-4 text-white">
-                      <span className="chip">KR V-tuber • Moing</span>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="chip">KR V-tuber • Moing</span>
+                        <a
+                          href={liveStatus.channelUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className={liveChipClass}
+                        >
+                          <span className="inline-block w-2 h-2 bg-current rounded-full" />
+                          {liveChipLabel}
+                        </a>
+                      </div>
                       <h1 className="text-3xl font-extrabold typography-heading md:text-4xl">
                         마녀의 포션 공방
                       </h1>
@@ -46,7 +68,7 @@ export default function Page(): ReactElement {
                           포션을 만들면 폭발하거나, 고백하게 만드는 재앙 제조기. “진짜 감기약 맞아요?” 음... 아마도요.
                         </p>
                         <p className="text-base font-light opacity-0 typography-lead animate-fade-in animation-delay-200">
-                          모잉 팬 사이트에 오신 걸 환영합니다.
+                          {liveStatusDescription}
                         </p>
                       </div>
                     </div>
@@ -104,7 +126,7 @@ export default function Page(): ReactElement {
             </div>
           </div>
           {/* Right Aside */}
-          <RigthAside className="hidden lg:flex lg:sticky lg:top-24" />
+          <RightAside className="hidden lg:flex lg:sticky lg:top-24" />
         </div>
       </div>
     </main>
