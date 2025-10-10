@@ -21,7 +21,18 @@ type LoadState = "idle" | "loading" | "ready" | "error";
 
 let cachedData: YouTubeVideosResponse | null = null;
 let cachedError: string | null = null;
+let cachedAt: number | null = null;
 let inflightRequest: Promise<YouTubeVideosResponse> | null = null;
+
+const CACHE_TTL_MS = 5 * 60 * 1000;
+
+function isCacheFresh(): boolean {
+  return (
+    cachedData !== null &&
+    cachedAt !== null &&
+    Date.now() - cachedAt < CACHE_TTL_MS
+  );
+}
 
 async function fetchYouTubeVideos(): Promise<YouTubeVideosResponse> {
   const res = await fetch("/api/youTubePlayer", {
@@ -41,10 +52,12 @@ interface UseYouTubeVideosResult {
 }
 
 export function useYouTubeVideos(): UseYouTubeVideosResult {
-  const [data, setData] = useState<YouTubeVideosResponse | null>(cachedData);
+  const [data, setData] = useState<YouTubeVideosResponse | null>(
+    isCacheFresh() ? cachedData : null
+  );
   const [error, setError] = useState<string | null>(cachedError);
   const [status, setStatus] = useState<LoadState>(() => {
-    if (cachedData) {
+    if (isCacheFresh()) {
       return "ready";
     }
     if (cachedError) {
@@ -54,8 +67,21 @@ export function useYouTubeVideos(): UseYouTubeVideosResult {
   });
 
   useEffect(() => {
-    if (cachedData || cachedError) {
+    if (isCacheFresh()) {
+      setData(cachedData);
+      setStatus("ready");
       return;
+    }
+
+    if (cachedData) {
+      cachedData = null;
+      cachedAt = null;
+      setData(null);
+    }
+
+    if (cachedError) {
+      cachedError = null;
+      setError(null);
     }
 
     let cancelled = false;
@@ -75,6 +101,7 @@ export function useYouTubeVideos(): UseYouTubeVideosResult {
         }
 
         cachedData = result;
+        cachedAt = Date.now();
         inflightRequest = null;
         setData(result);
         setStatus("ready");
@@ -88,6 +115,7 @@ export function useYouTubeVideos(): UseYouTubeVideosResult {
             ? err.message
             : "알 수 없는 오류가 발생했습니다.";
         cachedError = message;
+        cachedAt = null;
         inflightRequest = null;
         setError(message);
         setStatus("error");
@@ -107,5 +135,6 @@ export function useYouTubeVideos(): UseYouTubeVideosResult {
 export function resetYouTubeVideosCache(): void {
   cachedData = null;
   cachedError = null;
+  cachedAt = null;
   inflightRequest = null;
 }
