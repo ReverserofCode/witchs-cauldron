@@ -1,104 +1,58 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import VideoCard from "./VideoCard";
 import SectionCard from "./sectionCard";
+import YouTubeCategorySection from "./YouTubeCategorySection";
+import { useYouTubeVideos } from "../hooks/useYouTubeVideos";
 
-interface VideoItem {
-  videoId: string;
-  title: string;
-  publishedAt: string;
-  thumbnail: string;
-  channelTitle: string;
-  url: string;
-}
-
-interface ApiResponse {
-  moing: VideoItem[];
-  fullmoing: VideoItem[];
-  moingFan: VideoItem[];
-}
+const CATEGORY_CONFIG = [
+  {
+    key: "moing" as const,
+    title: "모잉 공식 채널 최신 영상",
+    description: "공식 채널(@moing)의 최신 업로드",
+  },
+  {
+    key: "fullmoing" as const,
+    title: "모잉 다시보기 (Full) 최신 영상",
+    description: "1시간 이상 길이의 다시보기(@fullmoing)",
+  },
+  {
+    key: "moingFan" as const,
+    title: "모잉 팬 채널 최신 영상",
+    description: "팬 채널(@모잉수제문어포션)의 하이라이트",
+  },
+] as const;
 
 export default function YouTubeVideosSection() {
-  const [videos, setVideos] = useState<ApiResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    fetch("/api/youTubePlayer")
-      .then((res) => {
-        if (!res.ok) {
-          throw new Error("failed-to-fetch");
-        }
-        return res.json();
-      })
-      .then((data: ApiResponse) => {
-        setVideos(data);
-        setLoading(false);
-      })
-      .catch(() => {
-        setError("유튜브 영상을 불러오지 못했습니다.");
-        setLoading(false);
-      });
-  }, []);
-
-  const sections = useMemo(
-    () => [
-      {
-        key: "moing" as const,
-        title: "모잉 공식 채널 최신 영상",
-        description: "공식 채널(@moing)의 최신 업로드",
-      },
-      {
-        key: "fullmoing" as const,
-        title: "모잉 다시보기 (Full) 최신 영상",
-        description: "1시간 이상 길이의 다시보기(@fullmoing)",
-      },
-      {
-        key: "moingFan" as const,
-        title: "모잉 팬 채널 최신 영상",
-        description: "팬 채널(@모잉수제문어포션)의 하이라이트",
-      },
-    ],
-    []
-  );
+  const { data, error, status } = useYouTubeVideos();
+  const isLoading = status === "idle" || status === "loading";
+  const isError = status === "error";
+  const isReady = status === "ready" && !!data;
 
   return (
     <SectionCard
       tone="neutral"
       eyebrow="YouTube Hub"
       title="유튜브 영상 모음"
-  description="모잉 공식·다시보기·팬 채널의 최신 영상을 한눈에 확인해 보세요."
+      description="모잉 공식·다시보기·팬 채널의 최신 영상을 한눈에 확인해 보세요."
       bodyClassName="space-y-6"
     >
-      {loading && <div className="text-sm text-purple-900/70 typography-body">불러오는 중...</div>}
-      {error && (
+      {isLoading && <div className="text-sm text-purple-900/70 typography-body">불러오는 중...</div>}
+      {isError && (
         <div className="p-3 text-sm text-red-600 border border-red-200 rounded-xl bg-red-50/80 typography-body">
-          {error}
+          {error ?? "유튜브 영상을 불러오지 못했습니다."}
         </div>
       )}
 
-      {!loading && !error && videos && (
+      {isReady && (
         <div className="space-y-8">
-          {sections.map(({ key, title, description }) => {
-            const items = videos?.[key] ?? [];
-            if (!items.length) {
-              return null;
-            }
-            return (
-              <div key={key} className="space-y-3">
-                <div className="flex flex-col gap-1">
-                  <h3 className="text-lg font-semibold text-purple-900/90 typography-heading">{title}</h3>
-                  <p className="text-xs text-purple-800/70 typography-small">{description}</p>
-                </div>
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                  {items.map((video) => (
-                    <VideoCard key={video.videoId} video={video} aspect="video" />
-                  ))}
-                </div>
-              </div>
-            );
-          })}
+          {CATEGORY_CONFIG.map(({ key, title, description }) => (
+            <YouTubeCategorySection
+              key={key}
+              title={title}
+              description={description}
+              videos={data[key] ?? []}
+            />
+          ))}
         </div>
       )}
     </SectionCard>

@@ -13,16 +13,12 @@ import YouTubeShortsSection from './components/YouTubeShortsSection'
 import YouTubeVideosSection from './components/YouTubeVideosSection'
 import LatestYouTubeVideoCard from './components/latestYouTubeVideoCard'
 import TopOfficialYouTubeVideoCard from './components/topOfficialYouTubeVideoCard'
+import YouTubeOfficialVideosSection from './components/YouTubeOfficialVideosSection'
+import YouTubeFullMoingVideosSection from './components/YouTubeFullMoingVideosSection'
+import YouTubeFanVideosSection from './components/YouTubeFanVideosSection'
+
 
 export default function Page(): ReactElement {
-  const profileStats = [
-    { title: 'Name', value: 'MOING' },
-    { title: 'Height', value: '155' },
-    { title: 'Age', value: '99' },
-    { title: 'Weight', value: '44' },
-    { title: 'MBTI', value: 'INFP' },
-    { title: 'Birth', value: '3/14' },
-  ] as const
 
   return (
     <main className="py-10 lg:py-16">
@@ -81,6 +77,7 @@ export default function Page(): ReactElement {
                 <LatestYouTubeVideoCard className="h-full" />
                 <TopOfficialYouTubeVideoCard className="h-full" />
               </div>
+              <YouTubeOfficialVideosSection />
               <ScheduleSection />
             </div>
 

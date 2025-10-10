@@ -145,7 +145,7 @@ export default function ScheduleSection({
       tone="lavender"
       eyebrow="Broadcast Schedule"
       title="라이브 일정표"
-      description={`웹에 게시된 구글 시트를 기반으로 자동 동기화됩니다. 오늘부터 4일간의 방송을 보여주며 하루당 최대 ${clampedLimit}개의 방송을 표시합니다.`}
+      description={`오늘부터 4일간의 방송을 보여주며 하루당 최대 ${clampedLimit}일간의 방송을 표시합니다.`}
       bodyClassName="relative"
     >
       {status === 'loading' && <ScheduleSkeleton />}
