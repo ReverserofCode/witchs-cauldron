@@ -221,73 +221,7 @@ export default function LeftSidebar({ className, images }: LeftSidebarProps = {}
         </div>
       </SectionCard>
 
-      <SectionCard
-        tone="lavender"
-        className="shadow-md rounded-2xl border-white/40 bg-gradient-to-br from-purple-100/70 via-white/70 to-white/90 shadow-purple-900/15"
-        bodyClassName="gap-3"
-        eyebrow="Highlights"
-        title="오늘의 추천 클립"
-      >
-        {youtubeStatus === "loading" && (
-          <YouTubeSectionStatus tone="info">추천 영상을 준비 중입니다...</YouTubeSectionStatus>
-        )}
-        {youtubeStatus === "ready" && highlightVideos.length === 0 && (
-          <YouTubeSectionStatus tone="empty">현재 추천할 영상이 없습니다.</YouTubeSectionStatus>
-        )}
-        {youtubeStatus === "ready" && highlightVideos.length > 0 && (
-          <ul className="space-y-2 text-[11px] text-purple-900/85">
-            {highlightVideos.map(({ label, video }) => (
-              <li key={`${label}-${video.videoId}`} className="flex items-start gap-2 px-3 py-2 rounded-xl bg-white/75">
-                <span className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-purple-200 text-[10px] font-semibold text-purple-900">
-                  {label}
-                </span>
-                <div className="flex flex-col gap-1">
-                  <a
-                    href={video.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="line-clamp-2 font-semibold text-purple-950/95 hover:text-[rgb(var(--moing-deep))]"
-                    title={video.title}
-                  >
-                    {video.title}
-                  </a>
-                  <span className="text-[10px] text-purple-700/80">
-                    {new Intl.DateTimeFormat("ko-KR", { month: "numeric", day: "numeric" }).format(
-                      new Date(video.publishedAt)
-                    )}
-                  </span>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </SectionCard>
-
-      <SectionCard
-        tone="neutral"
-        className="shadow-md rounded-2xl border-white/40 bg-white/85 shadow-purple-900/10"
-        bodyClassName="gap-3"
-        eyebrow="Navigation"
-        title="페이지 바로가기"
-      >
-        <nav>
-          <ul className="flex flex-col gap-1 text-[11px] text-purple-900/80">
-            {TABLE_OF_CONTENTS.map((entry) => (
-              <li key={entry.id}>
-                <a
-                  href={`#${entry.id}`}
-                  className="flex items-center justify-between rounded-lg px-3 py-1.5 transition-colors hover:bg-purple-100/60"
-                >
-                  <span>{entry.label}</span>
-                  <span aria-hidden className="text-[10px] text-purple-600">
-                    {">"}
-                  </span>
-                </a>
-              </li>
-            ))}
-          </ul>
-        </nav>
-      </SectionCard>
+      
 
       {gallery.length > 0 && (
         <SectionCard
