@@ -77,12 +77,16 @@ export default function Page(): ReactElement {
                 <LatestYouTubeVideoCard className="h-full" />
                 <TopOfficialYouTubeVideoCard className="h-full" />
               </div>
-              <YouTubeOfficialVideosSection />
               <ScheduleSection />
+              <YouTubeOfficialVideosSection />
+              <YouTubeFullMoingVideosSection />
+              <YouTubeFanVideosSection />
+              {/* <YouTubeShortsSection /> */}
             </div>
 
             <div className="mt-1 space-y-10">
-              <YouTubeVideosSection />
+              {/* 유튜브 카테고리별 컴포넌트 분화 */}
+              {/* <YouTubeVideosSection /> */}
               {/* 적절한 쇼츠 채널이 없어 임시 폐쇄  */}
               {/* <YouTubeShortsSection /> */}
             </div>

@@ -32,15 +32,15 @@ export default function YouTubeFullMoingVideosSection({ className }: YouTubeFull
       )}
 
       {isReady && !videos.length && (
-        <div className="p-3 text-sm text-purple-900/75 border border-purple-200/60 rounded-xl bg-white/85 typography-body">
+        <div className="p-3 text-sm border text-purple-900/75 border-purple-200/60 rounded-xl bg-white/85 typography-body">
           현재 업로드된 다시보기 영상이 없습니다.
         </div>
       )}
 
       {isReady && videos.length > 0 && (
         <YouTubeCategorySection
-          title="모잉 다시보기 (Full) 최신 영상"
-          description="1시간 이상 길이의 다시보기(@fullmoing)"
+        //   title="모잉 다시보기 (Full) 최신 영상"
+        //   description="1시간 이상 길이의 다시보기(@fullmoing)"
           videos={videos}
         />
       )}

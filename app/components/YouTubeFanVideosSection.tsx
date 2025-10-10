@@ -32,15 +32,15 @@ export default function YouTubeFanVideosSection({ className }: YouTubeFanVideosS
       )}
 
       {isReady && !videos.length && (
-        <div className="p-3 text-sm text-purple-900/75 border border-purple-200/60 rounded-xl bg-white/85 typography-body">
+        <div className="p-3 text-sm border text-purple-900/75 border-purple-200/60 rounded-xl bg-white/85 typography-body">
           현재 팬 채널 하이라이트 영상이 없습니다.
         </div>
       )}
 
       {isReady && videos.length > 0 && (
         <YouTubeCategorySection
-          title="모잉 팬 채널 최신 영상"
-          description="팬 채널(@모잉수제문어포션)의 하이라이트"
+        //   title="모잉 팬 채널 최신 영상"
+        //   description="팬 채널(@모잉수제문어포션)의 하이라이트"
           videos={videos}
         />
       )}

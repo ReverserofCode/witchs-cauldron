@@ -39,8 +39,8 @@ export default function YouTubeOfficialVideosSection({ className }: YouTubeOffic
 
       {isReady && videos.length > 0 && (
         <YouTubeCategorySection
-          title="모잉 공식 채널 최신 영상"
-          description="공식 채널(@moing)의 최신 업로드"
+        //   title="모잉 공식 채널 최신 영상"
+        //   description="공식 채널(@moing)의 최신 업로드"
           videos={videos}
         />
       )}
