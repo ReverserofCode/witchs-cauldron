@@ -16,15 +16,6 @@ interface RightSidebarProps {
   images?: FanArtImage[];
 }
 
-const TABLE_OF_CONTENTS = [
-  { id: "featured-latest", label: "최신 영상" },
-  { id: "featured-top", label: "지난달 최다 조회수" },
-  { id: "schedule-section", label: "방송 일정" },
-  { id: "youtube-official", label: "공식 채널" },
-  { id: "youtube-full", label: "다시보기" },
-  { id: "youtube-fan", label: "팬 하이라이트" },
-];
-
 const COMMUNITY_LINKS = [
   {
     label: "치지직 채널",
@@ -94,37 +85,11 @@ export default function RightSidebar({ className, images }: RightSidebarProps = 
     >
       <SectionCard
         tone="neutral"
-        className="shadow-md rounded-2xl border-white/40 bg-white/85 shadow-purple-900/10"
-        bodyClassName="gap-3"
-        eyebrow="Navigation"
-        title="페이지 바로가기"
-      >
-        <nav>
-          <ul className="flex flex-col gap-1 text-[11px] text-purple-900/80">
-            {TABLE_OF_CONTENTS.map((entry) => (
-              <li key={entry.id}>
-                <a
-                  href={`#${entry.id}`}
-                  className="flex items-center justify-between rounded-lg px-3 py-1.5 transition-colors hover:bg-purple-100/60"
-                >
-                  <span>{entry.label}</span>
-                  <span aria-hidden className="text-[10px] text-purple-600">
-                    {">"}
-                  </span>
-                </a>
-              </li>
-            ))}
-          </ul>
-        </nav>
-      </SectionCard>
-
-      <SectionCard
-        tone="neutral"
-        className="shadow-md rounded-2xl border-white/40 bg-white/90 shadow-purple-900/10"
+        className="shadow-md rounded-2xl border-white/40 bg-white/88 shadow-purple-900/10"
         bodyClassName="gap-3"
         eyebrow="Community"
         title="모잉 커뮤니티"
-        description="팬들과 함께하는 공식 채널 모음"
+        description="팬들과 함께하는 공식 채널"
       >
         <ul className="flex flex-col gap-2 text-[11px] text-purple-900/85">
           {COMMUNITY_LINKS.map((link) => (
@@ -145,11 +110,11 @@ export default function RightSidebar({ className, images }: RightSidebarProps = 
 
       <SectionCard
         tone="lavender"
-        className="h-full shadow-md rounded-2xl border-white/40 bg-white/60 shadow-purple-900/10"
+        className="flex-1 shadow-md rounded-2xl border-white/40 bg-white/60 shadow-purple-900/10"
         bodyClassName="gap-5"
         eyebrow="Fan Art"
         title="마녀의 작업실"
-        description="팬 아트 갤러리를 감상하고 다운로드해 보세요."
+        description="팬들의 참여로 꾸며지는 갤러리입니다."
       >
         {hasGallery ? (
           <div className="flex flex-col gap-6">
