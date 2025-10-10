@@ -1,32 +1,69 @@
 "use client"
 
-// 우측 사이드바: 추가 정보나 배너 영역
 import Image from 'next/image'
 import Link from 'next/link'
-import { type ReactElement, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type ReactElement } from 'react'
 import SectionCard from './sectionCard'
+import YouTubeSectionStatus from './YouTubeSectionStatus'
+import { useYouTubeVideos } from '../hooks/useYouTubeVideos'
 import type { ScheduleEvent, ScheduleFeed } from '../api/broadCastSchedule/schedule'
 
 type FetchStatus = 'idle' | 'loading' | 'ready' | 'error'
 
 const SCHEDULE_ENDPOINT = '/api/broadCastSchedule'
+const TOP_VIDEO_ENDPOINT = '/api/youTubePlayer/topOfficial'
 const MAX_VISIBLE_EVENTS = 3
 
-interface RightAsideProps {
-    className?: string
+const TABLE_OF_CONTENTS = [
+    { id: 'featured-latest', label: '최신 영상' },
+    { id: 'featured-top', label: '지난달 최다 조회수' },
+    { id: 'schedule-section', label: '방송 일정' },
+    { id: 'youtube-official', label: '공식 채널' },
+    { id: 'youtube-full', label: '다시보기' },
+    { id: 'youtube-fan', label: '팬 하이라이트' },
+]
+
+interface FanArtImage {
+    src: string
+    alt: string
+    download?: string
+    credit?: string
 }
 
-export default function RightAside({ className }: RightAsideProps = {}): ReactElement {
-    const [status, setStatus] = useState<FetchStatus>('idle')
+interface LeftAsideProps {
+    className?: string
+    images?: FanArtImage[]
+}
+
+interface TopVideoPayload {
+    videoId: string
+    title: string
+    thumbnail: string
+    channelTitle: string
+    publishedAt: string
+    url: string
+    viewCount: number | null
+}
+
+const defaultImages: FanArtImage[] = []
+
+export default function LeftAside({ className, images }: LeftAsideProps = {}): ReactElement {
+    const [scheduleStatus, setScheduleStatus] = useState<FetchStatus>('idle')
     const [events, setEvents] = useState<ScheduleEvent[]>([])
-    const [error, setError] = useState<string | null>(null)
+    const [scheduleError, setScheduleError] = useState<string | null>(null)
+
+    const [topVideoStatus, setTopVideoStatus] = useState<FetchStatus>('idle')
+    const [topVideo, setTopVideo] = useState<TopVideoPayload | null>(null)
+    const [topVideoError, setTopVideoError] = useState<string | null>(null)
+
+    const { data: youtubeData, status: youtubeStatus, error: youtubeError } = useYouTubeVideos()
 
     useEffect(() => {
         let cancelled = false
 
         async function loadSchedule() {
-            setStatus('loading')
-            setError(null)
+            setScheduleStatus('loading')
+            setScheduleError(null)
 
             try {
                 const response = await fetch(SCHEDULE_ENDPOINT, {
@@ -42,11 +79,11 @@ export default function RightAside({ className }: RightAsideProps = {}): ReactEl
                 if (cancelled) return
 
                 setEvents(selectUpcomingEvents(payload.events))
-                setStatus('ready')
+                setScheduleStatus('ready')
             } catch (err) {
                 if (cancelled) return
-                setError(err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.')
-                setStatus('error')
+                setScheduleError(err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.')
+                setScheduleStatus('error')
             }
         }
 
@@ -57,10 +94,50 @@ export default function RightAside({ className }: RightAsideProps = {}): ReactEl
         }
     }, [])
 
+    useEffect(() => {
+        let cancelled = false
+
+        async function loadTopVideo() {
+            setTopVideoStatus('loading')
+            setTopVideoError(null)
+
+            try {
+                const res = await fetch(TOP_VIDEO_ENDPOINT, {
+                    headers: { accept: 'application/json' },
+                    cache: 'no-store',
+                })
+
+                if (!res.ok) {
+                    throw new Error(`영상 정보를 불러오지 못했습니다. (${res.status})`)
+                }
+
+                const payload = (await res.json()) as { video: TopVideoPayload | null }
+                if (cancelled) return
+
+                setTopVideo(payload.video ?? null)
+                setTopVideoStatus('ready')
+            } catch (err) {
+                if (cancelled) return
+                setTopVideoError(err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.')
+                setTopVideoStatus('error')
+            }
+        }
+
+        loadTopVideo()
+
+        return () => {
+            cancelled = true
+        }
+    }, [])
+
     const upcomingEvents = useMemo(() => selectUpcomingEvents(events, MAX_VISIBLE_EVENTS), [events])
-    const nextEventLabel = useMemo(() =>
-        upcomingEvents.length > 0 ? formatEventDateTime(upcomingEvents[0]) : null,
-    [upcomingEvents])
+    const nextEvent = upcomingEvents[0] ?? null
+    const nextEventLabel = nextEvent ? formatEventDateTime(nextEvent) : undefined
+
+    const latestVideo = useMemo(() => selectLatestVideo(youtubeData), [youtubeData])
+    const highlightVideos = useMemo(() => buildHighlightVideos(youtubeData), [youtubeData])
+
+    const gallery = useMemo(() => (images && images.length > 0 ? images : defaultImages), [images])
 
     return (
         <aside
@@ -71,79 +148,178 @@ export default function RightAside({ className }: RightAsideProps = {}): ReactEl
         >
             <SectionCard
                 tone="neutral"
-                className="shadow-md rounded-2xl border-white/40 bg-white/70 shadow-purple-900/10"
+                className="shadow-md rounded-2xl border-white/40 bg-white/80 shadow-purple-900/10"
                 bodyClassName="gap-3"
-                eyebrow="Schedule"
-                title="빠른 방송 일정"
-                description={nextEventLabel ? `${nextEventLabel}` : undefined}
+                eyebrow="Today"
+                title="오늘의 첫 방송"
+                description={nextEventLabel}
             >
-                {status === 'loading' && <ScheduleAsideSkeleton />}
-                {status === 'error' && error && (
-                    <p className="rounded-xl border border-red-200 bg-red-50/80 px-3 py-2 text-[11px] text-red-600">
-                        {error}
-                    </p>
+                {scheduleStatus === 'loading' && <ScheduleAsideSkeleton />}
+                {scheduleStatus === 'error' && scheduleError && (
+                    <YouTubeSectionStatus tone="error">{scheduleError}</YouTubeSectionStatus>
                 )}
-                {status === 'ready' && upcomingEvents.length === 0 && (
-                    <p className="rounded-xl border border-dashed border-purple-200/60 bg-white/70 px-3 py-4 text-center text-[11px] text-purple-700/70">
-                        예정된 방송이 없습니다.
-                    </p>
+                {scheduleStatus === 'ready' && nextEvent && (
+                    <div className="flex flex-col gap-2 rounded-xl border border-purple-200/60 bg-purple-100/40 px-3 py-2 text-[11px] text-purple-950/90">
+                        <span className="text-xs font-semibold text-purple-900/95 line-clamp-2">{nextEvent.title}</span>
+                        <div className="flex flex-wrap items-center gap-2 text-[10px] text-purple-700/80">
+                            <span>{formatEventDateTime(nextEvent)}</span>
+                            {nextEvent.platform && (
+                                <span className="inline-flex items-center gap-1 rounded-full bg-purple-200/80 px-2 py-0.5 font-semibold uppercase tracking-wide">
+                                    {nextEvent.platform}
+                                </span>
+                            )}
+                        </div>
+                    </div>
                 )}
-                {status === 'ready' && upcomingEvents.length > 0 && (
-                    <ul className="space-y-2 text-[11px] text-purple-950/85">
-                        {upcomingEvents.map((event) => (
-                            <li
-                                key={event.id}
-                                className="flex items-start justify-between gap-2 px-3 py-2 shadow-sm rounded-xl bg-purple-100/40"
-                            >
-                                <div className="flex flex-col gap-1">
-                                    <span className="font-semibold leading-snug text-purple-950/95 line-clamp-2">
-                                        {event.title}
-                                    </span>
-                                    <span className="text-[10px] font-medium text-purple-700/80">
-                                        {formatEventDateTime(event)}
-                                    </span>
-                                </div>
-                                {event.platform && (
-                                    <span className="mt-1 inline-flex shrink-0 items-center rounded-full bg-purple-200/80 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-purple-900/80">
-                                        {event.platform}
-                                    </span>
-                                )}
+                {scheduleStatus === 'ready' && upcomingEvents.length > 1 && (
+                    <ul className="space-y-1 text-[10px] text-purple-800/80">
+                        {upcomingEvents.slice(1).map((event) => (
+                            <li key={event.id} className="flex flex-col gap-0.5 rounded-lg px-2 py-1 bg-white/70">
+                                <span className="font-semibold text-purple-900/85 line-clamp-1">{event.title}</span>
+                                <span>{formatEventDateTime(event)}</span>
                             </li>
                         ))}
                     </ul>
                 )}
                 <Link href="#schedule-section" className="btn btn-primary mt-2 w-full justify-center text-[11px]">
-                    일정 보기
+                    전체 일정 보기
                 </Link>
+            </SectionCard>
+
+            <SectionCard
+                tone="neutral"
+                className="shadow-md rounded-2xl border-white/40 bg-white/85 shadow-purple-900/10"
+                bodyClassName="gap-3"
+                eyebrow="Video Picks"
+                title="바로 보기"
+            >
+                {youtubeStatus === 'loading' && <YouTubeSectionStatus tone="info">유튜브 정보를 불러오는 중...</YouTubeSectionStatus>}
+                {youtubeStatus === 'error' && (
+                    <YouTubeSectionStatus tone="error">{youtubeError ?? '유튜브 영상을 불러오지 못했습니다.'}</YouTubeSectionStatus>
+                )}
+                {youtubeStatus === 'ready' && latestVideo && (
+                    <QuickVideoItem
+                        label="방금 업로드"
+                        video={latestVideo}
+                        highlight
+                    />
+                )}
+                {topVideoStatus === 'loading' && <YouTubeSectionStatus tone="info">지난달 인기 영상을 불러오는 중...</YouTubeSectionStatus>}
+                {topVideoStatus === 'error' && topVideoError && (
+                    <YouTubeSectionStatus tone="error">{topVideoError}</YouTubeSectionStatus>
+                )}
+                {topVideoStatus === 'ready' && topVideo && (
+                    <QuickVideoItem label="지난달 1위" video={topVideo} />
+                )}
+                <div className="grid gap-2 text-[11px]">
+                    <a href="#featured-latest" className="btn btn-ghost h-8 justify-center text-[11px]">최신 영상 섹션으로 이동</a>
+                    <a href="#featured-top" className="btn btn-ghost h-8 justify-center text-[11px]">최다 조회수 섹션으로 이동</a>
+                </div>
             </SectionCard>
 
             <SectionCard
                 tone="lavender"
                 className="shadow-md rounded-2xl border-white/40 bg-gradient-to-br from-purple-100/70 via-white/70 to-white/90 shadow-purple-900/15"
-                bodyClassName="gap-4"
-                eyebrow="Community"
-                title="모잉 디스코드"
+                bodyClassName="gap-3"
+                eyebrow="Highlights"
+                title="오늘의 추천 클립"
             >
-                <div className="relative overflow-hidden border shadow-lg rounded-2xl border-white/40 bg-white/60 shadow-purple-900/15">
-                    {/* <Image
-                        src="/rightAside/rightSide.png"
-                        alt="모잉 커뮤니티"
-                        width={320}
-                        height={180}
-                        className="object-cover w-full h-auto"
-                        priority
-                    /> */}
-                </div>
-                <div className="flex flex-col gap-1.5 text-[11px] text-purple-900/80">
-                    <p className="font-semibold">디스코드에 참여하고 라이브 소식을 받아보세요.</p>
-                </div>
-                <div className="flex flex-col gap-1.5">
-                    {/* 디스코드 외에 다른 활성화 커뮤니티 없음 */}
-                    <a href="https://discord.com/invite/DhuzudS" target="_blank" rel="noreferrer" className="justify-center w-full text-[11px] btn btn-ghost">
-                        디스코드 입장하기
-                    </a>
-                </div>
+                {youtubeStatus === 'loading' && <YouTubeSectionStatus tone="info">추천 영상을 준비 중입니다...</YouTubeSectionStatus>}
+                {youtubeStatus === 'ready' && highlightVideos.length === 0 && (
+                    <YouTubeSectionStatus tone="empty">현재 추천할 영상이 없습니다.</YouTubeSectionStatus>
+                )}
+                {youtubeStatus === 'ready' && highlightVideos.length > 0 && (
+                    <ul className="space-y-2 text-[11px] text-purple-900/85">
+                        {highlightVideos.map(({ label, video }) => (
+                            <li key={`${label}-${video.videoId}`} className="flex items-start gap-2 px-3 py-2 rounded-xl bg-white/75">
+                                <span className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-purple-200 text-[10px] font-semibold text-purple-900">
+                                    {label}
+                                </span>
+                                <div className="flex flex-col gap-1">
+                                    <a
+                                        href={video.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="line-clamp-2 font-semibold text-purple-950/95 hover:text-[rgb(var(--moing-deep))]"
+                                        title={video.title}
+                                    >
+                                        {video.title}
+                                    </a>
+                                    <span className="text-[10px] text-purple-700/80">{new Intl.DateTimeFormat('ko-KR', { month: 'numeric', day: 'numeric' }).format(new Date(video.publishedAt))}</span>
+                                </div>
+                            </li>
+                        ))}
+                    </ul>
+                )}
             </SectionCard>
+
+            <SectionCard
+                tone="neutral"
+                className="shadow-md rounded-2xl border-white/40 bg-white/85 shadow-purple-900/10"
+                bodyClassName="gap-3"
+                eyebrow="Navigation"
+                title="페이지 바로가기"
+            >
+                <nav>
+                    <ul className="flex flex-col gap-1 text-[11px] text-purple-900/80">
+                        {TABLE_OF_CONTENTS.map((entry) => (
+                            <li key={entry.id}>
+                                <a
+                                    href={`#${entry.id}`}
+                                    className="flex items-center justify-between rounded-lg px-3 py-1.5 transition-colors hover:bg-purple-100/60"
+                                >
+                                    <span>{entry.label}</span>
+                                      <span aria-hidden className="text-[10px] text-purple-600">{'>'}</span>
+                                </a>
+                            </li>
+                        ))}
+                    </ul>
+                </nav>
+            </SectionCard>
+
+            {gallery.length > 0 && (
+                <SectionCard
+                    tone="lavender"
+                    className="shadow-md rounded-2xl border-white/40 bg-white/60 shadow-purple-900/10"
+                    bodyClassName="gap-4"
+                    eyebrow="Fan Art"
+                    title="마녀의 작업실"
+                    description="팬 아트 갤러리를 감상해 보세요."
+                >
+                    <div className="flex flex-col gap-5">
+                        {gallery.map((item, index) => (
+                            <figure key={item.src} className="flex flex-col gap-3">
+                                <div className="relative overflow-hidden border shadow-lg rounded-2xl border-white/40 shadow-purple-900/20">
+                                    <Image
+                                        src={item.src}
+                                        alt={item.alt}
+                                        width={320}
+                                        height={420}
+                                        className="object-cover w-full h-full"
+                                        sizes="(min-width: 1280px) 240px, (min-width: 1024px) 200px, 100vw"
+                                        priority={index === 0}
+                                    />
+                                </div>
+                                {item.credit && (
+                                    <figcaption className="text-[11px] text-purple-900/70">{item.credit}</figcaption>
+                                )}
+                                <div className="flex items-center justify-between text-[11px] text-purple-900/60">
+                                    <span>{index + 1} / {gallery.length}</span>
+                                    {item.download && (
+                                        <a
+                                            href={item.download}
+                                            download
+                                            className="btn btn-primary h-8 min-w-[5rem] justify-center text-xs"
+                                        >
+                                            다운로드
+                                        </a>
+                                    )}
+                                </div>
+                            </figure>
+                        ))}
+                    </div>
+                </SectionCard>
+            )}
         </aside>
     )
 }
@@ -204,13 +380,95 @@ function formatEventDateTime(event: ScheduleEvent): string {
     return `${formatter.format(startDate)} · ${endFormatter.format(endDate)}`
 }
 
+function selectLatestVideo(data: ReturnType<typeof useYouTubeVideos>['data']): TopVideoPayload | null {
+    if (!data) {
+        return null
+    }
+
+    const candidates = [
+        ...(data.moing ?? []),
+        ...(data.fullmoing ?? []),
+        ...(data.moingFan ?? []),
+    ]
+
+    if (candidates.length === 0) {
+        return null
+    }
+
+    return candidates.reduce<TopVideoPayload | null>((latest, candidate) => {
+        const candidateTime = Date.parse(candidate.publishedAt)
+        if (Number.isNaN(candidateTime)) {
+            return latest
+        }
+
+        if (!latest) {
+            return mapVideo(candidate)
+        }
+
+        const latestTime = Date.parse(latest.publishedAt)
+        if (Number.isNaN(latestTime) || candidateTime > latestTime) {
+            return mapVideo(candidate)
+        }
+
+        return latest
+    }, null)
+}
+
+function buildHighlightVideos(data: ReturnType<typeof useYouTubeVideos>['data']) {
+    if (!data) {
+        return [] as Array<{ label: string; video: TopVideoPayload }>
+    }
+
+    const entries: Array<{ label: string; video: TopVideoPayload }> = []
+
+    if (data.moing?.[0]) {
+        entries.push({ label: '공식', video: mapVideo(data.moing[0]) })
+    }
+    if (data.fullmoing?.[0]) {
+        entries.push({ label: '다시보기', video: mapVideo(data.fullmoing[0]) })
+    }
+    if (data.moingFan?.[0]) {
+        entries.push({ label: '팬', video: mapVideo(data.moingFan[0]) })
+    }
+
+    return entries
+}
+
+function mapVideo(item: { videoId: string; title: string; thumbnail?: string; channelTitle?: string; publishedAt: string; url: string }): TopVideoPayload {
+    return {
+        videoId: item.videoId,
+        title: item.title,
+        thumbnail: item.thumbnail ?? '',
+        channelTitle: item.channelTitle ?? '',
+        publishedAt: item.publishedAt,
+        url: item.url,
+        viewCount: null,
+    }
+}
+
+function QuickVideoItem({ label, video, highlight }: { label: string; video: TopVideoPayload; highlight?: boolean }) {
+    return (
+        <a
+            href={video.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`flex flex-col gap-1 rounded-xl border px-3 py-2 text-[11px] transition-colors ${highlight ? 'border-purple-300 bg-purple-50/80 hover:bg-purple-100/80' : 'border-purple-200/60 bg-white/70 hover:bg-purple-100/70'}`}
+            title={video.title}
+        >
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-purple-700/80">{label}</span>
+            <span className="font-semibold line-clamp-2 text-purple-950/95">{video.title}</span>
+            <span className="text-[10px] text-purple-700/75">{video.channelTitle || '모잉 채널'}</span>
+        </a>
+    )
+}
+
 function ScheduleAsideSkeleton(): ReactElement {
     return (
         <ul className="space-y-2">
             {Array.from({ length: MAX_VISIBLE_EVENTS }).map((_, index) => (
                 <li
                     key={index}
-                    className="flex items-center justify-between px-3 py-2 animate-pulse rounded-xl bg-purple-100/30"
+                    className="flex items-center justify-between px-3 py-2 rounded-xl bg-purple-100/30 animate-pulse"
                 >
                     <div className="flex flex-col w-full gap-2">
                         <span className="w-full h-4 rounded-full bg-purple-200/60" />

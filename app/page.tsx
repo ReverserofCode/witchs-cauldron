@@ -74,13 +74,25 @@ export default function Page(): ReactElement {
               </SectionCard>
 
               <div className="grid gap-5 md:grid-cols-1 lg:grid-cols-2">
-                <LatestYouTubeVideoCard className="h-full" />
-                <TopOfficialYouTubeVideoCard className="h-full" />
+                <div id="featured-latest" className="h-full">
+                  <LatestYouTubeVideoCard className="h-full" />
+                </div>
+                <div id="featured-top" className="h-full">
+                  <TopOfficialYouTubeVideoCard className="h-full" />
+                </div>
               </div>
-              <ScheduleSection />
-              <YouTubeOfficialVideosSection />
-              <YouTubeFullMoingVideosSection />
-              <YouTubeFanVideosSection />
+              <div id="schedule-section">
+                <ScheduleSection />
+              </div>
+              <div id="youtube-official">
+                <YouTubeOfficialVideosSection />
+              </div>
+              <div id="youtube-full">
+                <YouTubeFullMoingVideosSection />
+              </div>
+              <div id="youtube-fan">
+                <YouTubeFanVideosSection />
+              </div>
               {/* <YouTubeShortsSection /> */}
             </div>
 
