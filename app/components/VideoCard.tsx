@@ -10,16 +10,20 @@ interface VideoCardProps {
     url: string;
     channelTitle?: string;
     publishedAt?: string;
+    viewCount?: number | null;
   };
   aspect?: "video" | "short";
 }
 
 export default function VideoCard({ video, aspect = "video" }: VideoCardProps) {
-  const { thumbnail, title, url, channelTitle, publishedAt } = video;
+  const { thumbnail, title, url, channelTitle, publishedAt, viewCount } = video;
   const aspectClass = aspect === "short" ? "aspect-[9/16]" : "aspect-video";
   const fallbackSrc = "/mainPage/SDCharacter.png";
   const displayChannel = channelTitle ?? "모잉 팬 채널";
   const displayDate = publishedAt ? new Date(publishedAt).toLocaleDateString("ko-KR") : null;
+  const displayViews = typeof viewCount === "number" && Number.isFinite(viewCount)
+    ? new Intl.NumberFormat("ko-KR").format(viewCount)
+    : null;
 
   return (
     <a
@@ -47,6 +51,7 @@ export default function VideoCard({ video, aspect = "video" }: VideoCardProps) {
         <div className="mt-auto text-[11px] text-ink/60 typography-small">
           <span className="block">{displayChannel}</span>
           {displayDate && <span>{displayDate}</span>}
+          {displayViews && <span>조회수 {displayViews}</span>}
         </div>
       </div>
     </a>

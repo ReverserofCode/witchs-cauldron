@@ -67,13 +67,13 @@ export default function YouTubeVideosSection() {
     <SectionCard
       tone="neutral"
       eyebrow="YouTube Hub"
-      title="최신 유튜브 영상"
+      title="유튜브 영상 모음"
   description="모잉 공식·다시보기·팬 채널의 최신 영상을 한눈에 확인해 보세요."
       bodyClassName="space-y-6"
     >
       {loading && <div className="text-sm text-purple-900/70 typography-body">불러오는 중...</div>}
       {error && (
-        <div className="rounded-xl border border-red-200 bg-red-50/80 p-3 text-sm text-red-600 typography-body">
+        <div className="p-3 text-sm text-red-600 border border-red-200 rounded-xl bg-red-50/80 typography-body">
           {error}
         </div>
       )}

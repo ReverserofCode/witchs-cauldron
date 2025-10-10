@@ -9,9 +9,10 @@ import LeftAside from './components/leftAside'
 import RigthAside from './components/rightAside'
 import ScheduleSection from './components/scheduleSection'
 import SectionCard from './components/sectionCard'
-import TodayBroadcastStatusCard from './components/todayBroadcastStatusCard'
 import YouTubeShortsSection from './components/YouTubeShortsSection'
 import YouTubeVideosSection from './components/YouTubeVideosSection'
+import LatestYouTubeVideoCard from './components/latestYouTubeVideoCard'
+import TopOfficialYouTubeVideoCard from './components/topOfficialYouTubeVideoCard'
 
 export default function Page(): ReactElement {
   const profileStats = [
@@ -76,31 +77,14 @@ export default function Page(): ReactElement {
                 </p>
               </SectionCard>
 
-              <div className="grid gap-5 md:grid-cols-[minmax(0,1fr)_minmax(0,18rem)]">
-                <SectionCard
-                  tone="lavender"
-                  eyebrow="Character Profile"
-                  title="설정 카드"
-                  bodyClassName="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
-                >
-                  {profileStats.map((stat) => (
-                    <div
-                      key={stat.title}
-                      className="flex items-center justify-between px-3 py-3 border shadow-sm rounded-2xl border-white/60 bg-white/75"
-                    >
-                      <dt className="text-[11px] font-semibold uppercase tracking-wide text-purple-700/90">
-                        {stat.title}
-                      </dt>
-                      <dd className="text-[11px] font-extrabold text-purple-900/90">{stat.value}</dd>
-                    </div>
-                  ))}
-                </SectionCard>
-                <TodayBroadcastStatusCard />
+              <div className="grid gap-5 md:grid-cols-1 lg:grid-cols-2">
+                <LatestYouTubeVideoCard className="h-full" />
+                <TopOfficialYouTubeVideoCard className="h-full" />
               </div>
+              <ScheduleSection />
             </div>
 
             <div className="mt-1 space-y-10">
-              <ScheduleSection />
               <YouTubeVideosSection />
               {/* 적절한 쇼츠 채널이 없어 임시 폐쇄  */}
               {/* <YouTubeShortsSection /> */}

@@ -149,7 +149,7 @@ export default function TodayBroadcastStatusCard({ className }: TodayBroadcastSt
               </div>
             ) : (
               <div className="p-4 text-sm font-medium border shadow-sm rounded-2xl border-white/60 bg-white/85 text-purple-700/80 typography-body">
-                오늘은 예정된 방송이 없습니다. 휴식을 즐겨보세요!
+                오늘은 예정된 방송이 없습니다.
               </div>
             )}
 
