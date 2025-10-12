@@ -103,6 +103,9 @@ export default async function Page(): Promise<ReactElement> {
                   <TopOfficialYouTubeVideoCard className="h-full" />
                 </div>
               </div>
+              <div id="clips-section">
+                <ClipsSection />
+              </div>
               <div id="schedule-section">
                 <ScheduleSection />
               </div>
@@ -115,9 +118,7 @@ export default async function Page(): Promise<ReactElement> {
               <div id="youtube-fan">
                 <YouTubeFanVideosSection />
               </div>
-              <div id="clips-section">
-                <ClipsSection />
-              </div>
+              
               {/* <YouTubeShortsSection /> */}
             </div>
 
