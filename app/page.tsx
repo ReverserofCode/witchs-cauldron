@@ -9,6 +9,7 @@ import profileImg from '../public/mainPage/Profile.png'
 import { LeftSidebar, RightSidebar } from '@/app/components/layout'
 import { SectionCard, LatestYouTubeVideoCard, TopOfficialYouTubeVideoCard } from '@/app/components/cards'
 import {
+  ClipsSection,
   ScheduleSection,
   YouTubeOfficialVideosSection,
   YouTubeFullMoingVideosSection,
@@ -113,6 +114,9 @@ export default async function Page(): Promise<ReactElement> {
               </div>
               <div id="youtube-fan">
                 <YouTubeFanVideosSection />
+              </div>
+              <div id="clips-section">
+                <ClipsSection />
               </div>
               {/* <YouTubeShortsSection /> */}
             </div>
