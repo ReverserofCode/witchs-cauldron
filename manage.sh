@@ -107,7 +107,9 @@ show_logs() {
 # 이미지 빌드
 build_image() {
     log_info "Docker 이미지를 다시 빌드합니다..."
-    docker-compose -f $COMPOSE_FILE build --no-cache
+    log_info "빌드 캐시를 정리합니다..."
+    docker builder prune -f || true
+    docker-compose -f $COMPOSE_FILE build --no-cache --progress=plain
     log_success "이미지 빌드가 완료되었습니다."
 }
 

@@ -93,10 +93,13 @@ build_image() {
     if [ "$1" = "--clean" ]; then
         log_info "기존 이미지를 제거합니다..."
         docker rmi witchs-cauldron-frontend:latest || true
+        # Docker 빌드 캐시도 정리
+        docker builder prune -f || true
     fi
     
-    # 이미지 빌드
-    docker-compose -f docker-compose.prod.yml build --no-cache
+    # 이미지 빌드 (더 상세한 로그 출력)
+    log_info "빌드 진행 상황을 모니터링합니다..."
+    docker-compose -f docker-compose.prod.yml build --no-cache --progress=plain
     log_success "Docker 이미지 빌드가 완료되었습니다."
 }
 

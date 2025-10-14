@@ -209,6 +209,33 @@ ports:
    docker-compose -f docker-compose.prod.yml build
    ```
 
+5. **모듈을 찾을 수 없는 오류 (@tailwindcss/postcss, path aliases)**
+
+   ```bash
+   # 빌드 캐시 완전 정리
+   docker builder prune -f
+   docker system prune -a
+
+   # 완전히 새로 빌드
+   ./manage.sh clean
+   ./deploy.sh --clean
+   ```
+
+6. **Docker Compose 버전 경고**
+
+   - `version` 속성 관련 경고는 무시해도 안전합니다
+   - 최신 Docker Compose에서는 version 속성이 필요하지 않습니다
+
+7. **Tailwind CSS 빌드 오류**
+
+   ```bash
+   # devDependencies가 제대로 설치되었는지 확인
+   docker run --rm -v $(pwd):/app -w /app node:22-alpine npm list --depth=0
+
+   # PostCSS 설정 확인
+   cat postcss.config.js
+   ```
+
 ### 로그 확인
 
 ```bash

@@ -1,22 +1,25 @@
 # ================================
-# Stage 1: Dependencies
+# Stage 1: Dependencies (Production)
 # ================================
-FROM node:18-alpine AS deps
+FROM node:22-alpine AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
 # package.json과 package-lock.json 복사
 COPY package*.json ./
-RUN npm ci --only=production
+RUN npm ci --only=production && npm cache clean --force
 
 # ================================
 # Stage 2: Builder
 # ================================
-FROM node:18-alpine AS builder
+FROM node:22-alpine AS builder
 WORKDIR /app
 
-# Dependencies stage에서 node_modules 복사
-COPY --from=deps /app/node_modules ./node_modules
+# 빌드에 필요한 모든 dependencies 설치
+COPY package*.json ./
+RUN npm ci
+
+# 소스 코드 복사
 COPY . .
 
 # Next.js 텔레메트리 비활성화
@@ -28,7 +31,7 @@ RUN npm run build
 # ================================
 # Stage 3: Runner (Production)
 # ================================
-FROM node:18-alpine AS runner
+FROM node:22-alpine AS runner
 WORKDIR /app
 
 # 프로덕션 환경 설정
@@ -39,8 +42,14 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
+# production dependencies 복사
+COPY --from=deps /app/node_modules ./node_modules
+
 # public 폴더 복사
 COPY --from=builder /app/public ./public
+
+# package.json 복사 (standalone 서버에 필요)
+COPY --from=builder /app/package*.json ./
 
 # 빌드된 애플리케이션 복사 (권한 설정 포함)
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
