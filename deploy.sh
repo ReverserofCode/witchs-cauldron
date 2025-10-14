@@ -53,19 +53,20 @@ check_docker() {
 
 # Docker Compose 설치 확인
 check_docker_compose() {
-    log_info "Docker Compose 설치 상태를 확인합니다..."
-    
-    if ! command -v docker-compose &> /dev/null; then
-        log_error "Docker Compose가 설치되어 있지 않습니다."
-        log_info "Docker Compose 설치를 진행합니다..."
-        
-        # Docker Compose 설치
-        sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-        sudo chmod +x /usr/local/bin/docker-compose
-    else
-        log_success "Docker Compose가 이미 설치되어 있습니다."
-        docker-compose --version
+    log_info "Docker Compose 플러그인(docker compose) 사용 가능 여부를 확인합니다..."
+    if docker compose version >/dev/null 2>&1; then
+        log_success "Docker Compose 플러그인 사용 가능: $(docker compose version --short 2>/dev/null || true)"
+        return 0;
     fi
+    # 구형 standalone docker-compose 확인
+    if command -v docker-compose &>/dev/null; then
+        log_warning "standalone docker-compose 감지됨. 가능하면 Docker 최신 버전(플러그인 형태) 사용을 권장합니다."
+        docker-compose --version
+        return 0
+    fi
+    log_error "Docker Compose가 설치되어 있지 않습니다. 설치를 진행합니다."
+    sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+    sudo chmod +x /usr/local/bin/docker-compose
 }
 
 # 기존 컨테이너 정리
@@ -99,7 +100,11 @@ build_image() {
     
     # 이미지 빌드 (더 상세한 로그 출력)
     log_info "빌드 진행 상황을 모니터링합니다..."
-    docker-compose -f docker-compose.prod.yml build --no-cache --progress=plain
+    if docker compose version >/dev/null 2>&1; then
+        docker compose --progress=plain -f docker-compose.prod.yml build --no-cache
+    else
+        docker-compose -f docker-compose.prod.yml build --no-cache --progress=plain || docker-compose -f docker-compose.prod.yml build --no-cache
+    fi
     log_success "Docker 이미지 빌드가 완료되었습니다."
 }
 
@@ -107,12 +112,16 @@ build_image() {
 start_application() {
     log_info "애플리케이션을 시작합니다..."
     
-    docker-compose -f docker-compose.prod.yml up -d
+    if docker compose version >/dev/null 2>&1; then
+        docker compose -f docker-compose.prod.yml up -d
+    else
+        docker-compose -f docker-compose.prod.yml up -d
+    fi
     
     log_success "애플리케이션이 시작되었습니다!"
     log_info "접속 URL: http://localhost:3000"
-    log_info "상태 확인: docker-compose -f docker-compose.prod.yml ps"
-    log_info "로그 확인: docker-compose -f docker-compose.prod.yml logs -f"
+    log_info "상태 확인: docker compose -f docker-compose.prod.yml ps"
+    log_info "로그 확인: docker compose -f docker-compose.prod.yml logs -f"
 }
 
 # 헬스체크
@@ -134,7 +143,7 @@ health_check() {
     done
     
     log_error "애플리케이션이 정상적으로 시작되지 않았습니다."
-    log_info "로그를 확인하세요: docker-compose -f docker-compose.prod.yml logs"
+    log_info "로그를 확인하세요: docker compose -f docker-compose.prod.yml logs"
     return 1
 }
 
@@ -166,10 +175,10 @@ main() {
     log_success "배포가 완료되었습니다! 🚀"
     echo ""
     echo "유용한 명령어:"
-    echo "  상태 확인: docker-compose -f docker-compose.prod.yml ps"
-    echo "  로그 확인: docker-compose -f docker-compose.prod.yml logs -f"
-    echo "  중지: docker-compose -f docker-compose.prod.yml down"
-    echo "  재시작: docker-compose -f docker-compose.prod.yml restart"
+    echo "  상태 확인: docker compose -f docker-compose.prod.yml ps"
+    echo "  로그 확인: docker compose -f docker-compose.prod.yml logs -f"
+    echo "  중지: docker compose -f docker-compose.prod.yml down"
+    echo "  재시작: docker compose -f docker-compose.prod.yml restart"
 }
 
 # 스크립트 실행

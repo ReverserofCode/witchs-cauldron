@@ -60,7 +60,11 @@ show_help() {
 # 애플리케이션 시작
 start_app() {
     log_info "애플리케이션을 시작합니다..."
-    docker-compose -f $COMPOSE_FILE up -d
+    if docker compose version >/dev/null 2>&1; then
+        docker compose -f $COMPOSE_FILE up -d
+    else
+        docker-compose -f $COMPOSE_FILE up -d
+    fi
     log_success "애플리케이션이 시작되었습니다."
     log_info "접속 URL: http://localhost:3000"
 }
@@ -68,25 +72,42 @@ start_app() {
 # 애플리케이션 중지
 stop_app() {
     log_info "애플리케이션을 중지합니다..."
-    docker-compose -f $COMPOSE_FILE down
+    if docker compose version >/dev/null 2>&1; then
+        docker compose -f $COMPOSE_FILE down
+    else
+        docker-compose -f $COMPOSE_FILE down
+    fi
     log_success "애플리케이션이 중지되었습니다."
 }
 
 # 애플리케이션 재시작
 restart_app() {
     log_info "애플리케이션을 재시작합니다..."
-    docker-compose -f $COMPOSE_FILE restart
+    if docker compose version >/dev/null 2>&1; then
+        docker compose -f $COMPOSE_FILE restart
+    else
+        docker-compose -f $COMPOSE_FILE restart
+    fi
     log_success "애플리케이션이 재시작되었습니다."
 }
 
 # 상태 확인
 check_status() {
     log_info "애플리케이션 상태를 확인합니다..."
-    docker-compose -f $COMPOSE_FILE ps
+    if docker compose version >/dev/null 2>&1; then
+        docker compose -f $COMPOSE_FILE ps
+    else
+        docker-compose -f $COMPOSE_FILE ps
+    fi
     echo ""
     
     # 헬스체크 상태도 확인
     container_id=$(docker-compose -f $COMPOSE_FILE ps -q frontend)
+    if docker compose version >/dev/null 2>&1; then
+        container_id=$(docker compose -f $COMPOSE_FILE ps -q frontend)
+    else
+        container_id=$(docker-compose -f $COMPOSE_FILE ps -q frontend)
+    fi
     if [ ! -z "$container_id" ]; then
         health_status=$(docker inspect --format='{{.State.Health.Status}}' $container_id 2>/dev/null || echo "unknown")
         log_info "헬스 상태: $health_status"
@@ -98,9 +119,19 @@ show_logs() {
     if [ "$1" = "tail" ]; then
         log_info "최근 로그를 표시합니다..."
         docker-compose -f $COMPOSE_FILE logs --tail=100
+        if docker compose version >/dev/null 2>&1; then
+            docker compose -f $COMPOSE_FILE logs --tail=100
+        else
+            docker-compose -f $COMPOSE_FILE logs --tail=100
+        fi
     else
         log_info "실시간 로그를 표시합니다... (Ctrl+C로 종료)"
         docker-compose -f $COMPOSE_FILE logs -f
+        if docker compose version >/dev/null 2>&1; then
+            docker compose -f $COMPOSE_FILE logs -f
+        else
+            docker-compose -f $COMPOSE_FILE logs -f
+        fi
     fi
 }
 
@@ -109,7 +140,11 @@ build_image() {
     log_info "Docker 이미지를 다시 빌드합니다..."
     log_info "빌드 캐시를 정리합니다..."
     docker builder prune -f || true
-    docker-compose -f $COMPOSE_FILE build --no-cache --progress=plain
+    if docker compose version >/dev/null 2>&1; then
+        docker compose --progress=plain -f $COMPOSE_FILE build --no-cache
+    else
+        docker-compose -f $COMPOSE_FILE build --no-cache --progress=plain || docker-compose -f $COMPOSE_FILE build --no-cache
+    fi
     log_success "이미지 빌드가 완료되었습니다."
 }
 
@@ -124,6 +159,11 @@ clean_all() {
         
         # 컨테이너 중지 및 제거
         docker-compose -f $COMPOSE_FILE down --rmi all --volumes --remove-orphans
+        if docker compose version >/dev/null 2>&1; then
+            docker compose -f $COMPOSE_FILE down --rmi all --volumes --remove-orphans
+        else
+            docker-compose -f $COMPOSE_FILE down --rmi all --volumes --remove-orphans
+        fi
         
         # 사용하지 않는 이미지 정리
         docker image prune -f
@@ -144,6 +184,11 @@ update_app() {
     # 재시작
     log_info "애플리케이션을 재시작합니다..."
     docker-compose -f $COMPOSE_FILE up -d --force-recreate
+    if docker compose version >/dev/null 2>&1; then
+        docker compose -f $COMPOSE_FILE up -d --force-recreate
+    else
+        docker-compose -f $COMPOSE_FILE up -d --force-recreate
+    fi
     
     log_success "업데이트가 완료되었습니다."
 }
@@ -173,6 +218,11 @@ health_check() {
 # 컨테이너 쉘 접근
 access_shell() {
     container_id=$(docker-compose -f $COMPOSE_FILE ps -q frontend)
+    if docker compose version >/dev/null 2>&1; then
+        container_id=$(docker compose -f $COMPOSE_FILE ps -q frontend)
+    else
+        container_id=$(docker-compose -f $COMPOSE_FILE ps -q frontend)
+    fi
     
     if [ -z "$container_id" ]; then
         log_error "실행 중인 컨테이너를 찾을 수 없습니다."

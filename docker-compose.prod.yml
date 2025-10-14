@@ -9,12 +9,12 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - NODE_ENV=production
-      - NEXT_TELEMETRY_DISABLED=1
-      - PORT=3000
-      - HOSTNAME=0.0.0.0
-        # YouTube API 키 - 실제 배포 시 환경 파일이나 시스템 환경변수에서 설정
-        - YOUTUBE_API_KEY=${YOUTUBE_API_KEY:-}
+      NODE_ENV: production
+      NEXT_TELEMETRY_DISABLED: "1"
+      PORT: "3000"
+      HOSTNAME: 0.0.0.0
+      # YouTube API 키 - 실제 배포 시 .env 또는 시스템 환경변수에서 주입
+      YOUTUBE_API_KEY: ${YOUTUBE_API_KEY:-}
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "node", "healthcheck.js"]
