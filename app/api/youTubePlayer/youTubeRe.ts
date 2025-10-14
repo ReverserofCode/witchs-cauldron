@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { YOUTUBE_API_KEY, resolveChannelMetadata } from "./shared";
+import { checkYouTubeApiKey, resolveChannelMetadata } from "./shared";
 
 const MAX_RESULTS = 4;
 const CHANNEL_HANDLES = {
@@ -20,6 +20,8 @@ interface VideoItem {
 }
 
 async function fetchLatestVideos(playlistId: string): Promise<VideoItem[]> {
+  const YOUTUBE_API_KEY = checkYouTubeApiKey();
+
   const params = new URLSearchParams({
     playlistId,
     part: "snippet,contentDetails",

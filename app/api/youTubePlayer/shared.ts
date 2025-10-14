@@ -1,7 +1,12 @@
 const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY ?? "";
 
-if (!YOUTUBE_API_KEY) {
-  throw new Error("YOUTUBE_API_KEY 환경변수가 설정되어 있지 않습니다.");
+// 런타임에 API 키를 체크하는 함수
+function checkYouTubeApiKey(): string {
+  const apiKey = process.env.YOUTUBE_API_KEY;
+  if (!apiKey) {
+    throw new Error("YOUTUBE_API_KEY 환경변수가 설정되어 있지 않습니다.");
+  }
+  return apiKey;
 }
 
 interface ChannelMetadata {
@@ -14,6 +19,8 @@ const channelCache = new Map<string, ChannelMetadata>();
 export async function resolveChannelMetadata(
   handle: string
 ): Promise<ChannelMetadata | null> {
+  const YOUTUBE_API_KEY = checkYouTubeApiKey();
+
   if (channelCache.has(handle)) {
     return channelCache.get(handle)!;
   }
@@ -56,4 +63,4 @@ export async function resolveChannelId(handle: string): Promise<string | null> {
   return metadata?.channelId ?? null;
 }
 
-export { YOUTUBE_API_KEY };
+export { checkYouTubeApiKey };

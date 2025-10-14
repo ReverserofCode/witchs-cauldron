@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
-import { YOUTUBE_API_KEY, resolveChannelMetadata } from "../shared";
+import { checkYouTubeApiKey, resolveChannelMetadata } from "../shared";
 
-const CHANNEL_HANDLES = ["moing", "fullmoing"] as const;
+// 단일 채널(fullmoing)만 대상으로 지난달 최다 조회수 영상 선정
+const CHANNEL_HANDLES = ["fullmoing"] as const;
 type ChannelHandle = (typeof CHANNEL_HANDLES)[number];
 
 interface TopVideoPayload {
@@ -16,6 +17,7 @@ interface TopVideoPayload {
 
 function startOfPreviousMonthUtc(): Date {
   const now = new Date();
+  // 지난달 1일 00:00:00.000 UTC (포함)
   return new Date(
     Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1, 0, 0, 0, 0)
   );
@@ -23,6 +25,7 @@ function startOfPreviousMonthUtc(): Date {
 
 function startOfCurrentMonthUtc(): Date {
   const now = new Date();
+  // 이번달 1일 00:00:00.000 UTC (지난달 상한 - 미포함)
   return new Date(
     Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0, 0)
   );
@@ -31,6 +34,20 @@ function startOfCurrentMonthUtc(): Date {
 export async function GET() {
   const monthStart = startOfPreviousMonthUtc();
   const nextMonthStart = startOfCurrentMonthUtc();
+
+  // 런타임 API 키 존재 여부를 먼저 확인 (없으면 200 + video:null 반환)
+  try {
+    checkYouTubeApiKey();
+  } catch (e) {
+    return NextResponse.json(
+      {
+        video: null,
+        reason: "MISSING_API_KEY",
+        message: (e as Error).message,
+      },
+      { status: 200 }
+    );
+  }
 
   const candidates: Array<{
     videoId: string;
@@ -43,16 +60,27 @@ export async function GET() {
   }> = [];
 
   for (const handle of CHANNEL_HANDLES) {
-    const metadata = await resolveChannelMetadata(handle);
+    let metadata = null;
+    try {
+      metadata = await resolveChannelMetadata(handle);
+    } catch (e) {
+      console.error("채널 메타데이터 조회 중 오류", handle, e);
+      metadata = null;
+    }
     if (!metadata) {
       continue;
     }
-
-    const channelVideos = await fetchChannelVideos(
-      metadata.uploadsPlaylistId,
-      monthStart,
-      nextMonthStart
-    );
+    let channelVideos: Awaited<ReturnType<typeof fetchChannelVideos>> = [];
+    try {
+      channelVideos = await fetchChannelVideos(
+        metadata.uploadsPlaylistId,
+        monthStart,
+        nextMonthStart
+      );
+    } catch (e) {
+      console.error("채널 영상 조회 중 오류", handle, e);
+      channelVideos = [];
+    }
     candidates.push(
       ...channelVideos.map((item) => ({
         ...item,
@@ -65,9 +93,15 @@ export async function GET() {
     return NextResponse.json({ video: null }, { status: 200 });
   }
 
-  const viewCounts = await fetchVideoViewCounts(
-    candidates.map((item) => item.videoId)
-  );
+  let viewCounts: Record<string, number> = {};
+  try {
+    viewCounts = await fetchVideoViewCounts(
+      candidates.map((item) => item.videoId)
+    );
+  } catch (e) {
+    console.error("뷰 카운트 조회 중 오류", e);
+    viewCounts = {};
+  }
 
   const enriched = candidates.map<TopVideoPayload>((item) => ({
     videoId: item.videoId,
@@ -99,6 +133,7 @@ export async function GET() {
         !Number.isNaN(currentTime) &&
         (Number.isNaN(bestTime) || currentTime > bestTime)
       ) {
+        // 조회수 동률 시 더 최근 업로드를 선택
         return current;
       }
     }
@@ -106,7 +141,16 @@ export async function GET() {
     return best;
   }, null);
 
-  return NextResponse.json({ video: topVideo }, { status: 200 });
+  return NextResponse.json(
+    {
+      video: topVideo,
+      month: {
+        from: monthStart.toISOString(),
+        to: nextMonthStart.toISOString(),
+      },
+    },
+    { status: 200 }
+  );
 }
 
 async function fetchChannelVideos(
@@ -135,6 +179,7 @@ async function fetchChannelVideos(
   let pageToken: string | undefined;
 
   do {
+    const YOUTUBE_API_KEY = checkYouTubeApiKey();
     const params = new URLSearchParams({
       playlistId,
       part: "snippet,contentDetails",
@@ -218,7 +263,7 @@ async function fetchVideoViewCounts(
       id: chunk.join(","),
       part: "statistics",
     });
-    params.set("key", YOUTUBE_API_KEY);
+    params.set("key", checkYouTubeApiKey());
 
     const res = await fetch(
       `https://www.googleapis.com/youtube/v3/videos?${params.toString()}`,

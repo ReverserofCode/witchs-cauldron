@@ -45,16 +45,43 @@ chmod +x deploy.sh manage.sh
 
 ### 3단계: 애플리케이션 확인
 
-```bash
+````bash
 # 상태 확인
 ./manage.sh status
-
+#### 필수 환경 변수
 # 웹 브라우저에서 접속
+**YouTube API 키 설정 (필수)**
 # http://your-server-ip:3000
+```bash
+# 1. 환경 파일 생성
+cp .env.example .env
+
+# 2. 환경 파일 편집
+nano .env
+````
+
+````
+`.env` 파일 내용:
+```bash
+YOUTUBE_API_KEY=your_actual_youtube_api_key_here
+````
+
+**또는 시스템 환경변수로 설정:**
+
+```bash
+# 현재 세션에서만 설정
+export YOUTUBE_API_KEY="your_actual_youtube_api_key_here"
+
+# 영구적으로 설정 (bashrc에 추가)
+echo 'export YOUTUBE_API_KEY="your_actual_youtube_api_key_here"' >> ~/.bashrc
+source ~/.bashrc
 ```
 
 ## 🛠️ 수동 설치
 
+#### 기타 환경 변수
+
+필요에 따라 다른 환경 변수를 설정할 수 있습니다. `docker-compose.prod.yml` 파일을 편집하세요:
 자동 설치가 작동하지 않는 경우 수동으로 설치할 수 있습니다.
 
 ### Docker 설치
@@ -62,7 +89,8 @@ chmod +x deploy.sh manage.sh
 ```bash
 # 시스템 업데이트
 sudo apt update
-sudo apt upgrade -y
+   - YOUTUBE_API_KEY=${YOUTUBE_API_KEY:-}
+   # 추가 환경 변수들...
 
 # Docker 설치
 curl -fsSL https://get.docker.com -o get-docker.sh
@@ -235,6 +263,32 @@ ports:
    # PostCSS 설정 확인
    cat postcss.config.js
    ```
+
+   8. **YouTube API 키 관련 오류**
+
+      **오류**: `YOUTUBE_API_KEY 환경변수가 설정되어 있지 않습니다`
+
+      ```bash
+      # 환경변수가 설정되었는지 확인
+      echo $YOUTUBE_API_KEY
+
+      # .env 파일이 있는지 확인
+      ls -la .env
+
+      # YouTube API 키 설정
+      export YOUTUBE_API_KEY="your_api_key_here"
+
+      # 컨테이너에서 환경변수 확인
+      docker exec witchs-cauldron-frontend-prod printenv | grep YOUTUBE
+      ```
+
+      **YouTube API 키 발급 방법:**
+
+      1. [Google Cloud Console](https://console.cloud.google.com/) 접속
+      2. 새 프로젝트 생성 또는 기존 프로젝트 선택
+      3. "API 및 서비스" > "라이브러리"에서 "YouTube Data API v3" 활성화
+      4. "API 및 서비스" > "사용자 인증 정보"에서 API 키 생성
+      5. 생성된 API 키를 환경변수로 설정
 
 ### 로그 확인
 

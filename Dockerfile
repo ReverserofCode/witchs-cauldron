@@ -24,6 +24,7 @@ COPY . .
 
 # Next.js 텔레메트리 비활성화
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV YOUTUBE_API_KEY=dummy_key_for_build
 
 # 애플리케이션 빌드
 RUN npm run build
