@@ -1,4 +1,4 @@
-const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY ?? "";
+export const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY ?? "";
 
 // 런타임에 API 키를 체크하는 함수
 function checkYouTubeApiKey(): string {
