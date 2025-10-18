@@ -172,3 +172,6 @@ export async function GET() {
 
   return NextResponse.json(shortsOnly);
 }
+
+// 런타임 의존성(API Key, 외부 API)에 따라 반드시 동적 처리
+export const dynamic = "force-dynamic";

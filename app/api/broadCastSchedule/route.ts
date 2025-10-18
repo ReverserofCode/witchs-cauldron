@@ -6,6 +6,7 @@ import {
 } from "./schedule";
 
 const DEFAULT_REVALIDATE_SECONDS = 60 * 10; // 10 minutes
+export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);

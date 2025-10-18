@@ -153,6 +153,9 @@ export async function GET() {
   );
 }
 
+// 외부 API 및 런타임 키 의존 -> 동적 처리 강제
+export const dynamic = "force-dynamic";
+
 async function fetchChannelVideos(
   playlistId: string,
   monthStart: Date,
