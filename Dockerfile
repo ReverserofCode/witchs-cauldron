@@ -24,7 +24,6 @@ COPY . .
 
 # Next.js 텔레메트리 비활성화
 ENV NEXT_TELEMETRY_DISABLED=1
-ENV YOUTUBE_API_KEY=dummy_key_for_build
 
 # 애플리케이션 빌드
 RUN npm run build
@@ -55,6 +54,9 @@ COPY --from=builder /app/package*.json ./
 # 빌드된 애플리케이션 복사 (권한 설정 포함)
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+# 헬스체크 스크립트 복사 (런타임에서 참조)
+COPY --from=builder /app/healthcheck.js ./
 
 # nextjs 사용자로 전환
 USER nextjs

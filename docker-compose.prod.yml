@@ -8,13 +8,14 @@ services:
     image: witchs-cauldron-frontend:latest
     ports:
       - "3000:3000"
+    env_file:
+      - .env
     environment:
       NODE_ENV: production
       NEXT_TELEMETRY_DISABLED: "1"
       PORT: "3000"
       HOSTNAME: 0.0.0.0
-      # YouTube API 키 - 실제 배포 시 .env 또는 시스템 환경변수에서 주입
-      YOUTUBE_API_KEY: ${YOUTUBE_API_KEY:-}
+      # YouTube API 키는 .env 또는 배포 환경 변수에서 주입됨
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "node", "healthcheck.js"]
