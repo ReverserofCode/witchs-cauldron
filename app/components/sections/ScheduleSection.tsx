@@ -47,7 +47,7 @@ export default function ScheduleSection({
   useEffect(() => {
     let cancelled = false;
 
-    async function loadSchedule() {
+  async function loadSchedule() {
       setStatus('loading');
       setError(null);
       setDiagnostics(null);
@@ -90,7 +90,7 @@ export default function ScheduleSection({
     setDiagnoseError(null);
 
     try {
-      const res = await fetch(`${SCHEDULE_ENDPOINT}?debug=1`, {
+  const res = await fetch(`${SCHEDULE_ENDPOINT}?debug=1`, {
         headers: { accept: 'application/json' },
         cache: 'no-store',
       });
@@ -107,7 +107,7 @@ export default function ScheduleSection({
 
       setDiagnostics(payload.diagnostics);
 
-      const { events: upcomingWeek, range } = selectEventsForWeek(payload.feed?.events ?? [], DAYS_TO_SHOW);
+  const { events: upcomingWeek, range } = selectEventsForWeek(payload.feed?.events ?? [], DAYS_TO_SHOW);
       setEvents(upcomingWeek);
       setWeekRange(range);
       setStatus('ready');
@@ -120,7 +120,7 @@ export default function ScheduleSection({
   };
 
   const weekColumns = useMemo<WeekColumn[]>(
-    () => buildWeekColumns(events, weekRange?.start, clampedLimit),
+    () => buildWeekColumns(events, weekRange?.start, clampedLimit, DAYS_TO_SHOW),
     [events, weekRange?.start, clampedLimit]
   );
 
@@ -135,10 +135,10 @@ export default function ScheduleSection({
       tone="lavender"
       eyebrow="Broadcast Schedule"
       title="라이브 일정표"
-      description={`오늘부터 4일간의 방송을 보여주며 하루당 최대 ${clampedLimit}일간의 방송일정을 표시합니다.`}
+  description={`오늘부터 4일간의 방송을 보여주며 하루당 최대 ${clampedLimit}일간의 방송일정을 표시합니다.`}
       bodyClassName="relative"
     >
-      {status === 'loading' && <ScheduleSkeleton />}
+  {status === 'loading' && <ScheduleSkeleton daysToShow={DAYS_TO_SHOW} />}
       {status === 'error' && (
         <div className="p-4 space-y-3 text-xs text-red-700 border border-red-200 rounded-2xl bg-red-50/80 typography-small">
           <div className="typography-small">
@@ -245,28 +245,67 @@ function selectEventsForWeek(
   events: ScheduleEvent[],
   daysToShow: number
 ): { events: ScheduleEvent[]; range: { start: string; end: string } } {
-  const start = startOfDay(new Date());
-  const end = addDays(start, daysToShow);
-  const startMs = start.getTime();
-  const endMs = end.getTime();
+  const todayAnchor = startOfDay(new Date());
+  const primary = filterEventsWithinRange(events, todayAnchor, daysToShow);
+  if (primary.events.length > 0 || events.length === 0) {
+    return primary;
+  }
 
-  const filtered = events
-    .filter((event) => {
-      const eventStart = Date.parse(event.start);
-      if (Number.isNaN(eventStart)) {
-        return false;
+  // Fallback: 제공자 시점이 서버 시점보다 뒤집혀 있을 때
+  // 1) 오늘 기준 이후 일정이 있으면 그중 가장 가까운 날짜를 anchor로 사용
+  // 2) 모두 과거라면 가장 최근(가장 늦은) 일자를 anchor로 사용
+  const { nearestUpcoming, latestPast } = events.reduce(
+    (acc, event) => {
+      const projected = projectEventRange(event, todayAnchor);
+      if (!projected) return acc;
+      const ts = projected.startMs;
+      if (ts >= todayAnchor.getTime()) {
+        if (acc.nearestUpcoming === null || ts < acc.nearestUpcoming) acc.nearestUpcoming = ts;
+      } else {
+        if (acc.latestPast === null || ts > acc.latestPast) acc.latestPast = ts;
       }
+      return acc;
+    },
+    { nearestUpcoming: null as number | null, latestPast: null as number | null }
+  );
 
-      const eventEndParsed = event.end ? Date.parse(event.end) : Number.NaN;
-      const eventEnd = Number.isNaN(eventEndParsed) ? eventStart : eventEndParsed;
+  const fallbackTs = nearestUpcoming ?? latestPast;
+  if (fallbackTs === null) {
+    return primary;
+  }
 
-      const startsInRange = eventStart >= startMs && eventStart < endMs;
-      const endsInRange = eventEnd >= startMs && eventEnd < endMs;
-      const spansRange = eventStart < startMs && eventEnd >= startMs;
+  const fallbackAnchor = startOfDay(new Date(fallbackTs));
+  return filterEventsWithinRange(events, fallbackAnchor, daysToShow);
+}
+
+function filterEventsWithinRange(
+  events: ScheduleEvent[],
+  anchorDate: Date,
+  daysToShow: number
+): { events: ScheduleEvent[]; range: { start: string; end: string } } {
+  const start = startOfDay(anchorDate);
+  const end = addDays(start, daysToShow);
+  const rangeStartMs = start.getTime();
+  const rangeEndMs = end.getTime();
+
+  const projected = events
+    .map((event) => {
+      const projection = projectEventRange(event, start);
+      if (!projection) return null;
+      return { event, ...projection };
+    })
+    .filter((value): value is { event: ScheduleEvent; startMs: number; endMs: number } => Boolean(value));
+
+  const filtered = projected
+    .filter(({ startMs, endMs }) => {
+      const startsInRange = startMs >= rangeStartMs && startMs < rangeEndMs;
+      const endsInRange = endMs >= rangeStartMs && endMs < rangeEndMs;
+      const spansRange = startMs < rangeStartMs && endMs >= rangeStartMs;
 
       return startsInRange || endsInRange || spansRange;
     })
-    .sort((a, b) => Date.parse(a.start) - Date.parse(b.start));
+    .sort((a, b) => a.startMs - b.startMs)
+    .map((item) => item.event);
 
   return {
     events: filtered,
@@ -280,23 +319,21 @@ function selectEventsForWeek(
 function buildWeekColumns(
   events: ScheduleEvent[],
   rangeStartIso: string | undefined,
-  limitPerDay: number
+  limitPerDay: number,
+  daysToShow: number
 ): WeekColumn[] {
   const start = rangeStartIso ? startOfDay(new Date(rangeStartIso)) : startOfDay(new Date());
-  const dateKeyedEvents = new Map<string, ScheduleEvent[]>();
+  const dateKeyedEvents = new Map<string, Array<{ event: ScheduleEvent; startMs: number }>>();
 
   events.forEach((event) => {
-    const eventDate = new Date(event.start);
-    if (Number.isNaN(eventDate.getTime())) {
+    const projectedStart = projectEventDate(event, start);
+    if (!projectedStart) {
       return;
     }
-    const key = formatDateKey(eventDate);
-    const bucket = dateKeyedEvents.get(key);
-    if (bucket) {
-      bucket.push(event);
-    } else {
-      dateKeyedEvents.set(key, [event]);
-    }
+    const key = formatDateKey(projectedStart);
+    const bucket = dateKeyedEvents.get(key) ?? [];
+    bucket.push({ event, startMs: projectedStart.getTime() });
+    dateKeyedEvents.set(key, bucket);
   });
 
   const dateFormatter = new Intl.DateTimeFormat('ko-KR', {
@@ -307,12 +344,12 @@ function buildWeekColumns(
     weekday: 'short',
   });
 
-  return Array.from({ length: DAYS_TO_SHOW }).map((_, index) => {
+  return Array.from({ length: daysToShow }).map((_, index) => {
     const currentDate = addDays(start, index);
     const key = formatDateKey(currentDate);
     const bucket = dateKeyedEvents.get(key) ?? [];
-    const sorted = bucket.slice().sort((a, b) => Date.parse(a.start) - Date.parse(b.start));
-    const limited = sorted.slice(0, limitPerDay);
+    const sorted = bucket.slice().sort((a, b) => a.startMs - b.startMs);
+    const limited = sorted.slice(0, limitPerDay).map((item) => item.event);
     const isWeekend = [0, 6].includes(currentDate.getDay());
 
     return {
@@ -323,6 +360,39 @@ function buildWeekColumns(
       isWeekend,
     };
   });
+}
+
+function projectEventRange(event: ScheduleEvent, anchor: Date): { startMs: number; endMs: number } | null {
+  const startDate = new Date(event.start);
+  if (Number.isNaN(startDate.getTime())) {
+    return null;
+  }
+
+  const projectedStart = projectDateToAnchor(startDate, anchor);
+  const duration = event.end ? Date.parse(event.end) - startDate.getTime() : 0;
+  const safeDuration = Number.isFinite(duration) ? Math.max(duration, 0) : 0;
+
+  return {
+    startMs: projectedStart.getTime(),
+    endMs: projectedStart.getTime() + safeDuration,
+  };
+}
+
+function projectEventDate(event: ScheduleEvent, anchor: Date): Date | null {
+  const projection = projectEventRange(event, anchor);
+  if (!projection) {
+    return null;
+  }
+  return new Date(projection.startMs);
+}
+
+function projectDateToAnchor(date: Date, anchor: Date): Date {
+  const projected = new Date(date);
+  projected.setFullYear(anchor.getFullYear());
+  if (projected.getTime() < anchor.getTime()) {
+    projected.setFullYear(anchor.getFullYear() + 1);
+  }
+  return projected;
 }
 
 function startOfDay(date: Date): Date {
@@ -492,11 +562,11 @@ function formatMetadataDisplay(metadata: Record<string, unknown>): string {
   }
 }
 
-function ScheduleSkeleton() {
+function ScheduleSkeleton({ daysToShow }: { daysToShow: number }) {
   return (
     <div className="overflow-x-auto">
       <div className="grid min-w-[560px] grid-cols-4 gap-4">
-        {Array.from({ length: DAYS_TO_SHOW }).map((_, index) => (
+  {Array.from({ length: daysToShow }).map((_, index) => (
           <div
             key={index}
             className="flex flex-col gap-3 p-4 border rounded-2xl border-purple-100/80 bg-white/70"

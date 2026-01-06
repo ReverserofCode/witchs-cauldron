@@ -257,26 +257,51 @@ export default function LeftSidebar({ className, images }: LeftSidebarProps = {}
 }
 
 function selectUpcomingEvents(allEvents: ScheduleEvent[], limit: number = MAX_VISIBLE_EVENTS): ScheduleEvent[] {
-  const now = Date.now();
+  const anchor = new Date();
+  const now = anchor.getTime();
 
   const scored = allEvents
     .map((event) => {
-      const start = Date.parse(event.start);
-      if (Number.isNaN(start)) {
+      const projected = projectEventRange(event, anchor);
+      if (!projected) {
         return null;
       }
-      const end = event.end ? Date.parse(event.end) : Number.NaN;
-      const normalizedEnd = Number.isNaN(end) ? start : end;
-      const isUpcoming = start >= now || normalizedEnd >= now;
-      return { event, start, normalizedEnd, isUpcoming };
+      const { startMs, endMs } = projected;
+      const isUpcoming = startMs >= now || endMs >= now;
+      return { event, startMs, endMs, isUpcoming };
     })
     .filter((value): value is NonNullable<typeof value> => Boolean(value))
-    .sort((a, b) => a.start - b.start);
+    .sort((a, b) => a.startMs - b.startMs);
 
   const upcoming = scored.filter((item) => item.isUpcoming);
   const source = upcoming.length > 0 ? upcoming : scored;
 
   return source.slice(0, limit).map((item) => item.event);
+}
+
+function projectEventRange(event: ScheduleEvent, anchor: Date): { startMs: number; endMs: number } | null {
+  const startDate = new Date(event.start);
+  if (Number.isNaN(startDate.getTime())) {
+    return null;
+  }
+
+  const projectedStart = projectDateToAnchor(startDate, anchor);
+  const duration = event.end ? Date.parse(event.end) - startDate.getTime() : 0;
+  const safeDuration = Number.isFinite(duration) ? Math.max(duration, 0) : 0;
+
+  return {
+    startMs: projectedStart.getTime(),
+    endMs: projectedStart.getTime() + safeDuration,
+  };
+}
+
+function projectDateToAnchor(date: Date, anchor: Date): Date {
+  const projected = new Date(date);
+  projected.setFullYear(anchor.getFullYear());
+  if (projected.getTime() < anchor.getTime()) {
+    projected.setFullYear(anchor.getFullYear() + 1);
+  }
+  return projected;
 }
 
 function formatEventDateTime(event: ScheduleEvent): string {

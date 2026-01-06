@@ -199,22 +199,21 @@ function selectTodayEvents(events: ScheduleEvent[]): ScheduleEvent[] {
   const endMs = end.getTime();
 
   return events
-    .filter((event) => {
-      const eventStart = Date.parse(event.start);
-      if (Number.isNaN(eventStart)) {
-        return false;
-      }
-
-      const eventEndParsed = event.end ? Date.parse(event.end) : Number.NaN;
-      const eventEnd = Number.isNaN(eventEndParsed) ? eventStart : eventEndParsed;
-
+    .map((event) => {
+      const projection = projectEventRange(event, start);
+      if (!projection) return null;
+      return { event, ...projection };
+    })
+    .filter((value): value is { event: ScheduleEvent; startMs: number; endMs: number } => Boolean(value))
+    .filter(({ startMs: eventStart, endMs: eventEnd }) => {
       const startsToday = eventStart >= startMs && eventStart < endMs;
       const endsToday = eventEnd >= startMs && eventEnd < endMs;
       const spansToday = eventStart < startMs && eventEnd >= startMs;
 
       return startsToday || endsToday || spansToday;
     })
-    .sort((a, b) => Date.parse(a.start) - Date.parse(b.start));
+    .sort((a, b) => a.startMs - b.startMs)
+    .map((item) => item.event);
 }
 
 function startOfDay(date: Date): Date {
@@ -227,6 +226,31 @@ function addDays(date: Date, amount: number): Date {
   const copy = new Date(date);
   copy.setDate(copy.getDate() + amount);
   return copy;
+}
+
+function projectEventRange(event: ScheduleEvent, anchor: Date): { startMs: number; endMs: number } | null {
+  const startDate = new Date(event.start);
+  if (Number.isNaN(startDate.getTime())) {
+    return null;
+  }
+
+  const projectedStart = projectDateToAnchor(startDate, anchor);
+  const duration = event.end ? Date.parse(event.end) - startDate.getTime() : 0;
+  const safeDuration = Number.isFinite(duration) ? Math.max(duration, 0) : 0;
+
+  return {
+    startMs: projectedStart.getTime(),
+    endMs: projectedStart.getTime() + safeDuration,
+  };
+}
+
+function projectDateToAnchor(date: Date, anchor: Date): Date {
+  const projected = new Date(date);
+  projected.setFullYear(anchor.getFullYear());
+  if (projected.getTime() < anchor.getTime()) {
+    projected.setFullYear(anchor.getFullYear() + 1);
+  }
+  return projected;
 }
 
 function formatTime(dateISO: string): string {

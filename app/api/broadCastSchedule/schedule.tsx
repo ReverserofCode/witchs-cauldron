@@ -830,9 +830,14 @@ function inferBaseYear(rows: string[][]): number | undefined {
 			if (explicitYear) {
 				return parseInt(explicitYear[1], 10)
 			}
-			const shortYear = trimmed.match(/'\s*(\d{2})\s*\/\s*\d{1,2}\s*\/\s*\d{1,2}/)
+			// 새 형식: 앞에 ' 이 붙거나 붙지 않은 2자리 연도(예: '25/1/9 또는 25/1/9)
+			const shortYear = trimmed.match(/['’`]?\s*(\d{2})\s*\/\s*(\d{1,2})\s*\/\s*\d{1,2}/)
 			if (shortYear) {
-				return 2000 + parseInt(shortYear[1], 10)
+				const year = 2000 + parseInt(shortYear[1], 10)
+				const month = parseInt(shortYear[2], 10)
+				// 달력이 연말(12월)부터 새해 1~2월을 포함하는 형태일 때,
+				// 1~2월 표시가 보이면 기본 연도를 이전 해로 두어 12월을 맞춰준다.
+				return month <= 2 ? year - 1 : year
 			}
 		}
 	}
@@ -1026,8 +1031,25 @@ function parseDateTime(dateValue?: string, timeValue?: string): string | undefin
 }
 
 function normalizeDate(value: string): string {
-	return value
-		.trim()
+	// Excel에서 연도가 바뀌며 앞에 `'` 이 붙거나, 날짜 뒤에 주석이 붙은 형태까지 허용한다.
+	// 예) "'25/1/1 (신정)", "12/25 (크리스마스)" → 2025-01-01, 2024-12-25
+	const trimmed = value.trim()
+
+	// 날짜 패턴을 먼저 추출(문자열 중간/뒤에 메모가 있어도 앞부분만 사용)
+	const dateMatch = trimmed.match(/['’`]?(\d{2,4})[./-](\d{1,2})[./-](\d{1,2})/)
+	if (dateMatch) {
+		const rawYear = parseInt(dateMatch[1], 10)
+		const month = parseInt(dateMatch[2], 10)
+		const day = parseInt(dateMatch[3], 10)
+		const year = rawYear < 100 ? 2000 + rawYear : rawYear
+		const paddedMonth = `${month}`.padStart(2, '0')
+		const paddedDay = `${day}`.padStart(2, '0')
+		return `${year}-${paddedMonth}-${paddedDay}`
+	}
+
+	// 후속 처리: 구분자를 통일해 두지만, 패턴이 없으면 그대로 반환
+	return trimmed
+		.replace(/^['’`]+/, '')
 		.replace(/년|\//g, '-')
 		.replace(/월/g, '-')
 		.replace(/일/g, '')
