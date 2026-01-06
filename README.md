@@ -29,6 +29,10 @@
 - `public/mainPage`, `public/rightAside`: 정적 리소스(프로필 이미지, 팬아트 이미지 등).
 - `docker-compose.yml`: 로컬 개발을 위한 프론트엔드 컨테이너 정의.
 
+## 운영/유지보수
+
+- 운영 서버 점검, 재배포, 장애 대응 절차는 [MAINTENANCE.md](MAINTENANCE.md)에 정리되어 있습니다.
+
 ## 현재 상태
 
 - Next.js dev 서버가 http://localhost:3000 에서 정상 동작합니다.
