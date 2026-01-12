@@ -246,36 +246,9 @@ function selectEventsForWeek(
   daysToShow: number
 ): { events: ScheduleEvent[]; range: { start: string; end: string } } {
   const todayAnchor = startOfDay(new Date());
-  const primary = filterEventsWithinRange(events, todayAnchor, daysToShow);
-  if (primary.events.length > 0 || events.length === 0) {
-    return primary;
-  }
-
-  // Fallback: 제공자 시점이 서버 시점보다 뒤집혀 있을 때
-  // 1) 오늘 기준 이후 일정이 있으면 그중 가장 가까운 날짜를 anchor로 사용
-  // 2) 모두 과거라면 가장 최근(가장 늦은) 일자를 anchor로 사용
-  const { nearestUpcoming, latestPast } = events.reduce(
-    (acc, event) => {
-      const projected = projectEventRange(event, todayAnchor);
-      if (!projected) return acc;
-      const ts = projected.startMs;
-      if (ts >= todayAnchor.getTime()) {
-        if (acc.nearestUpcoming === null || ts < acc.nearestUpcoming) acc.nearestUpcoming = ts;
-      } else {
-        if (acc.latestPast === null || ts > acc.latestPast) acc.latestPast = ts;
-      }
-      return acc;
-    },
-    { nearestUpcoming: null as number | null, latestPast: null as number | null }
-  );
-
-  const fallbackTs = nearestUpcoming ?? latestPast;
-  if (fallbackTs === null) {
-    return primary;
-  }
-
-  const fallbackAnchor = startOfDay(new Date(fallbackTs));
-  return filterEventsWithinRange(events, fallbackAnchor, daysToShow);
+  
+  // 오늘부터 지정된 일수만큼의 이벤트만 필터링
+  return filterEventsWithinRange(events, todayAnchor, daysToShow);
 }
 
 function filterEventsWithinRange(
@@ -368,13 +341,13 @@ function projectEventRange(event: ScheduleEvent, anchor: Date): { startMs: numbe
     return null;
   }
 
-  const projectedStart = projectDateToAnchor(startDate, anchor);
+  // 실제 날짜를 그대로 사용 (연도 조정 없이)
   const duration = event.end ? Date.parse(event.end) - startDate.getTime() : 0;
   const safeDuration = Number.isFinite(duration) ? Math.max(duration, 0) : 0;
 
   return {
-    startMs: projectedStart.getTime(),
-    endMs: projectedStart.getTime() + safeDuration,
+    startMs: startDate.getTime(),
+    endMs: startDate.getTime() + safeDuration,
   };
 }
 
@@ -384,15 +357,6 @@ function projectEventDate(event: ScheduleEvent, anchor: Date): Date | null {
     return null;
   }
   return new Date(projection.startMs);
-}
-
-function projectDateToAnchor(date: Date, anchor: Date): Date {
-  const projected = new Date(date);
-  projected.setFullYear(anchor.getFullYear());
-  if (projected.getTime() < anchor.getTime()) {
-    projected.setFullYear(anchor.getFullYear() + 1);
-  }
-  return projected;
 }
 
 function startOfDay(date: Date): Date {

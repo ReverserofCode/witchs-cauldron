@@ -5,8 +5,10 @@ import {
   ScheduleSourceError,
 } from "./schedule";
 
-const DEFAULT_REVALIDATE_SECONDS = 60 * 10; // 10 minutes
+// 데이터 캐시 시간: 3분 (구글 시트 변경사항을 빠르게 반영)
+const DEFAULT_REVALIDATE_SECONDS = 60 * 3; // 3 minutes
 export const dynamic = "force-dynamic";
+export const revalidate = DEFAULT_REVALIDATE_SECONDS; // ISR 자동 갱신
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);

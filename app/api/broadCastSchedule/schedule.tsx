@@ -1,4 +1,4 @@
-// Broadcast schedule helper utilities
+﻿// Broadcast schedule helper utilities
 // - Pulls event rows from a Google Sheets document published as CSV ("Publish to web" -> CSV)
 // - Parses the CSV into calendar-friendly JSON
 // 구글 시트 주소 : https://docs.google.com/spreadsheets/d/1Gb0zwlzL-CGf9QP3iuY1oD-dhaUEowhUz4EFgTXg1I8/edit?pli=1&gid=250902752#gid=250902752
@@ -9,7 +9,7 @@
 // - DEFAULT_SHEET_CSV_URL은 동일한 문서를 CSV export URL로 강제한 버전이다.
 //   (실제로는 아래 normalizeGoogleSheetsUrl에서 재생성되므로 참고용)
 const DEFAULT_SHEET_ID = '1Gb0zwlzL-CGf9QP3iuY1oD-dhaUEowhUz4EFgTXg1I8'
-const DEFAULT_SHEET_GID = '250902752'
+const DEFAULT_SHEET_GID = '1591999743'
 const DEFAULT_SHEET_EDIT_URL = `https://docs.google.com/spreadsheets/d/${DEFAULT_SHEET_ID}/edit#gid=${DEFAULT_SHEET_GID}`
 const DEFAULT_SHEET_CSV_URL = `https://docs.google.com/spreadsheets/d/${DEFAULT_SHEET_ID}/export?format=csv&gid=${DEFAULT_SHEET_GID}`
 
@@ -77,6 +77,22 @@ export interface ScheduleDiagnostics {
 	feed?: ScheduleFeed
 	errorMessage?: string
 	errorStatus?: number
+}
+
+function resolveBaseYear(rows: string[][], today: Date): number {
+	// 복잡한 연도 추론 로직 제거 - 항상 현재 연도 사용
+	return today.getFullYear()
+}
+
+function resolveYearByProximity(month: number, today: Date): number {
+	const currentYear = today.getFullYear()
+	const currentMonth = today.getMonth() + 1
+	
+	// 단순화: 현재 월보다 이전 월이면 내년, 아니면 올해
+	if (month < currentMonth - 1) {
+		return currentYear + 1
+	}
+	return currentYear
 }
 
 /**
@@ -262,7 +278,8 @@ export async function fetchScheduleFromPublishedCsv(
 	const csvText = stripBom(await response.text())
 	const rawRows = parseCsv(csvText)
 	const parsedRows = rowsToObjects(rawRows)
-	const events = buildEvents(parsedRows, rawRows)
+	const today = new Date()
+	const events = buildEvents(parsedRows, rawRows, today)
 
 	return {
 		source: 'google-sheets-csv',
@@ -295,6 +312,7 @@ export async function diagnoseSchedule(
 	let rawRows: string[][] = []
 	let parsedRows: SheetRow[] = []
 	let events: ScheduleEvent[] = []
+	const today = new Date()
 
 	const sourceInfo = resolveScheduleSource(csvUrl)
 	const effectiveCsvUrl = sourceInfo.csvUrl
@@ -416,7 +434,7 @@ export async function diagnoseSchedule(
 		})
 
 		await runStep('build-events', '이벤트 생성', () => {
-			events = buildEvents(parsedRows, rawRows)
+			events = buildEvents(parsedRows, rawRows, today)
 			return {
 				totalEvents: events.length,
 				eventSample: events.slice(0, 3).map((event) => ({
@@ -452,19 +470,22 @@ export async function diagnoseSchedule(
 	return diagnostics
 }
 
-function buildEvents(rows: SheetRow[], rawRows: string[][]): ScheduleEvent[] {
+function buildEvents(rows: SheetRow[], rawRows: string[][], today: Date = new Date()): ScheduleEvent[] {
+	// 평탄화된 행에서 이벤트 생성 시도
 	const listFromFlatRows = rows
-		.map((row, index) => createEventFromRow(row, index))
+		.map((row, index) => createEventFromRow(row, index, today))
 		.filter((event): event is ScheduleEvent => Boolean(event))
 
+	// 유효한 이벤트가 있으면 반환
 	if (listFromFlatRows.length > 0) {
 		return listFromFlatRows
 	}
 
-	return buildEventsFromMatrix(rawRows)
+	// 없으면 매트릭스 방식으로 파싱
+	return buildEventsFromMatrix(rawRows, today)
 }
 
-function createEventFromRow(row: SheetRow, index: number): ScheduleEvent | null {
+function createEventFromRow(row: SheetRow, index: number, today: Date): ScheduleEvent | null {
 	const lookup = createLookup(row)
 	const dateValue = pickValue(row, lookup, ['date', '날짜'])
 	const startTime = pickValue(row, lookup, ['start', 'starttime', '시작', '시간'])
@@ -473,12 +494,12 @@ function createEventFromRow(row: SheetRow, index: number): ScheduleEvent | null 
 	const description = pickValue(row, lookup, ['description', '설명', '비고', '메모'])
 	const platform = pickValue(row, lookup, ['platform', '플랫폼', '채널', 'service'])
 
-	const startIso = parseDateTime(dateValue, startTime)
+	const startIso = parseDateTime(dateValue, startTime, today)
 	if (!startIso) {
 		return null
 	}
 
-	const endIso = parseDateTime(dateValue, endTime) ?? undefined
+	const endIso = parseDateTime(dateValue, endTime, today) ?? undefined
 
 	const event: ScheduleEvent = {
 		id: createEventId(startIso, title, index),
@@ -528,13 +549,13 @@ interface TimeRangeResult {
 	endMinute?: number
 }
 
-function buildEventsFromMatrix(rows: string[][]): ScheduleEvent[] {
+function buildEventsFromMatrix(rows: string[][], today: Date): ScheduleEvent[] {
 	const events: ScheduleEvent[] = []
 	if (!rows.length) {
 		return events
 	}
 
-	const baseYear = inferBaseYear(rows) ?? new Date().getFullYear()
+	const baseYear = resolveBaseYear(rows, today)
 	let context: DateContext = { currentYear: baseYear, lastMonth: 0 }
 	let columnDates: Array<ColumnDate | undefined> = []
 	const pending = new Map<number, string[]>()
@@ -835,9 +856,21 @@ function inferBaseYear(rows: string[][]): number | undefined {
 			if (shortYear) {
 				const year = 2000 + parseInt(shortYear[1], 10)
 				const month = parseInt(shortYear[2], 10)
-				// 달력이 연말(12월)부터 새해 1~2월을 포함하는 형태일 때,
-				// 1~2월 표시가 보이면 기본 연도를 이전 해로 두어 12월을 맞춰준다.
-				return month <= 2 ? year - 1 : year
+				
+				const today = new Date()
+				const currentYear = today.getFullYear()
+				const currentMonth = today.getMonth() + 1
+
+				// 현재 날짜와 비교하여 올바른 연도 반환
+				if (currentMonth <= 2 && month >= 11) {
+					// 현재 1~2월인데 시트에 11~12월이 있으면 작년으로 판단
+					return year - 1
+				} else if (currentMonth >= 11 && month <= 2) {
+					// 현재 11~12월인데 시트에 1~2월이 있으면 내년으로 판단
+					return year
+				}
+				// 그 외에는 발견한 연도 그대로 사용
+				return year
 			}
 		}
 	}
@@ -1001,12 +1034,12 @@ function pickValue(row: SheetRow, lookup: Map<string, string>, candidates: strin
 	return undefined
 }
 
-function parseDateTime(dateValue?: string, timeValue?: string): string | undefined {
+function parseDateTime(dateValue?: string, timeValue?: string, today: Date = new Date()): string | undefined {
 	if (!dateValue) {
 		return undefined
 	}
 
-	const normalizedDate = normalizeDate(dateValue)
+	const normalizedDate = normalizeDate(dateValue, today)
 	const normalizedTime = normalizeTime(timeValue)
 
 	if (!normalizedDate) {
@@ -1030,33 +1063,47 @@ function parseDateTime(dateValue?: string, timeValue?: string): string | undefin
 	return undefined
 }
 
-function normalizeDate(value: string): string {
-	// Excel에서 연도가 바뀌며 앞에 `'` 이 붙거나, 날짜 뒤에 주석이 붙은 형태까지 허용한다.
-	// 예) "'25/1/1 (신정)", "12/25 (크리스마스)" → 2025-01-01, 2024-12-25
-	const trimmed = value.trim()
+function normalizeDate(value: string, today: Date = new Date()): string {
+// Excel에서 연도가 바뀌며 앞에 `' 이 붙거나, 날짜 뒤에 주석이 붙은 형태까지 허용한다.
+// 예) "'26/1/15 (수)", "1/20 (월)"  2026-01-15, 2026-01-20
+const trimmed = value.trim()
+const currentYear = today.getFullYear()
 
-	// 날짜 패턴을 먼저 추출(문자열 중간/뒤에 메모가 있어도 앞부분만 사용)
-	const dateMatch = trimmed.match(/['’`]?(\d{2,4})[./-](\d{1,2})[./-](\d{1,2})/)
-	if (dateMatch) {
-		const rawYear = parseInt(dateMatch[1], 10)
-		const month = parseInt(dateMatch[2], 10)
-		const day = parseInt(dateMatch[3], 10)
-		const year = rawYear < 100 ? 2000 + rawYear : rawYear
-		const paddedMonth = `${month}`.padStart(2, '0')
-		const paddedDay = `${day}`.padStart(2, '0')
-		return `${year}-${paddedMonth}-${paddedDay}`
-	}
+// 날짜 패턴을 먼저 추출(문자열 중간/뒤에 메모가 있어도 앞부분만 사용)
+const dateMatch = trimmed.match(/[''`]?(\d{2,4})[./-](\d{1,2})[./-](\d{1,2})/)
+if (dateMatch) {
+const rawYear = parseInt(dateMatch[1], 10)
+const month = parseInt(dateMatch[2], 10)
+const day = parseInt(dateMatch[3], 10)
 
-	// 후속 처리: 구분자를 통일해 두지만, 패턴이 없으면 그대로 반환
-	return trimmed
-		.replace(/^['’`]+/, '')
-		.replace(/년|\//g, '-')
-		.replace(/월/g, '-')
-		.replace(/일/g, '')
-		.replace(/\.+/g, (match) => '-'.repeat(match.length))
-		.replace(/\s+/g, '-')
-		.replace(/--+/g, '-')
-		.replace(/-$/g, '')
+// 연도 처리: 2자리는 2000년대로, 4자리는 그대로, 그 외는 현재 연도
+const year = rawYear < 100 ? 2000 + rawYear : rawYear >= 1000 ? rawYear : currentYear
+
+const paddedMonth = ``.padStart(2, '0')
+const paddedDay = ``.padStart(2, '0')
+return `--`
+}
+
+// 월/일만 있는 경우 - 현재 연도 사용
+const monthDayMatch = trimmed.match(/(\d{1,2})\s*(?:[./-]|월)\s*(\d{1,2})/)
+if (monthDayMatch) {
+const month = parseInt(monthDayMatch[1], 10)
+const day = parseInt(monthDayMatch[2], 10)
+const paddedMonth = ``.padStart(2, '0')
+const paddedDay = ``.padStart(2, '0')
+return `--`
+}
+
+// 후속 처리: 구분자를 통일해 두지만, 패턴이 없으면 그대로 반환
+return trimmed
+.replace(/^[''`]+/, '')
+.replace(/년|\//g, '-')
+.replace(/월/g, '-')
+.replace(/일/g, '')
+.replace(/\.+/g, (match) => '-'.repeat(match.length))
+.replace(/\s+/g, '-')
+.replace(/--+/g, '-')
+.replace(/-$/g, '')
 }
 
 function normalizeTime(value?: string): string {
