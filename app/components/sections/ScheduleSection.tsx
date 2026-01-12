@@ -420,6 +420,11 @@ function formatTimeRange(startISO: string, endISO?: string): string {
     return '시간 미정';
   }
 
+  // 시간이 00:00인 경우 시간 미정으로 표시
+  if (start.getHours() === 0 && start.getMinutes() === 0) {
+    return '시간 미정';
+  }
+
   const timeFormatter = new Intl.DateTimeFormat('ko-KR', {
     hour: 'numeric',
     minute: '2-digit',

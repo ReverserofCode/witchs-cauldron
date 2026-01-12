@@ -1046,12 +1046,13 @@ function parseDateTime(dateValue?: string, timeValue?: string, today: Date = new
 		return undefined
 	}
 
+	// 시간이 있으면 날짜+시간, 없으면 날짜만 반환
 	const dateTimeVariants = normalizedTime.length
 		? [
 				`${normalizedDate} ${normalizedTime}`,
 				`${normalizedDate}T${normalizedTime}`,
 			]
-		: [`${normalizedDate}`, `${normalizedDate}T00:00:00`]
+		: [`${normalizedDate}`]
 
 	for (const variant of dateTimeVariants) {
 		const iso = toIsoString(variant)
