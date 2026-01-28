@@ -12,7 +12,8 @@ GitHub Actions를 사용하여 Witchs Cauldron 프로젝트의 CI/CD 파이프�
 |------|------|------|
 | `.github/workflows/ci.yml` | ✅ 완료 | PR 검증 워크플로우 |
 | `.github/workflows/cd.yml` | ✅ 완료 | 자동 배포 워크플로우 (비밀번호 인증) |
-| GitHub Secrets | ⏳ 대기 | 수동 설정 필요 |
+| GitHub Secrets | ✅ 완료 | 설정 완료 |
+| CI/CD 테스트 | ✅ 완료 | 2024-01-28 검증 완료 |
 
 ## 파이프라인 구조
 
@@ -109,10 +110,10 @@ ls -la ~/projects/witchs-cauldron/deploy.sh
 
 ### 서버 체크리스트
 
-- [ ] Docker 및 Docker Compose 설치됨
-- [ ] Git 설치됨
-- [ ] 프로젝트 디렉토리에 .env 파일 존재 (YOUTUBE_API_KEY 등)
-- [ ] deploy.sh 실행 권한 있음 (`chmod +x deploy.sh`)
+- [x] Docker 및 Docker Compose 설치됨
+- [x] Git 설치됨
+- [x] 프로젝트 디렉토리에 .env 파일 존재 (YOUTUBE_API_KEY 등)
+- [x] deploy.sh 실행 권한 있음 (`chmod +x deploy.sh`)
 
 ## 검증 방법
 
@@ -213,12 +214,12 @@ git status
 
 - [x] `.github/workflows/ci.yml` 생성
 - [x] `.github/workflows/cd.yml` 생성
-- [ ] GitHub Repository Secrets 설정
-  - [ ] SSH_HOST = `1.201.17.238`
-  - [ ] SSH_USERNAME = `root`
-  - [ ] SSH_PASSWORD = (비밀번호)
-  - [ ] SSH_PORT = `22`
-  - [ ] DEPLOY_PATH = `~/projects/witchs-cauldron`
-- [ ] 서버 환경 확인 (Docker, Git, deploy.sh 권한)
-- [ ] 테스트 PR로 CI 검증
-- [ ] main 푸시로 CD 검증
+- [x] GitHub Repository Secrets 설정
+  - [x] SSH_HOST = `1.201.17.238`
+  - [x] SSH_USERNAME = `root`
+  - [x] SSH_PASSWORD = (비밀번호)
+  - [x] SSH_PORT = `22`
+  - [x] DEPLOY_PATH = `~/projects/witchs-cauldron`
+- [x] 서버 환경 확인 (Docker, Git, deploy.sh 권한)
+- [x] CI 검증 완료 (build-and-test 성공)
+- [x] CD 검증 완료 (deploy 성공)
