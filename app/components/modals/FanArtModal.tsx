@@ -80,7 +80,7 @@ export default function FanArtModal({
   // Use portal to render modal at document.body level
   return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 bg-black/80 backdrop-blur-sm"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
@@ -88,11 +88,11 @@ export default function FanArtModal({
     >
       {/* Modal Content */}
       <div
-        className="relative flex flex-col max-w-4xl max-h-[90vh] w-full bg-white/95 rounded-3xl shadow-2xl overflow-hidden"
+        className="relative flex flex-col max-w-4xl max-h-[95vh] w-full bg-white/95 rounded-2xl shadow-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-purple-100">
+        <div className="flex items-center justify-between px-4 py-2 border-b border-purple-100">
           <div className="flex items-center gap-3">
             <span className="px-3 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800">
               Fan Art
@@ -104,13 +104,13 @@ export default function FanArtModal({
           <button
             type="button"
             onClick={onClose}
-            className="flex items-center justify-center w-10 h-10 transition-colors rounded-full hover:bg-purple-100"
+            className="flex items-center justify-center w-8 h-8 transition-colors rounded-full hover:bg-purple-100"
             aria-label="닫기"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              width="24"
-              height="24"
+              width="20"
+              height="20"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -126,8 +126,8 @@ export default function FanArtModal({
         </div>
 
         {/* Image Container */}
-        <div className="relative flex items-center justify-center flex-1 p-4 bg-gradient-to-b from-purple-50/50 to-white">
-          <div className="relative w-full h-[35vh] min-h-[200px]">
+        <div className="relative flex items-center justify-center flex-1 p-2 bg-gradient-to-b from-purple-50/50 to-white">
+          <div className="relative w-full h-[32vh] min-h-[180px]">
             <Image
               src={currentImage.src}
               alt={currentImage.alt}
@@ -143,13 +143,13 @@ export default function FanArtModal({
             <button
               type="button"
               onClick={handlePrev}
-              className="absolute flex items-center justify-center w-12 h-12 transition-all -translate-y-1/2 bg-white/90 rounded-full shadow-lg left-4 top-1/2 hover:bg-white hover:scale-110"
+              className="absolute flex items-center justify-center w-10 h-10 transition-all -translate-y-1/2 bg-white/90 rounded-full shadow-lg left-2 top-1/2 hover:bg-white hover:scale-110"
               aria-label="이전 이미지"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                width="24"
-                height="24"
+                width="20"
+                height="20"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -166,13 +166,13 @@ export default function FanArtModal({
             <button
               type="button"
               onClick={handleNext}
-              className="absolute flex items-center justify-center w-12 h-12 transition-all -translate-y-1/2 bg-white/90 rounded-full shadow-lg right-4 top-1/2 hover:bg-white hover:scale-110"
+              className="absolute flex items-center justify-center w-10 h-10 transition-all -translate-y-1/2 bg-white/90 rounded-full shadow-lg right-2 top-1/2 hover:bg-white hover:scale-110"
               aria-label="다음 이미지"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                width="24"
-                height="24"
+                width="20"
+                height="20"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -188,7 +188,7 @@ export default function FanArtModal({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between px-6 py-4 border-t border-purple-100">
+        <div className="flex items-center justify-between px-4 py-2 border-t border-purple-100">
           <div className="flex flex-col gap-1">
             <p className="text-sm font-medium text-purple-900">{currentImage.alt}</p>
             {currentImage.credit && (
@@ -208,8 +208,8 @@ export default function FanArtModal({
 
         {/* Thumbnail Strip */}
         {images.length > 1 && (
-          <div className="px-6 py-6 border-t border-purple-100 bg-purple-50/50">
-            <div className="flex gap-4 overflow-x-auto pb-2">
+          <div className="px-3 py-3 border-t border-purple-100 bg-purple-50/50">
+            <div className="flex gap-2 overflow-x-auto pb-1">
               {images.map((image, index) => (
                 <button
                   key={image.src}
