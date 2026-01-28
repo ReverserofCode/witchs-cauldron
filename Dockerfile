@@ -7,7 +7,7 @@ WORKDIR /app
 
 # package.json과 package-lock.json 복사
 COPY package*.json ./
-RUN npm ci --only=production && npm cache clean --force
+RUN npm install --omit=dev && npm cache clean --force
 
 # ================================
 # Stage 2: Builder
@@ -17,7 +17,7 @@ WORKDIR /app
 
 # 빌드에 필요한 모든 dependencies 설치
 COPY package*.json ./
-RUN npm ci
+RUN npm install
 
 # 소스 코드 복사
 COPY . .
