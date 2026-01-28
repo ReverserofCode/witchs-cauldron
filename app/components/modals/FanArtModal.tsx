@@ -127,7 +127,7 @@ export default function FanArtModal({
 
         {/* Image Container */}
         <div className="relative flex items-center justify-center flex-1 p-2 bg-gradient-to-b from-purple-50/50 to-white">
-          <div className="relative w-full h-[32vh] min-h-[180px]">
+          <div className="relative w-full h-[55vh] min-h-[300px]">
             <Image
               src={currentImage.src}
               alt={currentImage.alt}
@@ -208,17 +208,17 @@ export default function FanArtModal({
 
         {/* Thumbnail Strip */}
         {images.length > 1 && (
-          <div className="px-3 py-3 border-t border-purple-100 bg-purple-50/50">
-            <div className="flex gap-2 overflow-x-auto pb-1">
+          <div className="px-3 py-2 border-t border-purple-100 bg-purple-50/50">
+            <div className="flex gap-1.5 overflow-x-auto">
               {images.map((image, index) => (
                 <button
                   key={image.src}
                   type="button"
                   onClick={() => onNavigate(index)}
-                  className={`relative flex-shrink-0 w-32 h-32 overflow-hidden rounded-xl transition-all ${
+                  className={`relative flex-shrink-0 w-14 h-14 overflow-hidden rounded-lg transition-all ${
                     index === currentIndex
-                      ? "ring-2 ring-purple-600 ring-offset-2"
-                      : "opacity-60 hover:opacity-100"
+                      ? "ring-2 ring-purple-600 ring-offset-1"
+                      : "opacity-50 hover:opacity-100"
                   }`}
                   aria-label={`${index + 1}번 이미지로 이동`}
                   aria-current={index === currentIndex ? "true" : undefined}
@@ -228,7 +228,7 @@ export default function FanArtModal({
                     alt=""
                     fill
                     className="object-cover"
-                    sizes="128px"
+                    sizes="56px"
                   />
                 </button>
               ))}
