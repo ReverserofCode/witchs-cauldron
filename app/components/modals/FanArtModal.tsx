@@ -126,8 +126,8 @@ export default function FanArtModal({
         </div>
 
         {/* Image Container */}
-        <div className="relative flex items-center justify-center flex-1 p-6 bg-gradient-to-b from-purple-50/50 to-white">
-          <div className="relative w-full h-[50vh] min-h-[300px]">
+        <div className="relative flex items-center justify-center flex-1 p-4 bg-gradient-to-b from-purple-50/50 to-white">
+          <div className="relative w-full h-[35vh] min-h-[200px]">
             <Image
               src={currentImage.src}
               alt={currentImage.alt}
@@ -208,14 +208,14 @@ export default function FanArtModal({
 
         {/* Thumbnail Strip */}
         {images.length > 1 && (
-          <div className="px-6 py-5 border-t border-purple-100 bg-purple-50/50">
-            <div className="flex gap-3 overflow-x-auto pb-2">
+          <div className="px-6 py-6 border-t border-purple-100 bg-purple-50/50">
+            <div className="flex gap-4 overflow-x-auto pb-2">
               {images.map((image, index) => (
                 <button
                   key={image.src}
                   type="button"
                   onClick={() => onNavigate(index)}
-                  className={`relative flex-shrink-0 w-24 h-24 overflow-hidden rounded-xl transition-all ${
+                  className={`relative flex-shrink-0 w-32 h-32 overflow-hidden rounded-xl transition-all ${
                     index === currentIndex
                       ? "ring-2 ring-purple-600 ring-offset-2"
                       : "opacity-60 hover:opacity-100"
@@ -228,7 +228,7 @@ export default function FanArtModal({
                     alt=""
                     fill
                     className="object-cover"
-                    sizes="96px"
+                    sizes="128px"
                   />
                 </button>
               ))}
