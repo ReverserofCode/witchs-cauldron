@@ -208,8 +208,8 @@ export default function FanArtModal({
 
         {/* Thumbnail Strip */}
         {images.length > 1 && (
-          <div className="px-3 py-2 border-t border-purple-100 bg-purple-50/50">
-            <div className="flex gap-1.5 overflow-x-auto">
+          <div className="px-2 py-1 border-t border-purple-100 bg-purple-50/50">
+            <div className="flex gap-1.5 overflow-x-auto p-1.5">
               {images.map((image, index) => (
                 <button
                   key={image.src}
