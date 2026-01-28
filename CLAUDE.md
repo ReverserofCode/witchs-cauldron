@@ -25,11 +25,14 @@
 frontend/
 ├── .claude/                          # Claude Code 에이전트 설정
 │   └── agents/
-│       ├── codebase-structure-analyzer.md
-│       ├── code-generator.md
-│       ├── code-validator.md
-│       ├── orchestrator-planner.md
-│       └── requirements-analyzer.md
+│       ├── code-generator.md         # 코드 생성/수정 에이전트
+│       ├── code-tester.md            # 코드 테스트/빌드 검증 에이전트
+│       ├── code-validator.md         # 코드 리뷰/검증 에이전트
+│       ├── codebase-structure-analyzer.md  # 코드베이스 구조 분석
+│       ├── external-tool-integrator.md     # 외부 도구 연동 에이전트
+│       ├── orchestrator-planner.md   # 멀티 에이전트 조율/계획
+│       ├── requirements-analyzer.md  # 요구사항 분석 에이전트
+│       └── token-optimizer.md        # 토큰 최적화 에이전트
 │
 ├── app/                              # Next.js App Router 소스 코드
 │   ├── api/                          # API Routes (서버 사이드)
@@ -62,6 +65,12 @@ frontend/
 │   │   │   ├── TopOfficialYouTubeVideoCard.tsx
 │   │   │   ├── TodayBroadcastStatusCard.tsx
 │   │   │   └── VideoCard.tsx
+│   │   ├── gallery/                  # 갤러리 컴포넌트
+│   │   │   ├── index.ts
+│   │   │   └── FanArtGallery.tsx     # 팬아트 갤러리 (클릭 시 Modal)
+│   │   ├── modals/                   # 모달 컴포넌트
+│   │   │   ├── index.ts
+│   │   │   └── FanArtModal.tsx       # 팬아트 상세 보기 Modal (Portal)
 │   │   ├── layout/                   # 레이아웃 컴포넌트
 │   │   │   ├── index.ts
 │   │   │   ├── Header.tsx
@@ -279,7 +288,9 @@ docker-compose -f docker-compose.prod.yml up -d
 | YouTube API | `app/api/youTubePlayer/youTubeRe.ts` |
 | YouTube 공유 유틸 | `app/api/youTubePlayer/shared.ts` |
 | YouTube 캐싱 훅 | `app/hooks/useYouTubeVideos.ts` |
-| 팬아트 갤러리 | `app/components/layout/RightSidebar.tsx` |
+| 팬아트 갤러리 | `app/components/gallery/FanArtGallery.tsx` |
+| 팬아트 Modal | `app/components/modals/FanArtModal.tsx` |
+| 오른쪽 사이드바 | `app/components/layout/RightSidebar.tsx` |
 | 범용 카드 | `app/components/cards/SectionCard.tsx` |
 
 ## 코드 작업 가이드
@@ -325,6 +336,9 @@ export async function GET(request: Request) {
 
 ## 최근 변경 이력
 
+- **팬아트 Modal 기능 추가** - 이미지 클릭 시 전체 화면 Modal로 상세 보기, 키보드 네비게이션 지원
+- **갤러리/모달 컴포넌트 분리** - `FanArtGallery`, `FanArtModal` 컴포넌트 생성 (React Portal 사용)
+- **Claude Code 에이전트 확장** - `code-tester`, `external-tool-integrator`, `token-optimizer` 에이전트 추가
 - **팬아트 추가** - `public/rightAside/` 디렉토리
 - **시간 오표기 수정** - 방송 일정 파싱 로직
 - **신규 폼 적용** - 스케줄러 업데이트

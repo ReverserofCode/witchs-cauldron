@@ -6,7 +6,7 @@
 
 - 홈 화면은 3열 레이아웃(왼쪽 사이드바 · 메인 콘텐츠 · 오른쪽 사이드바)으로 구성되며, 메인 컬럼에서 히어로 카드와 유튜브/방송 일정 관련 섹션을 순차적으로 노출합니다.
 - 왼쪽 사이드바(`LeftSidebar`)는 방송 일정, 유튜브 최신/인기 영상, 팬아트 갤러리 스냅샷을 제공하며 API 상태에 따른 메시지를 표시합니다.
-- 오른쪽 사이드바(`RightSidebar`)는 커뮤니티 바로가기 카드와 팬아트 갤러리를 노출합니다. 팬아트는 `public/rightAside` 폴더의 이미지를 자동으로 스캔하여 보여주며, 항목이 없으면 업로드 가이드를 안내합니다.
+- 오른쪽 사이드바(`RightSidebar`)는 커뮤니티 바로가기 카드와 팬아트 갤러리를 노출합니다. 팬아트는 `public/rightAside` 폴더의 이미지를 자동으로 스캔하여 보여주며, 클릭 시 전체 화면 Modal로 상세 보기가 가능합니다. Modal은 키보드 네비게이션(좌우 화살표, ESC)과 썸네일 스트립을 지원합니다. 항목이 없으면 업로드 가이드를 안내합니다.
 - 메인 콘텐츠는 다음 섹션으로 구성됩니다:
   - 히어로 카드: 실시간 치지직 상태, 소개 문구, 아바타 이미지.
   - 최신 영상 카드(`LatestYouTubeVideoCard`), 지난달 조회수 1위 카드(`TopOfficialYouTubeVideoCard`).
@@ -23,10 +23,13 @@
 ### 디렉터리 안내
 
 - `app/components/cards`: 레이아웃 카드, 유튜브 카드 등 UI 컴포넌트 모음.
+- `app/components/gallery`: 팬아트 갤러리 컴포넌트 (`FanArtGallery`).
+- `app/components/modals`: Modal 컴포넌트 (`FanArtModal` - React Portal 사용).
 - `app/components/layout`: 헤더/푸터, LeftSidebar, RightSidebar 등 레이아웃 구성 요소.
 - `app/components/sections`: 방송 일정 및 유튜브 섹션별 렌더링 컴포넌트.
 - `app/hooks`: 프런트엔드 데이터 훅(`useYouTubeVideos` 등).
 - `public/mainPage`, `public/rightAside`: 정적 리소스(프로필 이미지, 팬아트 이미지 등).
+- `.claude/agents`: Claude Code 에이전트 설정 파일들.
 - `docker-compose.yml`: 로컬 개발을 위한 프론트엔드 컨테이너 정의.
 
 ## 운영/유지보수
