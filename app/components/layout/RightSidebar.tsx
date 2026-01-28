@@ -1,8 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
-import Image from "next/image";
 import { type ReactElement } from "react";
 import { SectionCard } from "@/app/components/cards";
+import { FanArtGallery } from "@/app/components/gallery";
 
 interface FanArtImage {
   src: string;
@@ -72,7 +72,6 @@ function loadFanArtImages(): FanArtImage[] {
 export default function RightSidebar({ className, images }: RightSidebarProps = {}): ReactElement {
   const defaultGallery = loadFanArtImages();
   const gallery = images && images.length > 0 ? images : defaultGallery;
-  const hasGallery = gallery.length > 0;
 
   return (
     <aside
@@ -116,48 +115,7 @@ export default function RightSidebar({ className, images }: RightSidebarProps = 
         title="마녀의 작업실"
         description="팬들의 참여로 꾸며지는 갤러리입니다."
       >
-        {hasGallery ? (
-          <div className="flex flex-col gap-6">
-            {gallery.map((item, index) => (
-              <figure key={item.src} className="flex flex-col gap-3">
-                <div className="relative overflow-hidden border shadow-lg rounded-2xl border-white/40 shadow-purple-900/20">
-                  <Image
-                    src={item.src}
-                    alt={item.alt}
-                    width={320}
-                    height={420}
-                    className="object-cover w-full h-full"
-                    sizes="(min-width: 1280px) 240px, (min-width: 1024px) 200px, 100vw"
-                    priority={index === 0}
-                  />
-                </div>
-                {item.credit && <figcaption className="text-[11px] text-purple-900/70">{item.credit}</figcaption>}
-                <div className="flex items-center justify-between text-[11px] text-purple-900/60">
-                  <span>
-                    {index + 1} / {gallery.length}
-                  </span>
-                  {item.download && (
-                    <a href={item.download} download className="btn btn-primary h-8 min-w-[5rem] justify-center text-xs">
-                      다운로드
-                    </a>
-                  )}
-                </div>
-              </figure>
-            ))}
-          </div>
-        ) : (
-          <div className="flex flex-col gap-3 text-[11px] text-purple-900/75">
-            <p>아직 등록된 팬아트가 없습니다. 팬카페에 작품을 공유하면 이곳에 소개됩니다.</p>
-            <a
-              href="https://cafe.naver.com/moinge"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="justify-center text-xs btn btn-primary h-9"
-            >
-              팬아트 업로드 가이드 보기
-            </a>
-          </div>
-        )}
+        <FanArtGallery images={gallery} />
       </SectionCard>
     </aside>
   );
