@@ -45,4 +45,4 @@ jobs:
           script: |
             cd ${{ secrets.DEPLOY_PATH }}
             git pull origin main
-            ./deploy.sh
+            ./deploy.sh --clean
