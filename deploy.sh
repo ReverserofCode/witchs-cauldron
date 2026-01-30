@@ -73,18 +73,23 @@ check_docker_compose() {
 build_image() {
     log_info "Docker 이미지를 빌드합니다 (기존 서비스 유지)..."
 
+    # 빌드 플래그 초기화
+    BUILD_FLAGS=""
+
     # 클린 빌드 옵션
     if [ "$1" = "--clean" ]; then
         log_info "빌드 캐시를 정리합니다..."
         docker builder prune -f || true
+        BUILD_FLAGS="--no-cache"
+        log_info "캐시 없이 빌드를 진행합니다..."
     fi
 
     # 이미지 빌드 (기존 컨테이너는 계속 실행 중)
     log_info "빌드 진행 상황을 모니터링합니다..."
     if docker compose version >/dev/null 2>&1; then
-        docker compose -f docker-compose.prod.yml build
+        docker compose -f docker-compose.prod.yml build $BUILD_FLAGS
     else
-        docker-compose -f docker-compose.prod.yml build
+        docker-compose -f docker-compose.prod.yml build $BUILD_FLAGS
     fi
     log_success "Docker 이미지 빌드가 완료되었습니다."
 }
