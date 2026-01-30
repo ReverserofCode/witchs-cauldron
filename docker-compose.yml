@@ -14,8 +14,9 @@ services:
       - CHOKIDAR_USEPOLLING=true
       - WATCHPACK_POLLING=true
     volumes:
-      - ./frontend:/app
+      - .:/app
       - frontend_node_modules:/app/node_modules
+      - /app/.next
     command:
       - sh
       - -lc

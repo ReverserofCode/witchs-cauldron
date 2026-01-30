@@ -15,7 +15,7 @@ export default function YouTubeCategorySection({ title, description, videos }: Y
   return (
     <div className="space-y-3">
       <HeaderContent title={title} description={description} />
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {videos.map((video) => (
           <VideoCard key={video.videoId} video={video} aspect="video" />
         ))}
