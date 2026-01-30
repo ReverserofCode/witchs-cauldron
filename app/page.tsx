@@ -65,7 +65,7 @@ export default async function Page(): Promise<ReactElement> {
                       </h1>
                       <div className="space-y-2 sm:space-y-2.5">
                         <p className="text-sm font-light typography-lead max-w-prose sm:text-base">
-                          포션을 만들면 폭발하거나, 고백하게 만드는 재앙 제조기. "진짜 감기약 맞아요?" 음... 아마도요.
+                          포션을 만들면 폭발하거나, 고백하게 만드는 재앙 제조기. &quot;진짜 감기약 맞아요?&quot; 음... 아마도요.
                         </p>
                         <p className="hidden text-base font-light opacity-0 typography-lead animate-fade-in animation-delay-200 sm:block">
                           {liveStatusDescription}
