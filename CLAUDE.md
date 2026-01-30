@@ -1,6 +1,8 @@
-# CLAUDE.md - 프로젝트 컨텍스트
+# CLAUDE.md - Frontend 상세 컨텍스트
 
-이 문서는 Claude Code가 프로젝트를 이해하고 효율적으로 작업할 수 있도록 작성되었습니다.
+> **빠른 탐색**: 프로젝트 전체 개요는 루트의 [`../CLAUDE.md`](../CLAUDE.md)를 참조하세요.
+
+이 문서는 frontend 디렉터리의 상세 구조와 API를 설명합니다.
 
 ## 프로젝트 개요
 
@@ -22,8 +24,8 @@
 ## 디렉토리 구조
 
 ```
-frontend/
-├── .claude/                          # Claude Code 에이전트 설정
+witchs-cauldron/                      # 프로젝트 루트
+├── .claude/                          # Claude Code 에이전트 설정 (루트 레벨)
 │   └── agents/
 │       ├── code-generator.md         # 코드 생성/수정 에이전트
 │       ├── code-tester.md            # 코드 테스트/빌드 검증 에이전트
@@ -34,8 +36,9 @@ frontend/
 │       ├── requirements-analyzer.md  # 요구사항 분석 에이전트
 │       └── token-optimizer.md        # 토큰 최적화 에이전트
 │
-├── app/                              # Next.js App Router 소스 코드
-│   ├── api/                          # API Routes (서버 사이드)
+├── frontend/                         # Next.js 프론트엔드 앱
+│   ├── app/                          # Next.js App Router 소스 코드
+│   │   ├── api/                      # API Routes (서버 사이드)
 │   │   ├── health/
 │   │   │   └── route.ts              # 헬스체크 엔드포인트
 │   │   ├── broadCastSchedule/
