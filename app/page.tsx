@@ -46,41 +46,41 @@ export default async function Page(): Promise<ReactElement> {
               <SectionCard
                 tone="dimmed"
                 header={
-                  <div className="grid items-center gap-8 md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
-                    <div className="space-y-4 text-white">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="chip">KR V-tuber • Moing</span>
+                  <div className="flex items-center gap-4 sm:gap-6 md:gap-8">
+                    <div className="flex-1 min-w-0 space-y-3 text-white sm:space-y-4">
+                      <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                        <span className="chip text-xs sm:text-sm">KR V-tuber • Moing</span>
                         <a
                           href={liveStatus.channelUrl}
                           target="_blank"
                           rel="noreferrer"
                           className={liveChipClass}
                         >
-                          <span className="inline-block w-2 h-2 bg-current rounded-full" />
-                          {liveChipLabel}
+                          <span className="inline-block w-1.5 h-1.5 sm:w-2 sm:h-2 bg-current rounded-full" />
+                          <span className="text-xs sm:text-sm">{liveChipLabel}</span>
                         </a>
                       </div>
-                      <h1 className="text-3xl font-extrabold typography-heading md:text-4xl">
+                      <h1 className="text-xl font-extrabold typography-heading sm:text-2xl md:text-4xl">
                         마녀의 포션 공방
                       </h1>
-                      <div className="space-y-2.5">
-                        <p className="text-base font-light typography-lead max-w-prose">
-                          포션을 만들면 폭발하거나, 고백하게 만드는 재앙 제조기. “진짜 감기약 맞아요?” 음... 아마도요.
+                      <div className="space-y-2 sm:space-y-2.5">
+                        <p className="text-sm font-light typography-lead max-w-prose sm:text-base">
+                          포션을 만들면 폭발하거나, 고백하게 만드는 재앙 제조기. "진짜 감기약 맞아요?" 음... 아마도요.
                         </p>
-                        <p className="text-base font-light opacity-0 typography-lead animate-fade-in animation-delay-200">
+                        <p className="hidden text-base font-light opacity-0 typography-lead animate-fade-in animation-delay-200 sm:block">
                           {liveStatusDescription}
                         </p>
                       </div>
                     </div>
-                    <div className="profile-avatar justify-self-end">
-                      <div className="relative w-32 h-32 md:h-48 md:w-48" aria-hidden>
+                    <div className="profile-avatar flex-shrink-0">
+                      <div className="relative w-20 h-20 sm:w-28 sm:h-28 md:h-48 md:w-48" aria-hidden>
                         <div className="w-full h-full avatar-frame">
                           <div className="glow" />
                           <Image
                             src={profileImg}
                             alt="Moing"
                             fill
-                            sizes="(min-width: 768px) 208px, 144px"
+                            sizes="(min-width: 768px) 192px, (min-width: 640px) 112px, 80px"
                             className="object-cover"
                             priority
                           />
