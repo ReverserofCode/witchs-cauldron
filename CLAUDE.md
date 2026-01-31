@@ -31,7 +31,10 @@ witchs-cauldron/                      # 프로젝트 루트
 │       ├── code-tester.md            # 코드 테스트/빌드 검증 에이전트
 │       ├── code-validator.md         # 코드 리뷰/검증 에이전트
 │       ├── codebase-structure-analyzer.md  # 코드베이스 구조 분석
+│       ├── dependency-analyzer.md    # 패키지 의존성 분석 (NEW)
+│       ├── documentation-generator.md # 문서 생성/업데이트 (NEW)
 │       ├── external-tool-integrator.md     # 외부 도구 연동 에이전트
+│       ├── lint-checker.md           # ESLint/TypeScript 빠른 검사 (NEW)
 │       ├── orchestrator-planner.md   # 멀티 에이전트 조율/계획
 │       ├── requirements-analyzer.md  # 요구사항 분석 에이전트
 │       └── token-optimizer.md        # 토큰 최적화 에이전트
@@ -339,6 +342,14 @@ export async function GET(request: Request) {
 
 ## 최근 변경 이력
 
+- **ScheduleModal 추가** - 전체 일정 보기 캘린더 Modal (`app/components/modals/ScheduleModal.tsx`)
+- **코드베이스 정리** - 미사용 레거시 파일 11개 삭제, 518줄 dead code 제거
+- **deploy.sh 실행 권한 수정** - CD 배포 시 Permission denied 오류 해결 (chmod +x)
+- **병렬 처리 에이전트 추가** - `lint-checker`, `dependency-analyzer`, `documentation-generator` 에이전트 추가
+- **무중단 배포** - deploy.sh 스크립트 개선 (빌드 후 컨테이너 교체)
+- **YouTube Shorts 제외** - 최신 영상 API에서 65초 이하 Shorts 필터링
+- **2열 숏폼 레이아웃** - 치지직 클립 + YouTube Shorts 동시 표시
+- **숏폼 클립 뷰어** - 틱톡/릴스 스타일 UI (9:16, 스와이프, 키보드)
 - **팬아트 Modal 기능 추가** - 이미지 클릭 시 전체 화면 Modal로 상세 보기, 키보드 네비게이션 지원
 - **갤러리/모달 컴포넌트 분리** - `FanArtGallery`, `FanArtModal` 컴포넌트 생성 (React Portal 사용)
 - **Claude Code 에이전트 확장** - `code-tester`, `external-tool-integrator`, `token-optimizer` 에이전트 추가
