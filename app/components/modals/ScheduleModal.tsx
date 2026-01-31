@@ -1,0 +1,393 @@
+"use client";
+
+import { useCallback, useEffect, useMemo, useState, type ReactElement } from "react";
+import { createPortal } from "react-dom";
+import type { ScheduleEvent } from "@/app/api/broadCastSchedule/schedule";
+
+interface ScheduleModalProps {
+  events: ScheduleEvent[];
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+interface CalendarDay {
+  date: Date;
+  isCurrentMonth: boolean;
+  isToday: boolean;
+  isWeekend: boolean;
+  events: ScheduleEvent[];
+}
+
+export default function ScheduleModal({
+  events,
+  isOpen,
+  onClose,
+}: ScheduleModalProps): ReactElement | null {
+  const [mounted, setMounted] = useState(false);
+  const [currentMonth, setCurrentMonth] = useState(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  });
+
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose();
+      } else if (e.key === "ArrowLeft") {
+        setCurrentMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
+      } else if (e.key === "ArrowRight") {
+        setCurrentMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
+      }
+    },
+    [onClose]
+  );
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (isOpen) {
+      document.addEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = "hidden";
+    }
+
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = "";
+    };
+  }, [isOpen, handleKeyDown]);
+
+  const calendarDays = useMemo(() => {
+    return buildCalendarDays(currentMonth, events);
+  }, [currentMonth, events]);
+
+  const monthLabel = useMemo(() => {
+    return new Intl.DateTimeFormat("ko-KR", {
+      year: "numeric",
+      month: "long",
+    }).format(currentMonth);
+  }, [currentMonth]);
+
+  const handlePrevMonth = () => {
+    setCurrentMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
+  };
+
+  const handleNextMonth = () => {
+    setCurrentMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
+  };
+
+  const handleToday = () => {
+    const now = new Date();
+    setCurrentMonth(new Date(now.getFullYear(), now.getMonth(), 1));
+  };
+
+  if (!mounted || !isOpen) {
+    return null;
+  }
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-sm"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label="전체 일정 보기"
+    >
+      <div
+        className="relative flex flex-col w-full max-w-5xl max-h-[95vh] bg-white/95 rounded-2xl shadow-2xl overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-purple-100 bg-gradient-to-r from-purple-50 to-white">
+          <div className="flex items-center gap-3">
+            <span className="px-3 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800">
+              Schedule
+            </span>
+            <h2 className="text-lg font-bold text-purple-900">{monthLabel}</h2>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleToday}
+              className="px-3 py-1.5 text-xs font-semibold text-purple-700 transition-colors rounded-lg hover:bg-purple-100"
+            >
+              오늘
+            </button>
+            <button
+              type="button"
+              onClick={handlePrevMonth}
+              className="flex items-center justify-center w-8 h-8 transition-colors rounded-full hover:bg-purple-100"
+              aria-label="이전 달"
+            >
+              <ChevronLeftIcon />
+            </button>
+            <button
+              type="button"
+              onClick={handleNextMonth}
+              className="flex items-center justify-center w-8 h-8 transition-colors rounded-full hover:bg-purple-100"
+              aria-label="다음 달"
+            >
+              <ChevronRightIcon />
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex items-center justify-center w-8 h-8 ml-2 transition-colors rounded-full hover:bg-purple-100"
+              aria-label="닫기"
+            >
+              <CloseIcon />
+            </button>
+          </div>
+        </div>
+
+        {/* Calendar Grid */}
+        <div className="flex-1 p-4 overflow-auto">
+          {/* Weekday Headers */}
+          <div className="grid grid-cols-7 gap-1 mb-2">
+            {["일", "월", "화", "수", "목", "금", "토"].map((day, index) => (
+              <div
+                key={day}
+                className={`py-2 text-xs font-semibold text-center ${
+                  index === 0 ? "text-red-500" : index === 6 ? "text-blue-500" : "text-purple-700"
+                }`}
+              >
+                {day}
+              </div>
+            ))}
+          </div>
+
+          {/* Calendar Days */}
+          <div className="grid grid-cols-7 gap-1">
+            {calendarDays.map((day, index) => (
+              <CalendarDayCell key={index} day={day} />
+            ))}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-between px-4 py-2 text-xs border-t border-purple-100 bg-purple-50/50 text-purple-700">
+          <span>방향키로 월 이동, ESC로 닫기</span>
+          <span>
+            이번 달 일정: {events.filter((e) => isEventInMonth(e, currentMonth)).length}개
+          </span>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+function CalendarDayCell({ day }: { day: CalendarDay }) {
+  const [showTooltip, setShowTooltip] = useState(false);
+  const dateLabel = day.date.getDate();
+
+  return (
+    <div
+      className={`relative min-h-[80px] sm:min-h-[100px] p-1 sm:p-2 rounded-lg border transition-colors ${
+        day.isCurrentMonth
+          ? day.isToday
+            ? "border-purple-400 bg-purple-100/80"
+            : day.isWeekend
+            ? "border-purple-200/60 bg-purple-50/50"
+            : "border-purple-100/60 bg-white/80"
+          : "border-transparent bg-gray-50/50"
+      }`}
+      onMouseEnter={() => day.events.length > 0 && setShowTooltip(true)}
+      onMouseLeave={() => setShowTooltip(false)}
+    >
+      {/* Date Number */}
+      <div
+        className={`text-xs sm:text-sm font-semibold mb-1 ${
+          !day.isCurrentMonth
+            ? "text-gray-300"
+            : day.isToday
+            ? "text-purple-900"
+            : day.date.getDay() === 0
+            ? "text-red-500"
+            : day.date.getDay() === 6
+            ? "text-blue-500"
+            : "text-purple-800"
+        }`}
+      >
+        {dateLabel}
+        {day.isToday && (
+          <span className="ml-1 px-1.5 py-0.5 text-[10px] font-bold text-white bg-purple-600 rounded">
+            오늘
+          </span>
+        )}
+      </div>
+
+      {/* Events */}
+      <div className="flex flex-col gap-0.5">
+        {day.events.slice(0, 3).map((event) => (
+          <div
+            key={event.id}
+            className="px-1 py-0.5 text-[10px] sm:text-xs font-medium text-purple-900 truncate bg-purple-200/60 rounded"
+            title={`${event.title} - ${formatEventTime(event.start)}`}
+          >
+            <span className="hidden sm:inline">{formatEventTime(event.start)} </span>
+            {event.title}
+          </div>
+        ))}
+        {day.events.length > 3 && (
+          <div className="px-1 py-0.5 text-[10px] font-medium text-purple-600">
+            +{day.events.length - 3}개 더
+          </div>
+        )}
+      </div>
+
+      {/* Tooltip for events */}
+      {showTooltip && day.events.length > 0 && (
+        <div className="absolute left-0 z-10 w-48 p-2 mt-1 text-xs bg-white border border-purple-200 shadow-lg top-full rounded-xl">
+          <div className="space-y-1.5">
+            {day.events.map((event) => (
+              <div key={event.id} className="p-1.5 rounded-lg bg-purple-50">
+                <p className="font-semibold text-purple-900">{event.title}</p>
+                <p className="text-purple-700">{formatEventTime(event.start)}</p>
+                {event.platform && (
+                  <p className="text-purple-600">{event.platform}</p>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function buildCalendarDays(month: Date, events: ScheduleEvent[]): CalendarDay[] {
+  const year = month.getFullYear();
+  const monthIndex = month.getMonth();
+
+  // First day of the month
+  const firstDay = new Date(year, monthIndex, 1);
+  // Last day of the month
+  const lastDay = new Date(year, monthIndex + 1, 0);
+
+  // Start from the Sunday of the week containing the first day
+  const startDate = new Date(firstDay);
+  startDate.setDate(startDate.getDate() - startDate.getDay());
+
+  // End at the Saturday of the week containing the last day
+  const endDate = new Date(lastDay);
+  endDate.setDate(endDate.getDate() + (6 - endDate.getDay()));
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const days: CalendarDay[] = [];
+  const current = new Date(startDate);
+
+  while (current <= endDate) {
+    const dateKey = formatDateKey(current);
+    const dayEvents = events.filter((event) => {
+      const eventDate = new Date(event.start);
+      return formatDateKey(eventDate) === dateKey;
+    });
+
+    days.push({
+      date: new Date(current),
+      isCurrentMonth: current.getMonth() === monthIndex,
+      isToday: current.getTime() === today.getTime(),
+      isWeekend: current.getDay() === 0 || current.getDay() === 6,
+      events: dayEvents.sort((a, b) =>
+        new Date(a.start).getTime() - new Date(b.start).getTime()
+      ),
+    });
+
+    current.setDate(current.getDate() + 1);
+  }
+
+  return days;
+}
+
+function formatDateKey(date: Date): string {
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, "0");
+  const day = `${date.getDate()}`.padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function formatEventTime(startISO: string): string {
+  const date = new Date(startISO);
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  if (date.getHours() === 0 && date.getMinutes() === 0) {
+    return "시간 미정";
+  }
+
+  return new Intl.DateTimeFormat("ko-KR", {
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(date);
+}
+
+function isEventInMonth(event: ScheduleEvent, month: Date): boolean {
+  const eventDate = new Date(event.start);
+  return (
+    eventDate.getFullYear() === month.getFullYear() &&
+    eventDate.getMonth() === month.getMonth()
+  );
+}
+
+function ChevronLeftIcon() {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="text-purple-700"
+    >
+      <polyline points="15 18 9 12 15 6" />
+    </svg>
+  );
+}
+
+function ChevronRightIcon() {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="text-purple-700"
+    >
+      <polyline points="9 18 15 12 9 6" />
+    </svg>
+  );
+}
+
+function CloseIcon() {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="text-purple-700"
+    >
+      <line x1="18" y1="6" x2="6" y2="18" />
+      <line x1="6" y1="6" x2="18" y2="18" />
+    </svg>
+  );
+}
