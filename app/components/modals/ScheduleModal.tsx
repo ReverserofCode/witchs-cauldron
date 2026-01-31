@@ -143,33 +143,47 @@ export default function ScheduleModal({
 
         {/* Calendar Grid */}
         <div className="flex-1 p-4 overflow-auto">
-          {/* Weekday Headers */}
-          <div className="grid grid-cols-7 gap-1 mb-2">
-            {["일", "월", "화", "수", "목", "금", "토"].map((day, index) => (
-              <div
-                key={day}
-                className={`py-2 text-xs font-semibold text-center ${
-                  index === 0 ? "text-red-500" : index === 6 ? "text-blue-500" : "text-purple-700"
-                }`}
-              >
-                {day}
+          {events.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full py-12 text-center">
+              <div className="w-16 h-16 mb-4 text-purple-300">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
               </div>
-            ))}
-          </div>
+              <p className="text-lg font-semibold text-purple-800">등록된 일정이 없습니다</p>
+              <p className="mt-1 text-sm text-purple-600">일정 데이터를 불러오지 못했거나 등록된 일정이 없습니다.</p>
+            </div>
+          ) : (
+            <>
+              {/* Weekday Headers */}
+              <div className="grid grid-cols-7 gap-1 mb-2">
+                {["일", "월", "화", "수", "목", "금", "토"].map((day, index) => (
+                  <div
+                    key={day}
+                    className={`py-2 text-xs font-semibold text-center ${
+                      index === 0 ? "text-red-500" : index === 6 ? "text-blue-500" : "text-purple-700"
+                    }`}
+                  >
+                    {day}
+                  </div>
+                ))}
+              </div>
 
-          {/* Calendar Days */}
-          <div className="grid grid-cols-7 gap-1">
-            {calendarDays.map((day, index) => (
-              <CalendarDayCell key={index} day={day} />
-            ))}
-          </div>
+              {/* Calendar Days */}
+              <div className="grid grid-cols-7 gap-1">
+                {calendarDays.map((day, index) => (
+                  <CalendarDayCell key={index} day={day} />
+                ))}
+              </div>
+            </>
+          )}
         </div>
 
         {/* Footer */}
         <div className="flex items-center justify-between px-4 py-2 text-xs border-t border-purple-100 bg-purple-50/50 text-purple-700">
           <span>방향키로 월 이동, ESC로 닫기</span>
           <span>
-            이번 달 일정: {events.filter((e) => isEventInMonth(e, currentMonth)).length}개
+            전체 일정: {events.length}개 | 이번 달: {events.filter((e) => isEventInMonth(e, currentMonth)).length}개
           </span>
         </div>
       </div>
