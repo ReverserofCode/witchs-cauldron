@@ -118,15 +118,6 @@ export default async function Page(): Promise<ReactElement> {
               <div id="youtube-fan">
                 <YouTubeFanVideosSection />
               </div>
-              
-              {/* <YouTubeShortsSection /> */}
-            </div>
-
-            <div className="mt-1 space-y-10">
-              {/* 유튜브 카테고리별 컴포넌트 분화 */}
-              {/* <YouTubeVideosSection /> */}
-              {/* 적절한 쇼츠 채널이 없어 임시 폐쇄  */}
-              {/* <YouTubeShortsSection /> */}
             </div>
           </div>
           {/* Right Aside */}
