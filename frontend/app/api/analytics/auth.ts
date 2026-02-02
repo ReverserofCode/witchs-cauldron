@@ -20,6 +20,11 @@ function getHeaderUserEmail() {
 }
 
 export function requireAdmin() {
+  const allowPublic = process.env.ANALYTICS_PUBLIC === "true";
+  if (allowPublic) {
+    return { ok: true, email: "public" };
+  }
+
   const allowNoHeader = process.env.ADMIN_ALLOW_NO_HEADER === "true";
   if (allowNoHeader && process.env.NODE_ENV !== "production") {
     return { ok: true, email: "local-dev" };

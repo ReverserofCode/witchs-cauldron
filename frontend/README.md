@@ -146,6 +146,8 @@ docker exec -it witchs-cauldron-frontend npx tsc --noEmit
   - `ADMIN_ALLOWED_EMAILS` (콤마 구분, 예: `admin@example.com,owner@example.com`)
 - 로컬 개발 편의:
   - 인증 헤더가 없는 환경에서는 `ADMIN_ALLOW_NO_HEADER=true`로 임시 우회할 수 있습니다. (운영 환경에서는 사용 금지)
+- 공개 모드:
+  - `ANALYTICS_PUBLIC=true` 설정 시 인증 없이 통계가 공개됩니다.
 - 인증 방식: 기존 로그인 시스템이 내려주는 사용자 이메일 헤더(`x-forwarded-user`, `x-authenticated-user`, `x-user-email` 등) 기반으로 접근을 제한합니다.
 
 ## 디렉터리

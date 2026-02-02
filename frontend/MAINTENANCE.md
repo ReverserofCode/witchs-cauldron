@@ -10,6 +10,7 @@
   - `ANALYTICS_DATABASE_URL` (운영자 통계용 Postgres, 필수)
   - `ADMIN_ALLOWED_EMAILS` (운영자 이메일 allowlist, 콤마 구분)
   - `ADMIN_ALLOW_NO_HEADER` (로컬 개발 임시 우회용, 운영에서 사용 금지)
+  - `ANALYTICS_PUBLIC` (통계 공개 모드, 운영에서 사용 가능)
 - 로그 및 관리 도구: `manage.sh` (start/stop/restart/status/logs/update/health/shell 제공)
 - Docker Compose 파일: `docker-compose.prod.yml` (로그 로테이션, 리소스 한도 포함)
 - 정적 자산: `public/rightAside`, `public/mainPage`, `public/broadcast-schedule.csv` (기본 일정 CSV)

@@ -76,6 +76,7 @@ services:
       - ANALYTICS_DATABASE_URL=${ANALYTICS_DATABASE_URL:-}
       - ADMIN_ALLOWED_EMAILS=${ADMIN_ALLOWED_EMAILS:-}
       - ADMIN_ALLOW_NO_HEADER=${ADMIN_ALLOW_NO_HEADER:-}
+      - ANALYTICS_PUBLIC=${ANALYTICS_PUBLIC:-}
     volumes:
       - ./frontend:/app
       - frontend_node_modules:/app/node_modules
