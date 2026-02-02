@@ -7,5 +7,9 @@ frontend_local
 **/__pycache__/
 
 # local clip artifacts (keep frontend/public/clips tracked)
-chizzkData/clips/
-clips/
+/chizzkData/clips/
+/clips/
+
+# frontend clip temp artifacts
+frontend/public/clips/__trash/
+frontend/public/clips/__tslist_*.txt

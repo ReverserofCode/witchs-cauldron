@@ -27,6 +27,7 @@ function loadClipsFromDirectory(): Clip[] {
 
   return files.map((filename, index) => {
     const base = filename.replace(/\.[^.]+$/, "");
+    const encodedFilename = encodeURIComponent(filename);
     const cleanName = base
       .replace(/^clip_/, "")
       .replace(/[_-]+/g, " ")
@@ -35,7 +36,7 @@ function loadClipsFromDirectory(): Clip[] {
 
     return {
       id: base,
-      src: `/clips/${filename}`,
+      src: `/clips/${encodedFilename}`,
       title: cleanName.length > 0 ? `${cleanName}` : `하이라이트 클립 #${index + 1}`,
     } satisfies Clip;
   });

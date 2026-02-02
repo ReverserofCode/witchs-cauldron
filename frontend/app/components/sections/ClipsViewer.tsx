@@ -18,10 +18,12 @@ export default function ClipsViewer({ clips }: ClipsViewerProps) {
   const [isMuted, setIsMuted] = useState(true);
   const [progress, setProgress] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [failedClipIds, setFailedClipIds] = useState<Set<string>>(new Set());
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const currentClip = clips[currentIndex];
+  const allFailed = clips.length > 0 && failedClipIds.size >= clips.length;
 
   // 비디오 진행률 업데이트
   useEffect(() => {
@@ -47,9 +49,11 @@ export default function ClipsViewer({ clips }: ClipsViewerProps) {
     video.volume = 0.3;
 
     if (isPlaying) {
-      video.play().catch(() => {
-        // 자동 재생 차단 시 무시
-      });
+      video
+        .play()
+        .catch(() => {
+          // 자동 재생 차단 또는 코덱 미지원 시 무시
+        });
     } else {
       video.pause();
     }
@@ -59,6 +63,10 @@ export default function ClipsViewer({ clips }: ClipsViewerProps) {
   useEffect(() => {
     setProgress(0);
     setIsPlaying(true);
+    const video = videoRef.current;
+    if (video) {
+      video.load();
+    }
   }, [currentIndex]);
 
   const goToNext = useCallback(() => {
@@ -162,7 +170,18 @@ export default function ClipsViewer({ clips }: ClipsViewerProps) {
     goToNext();
   };
 
-  if (clips.length === 0) {
+  const handleVideoError = () => {
+    if (!currentClip) return;
+    setFailedClipIds((prev) => {
+      if (prev.has(currentClip.id)) return prev;
+      const next = new Set(prev);
+      next.add(currentClip.id);
+      return next;
+    });
+    goToNext();
+  };
+
+  if (clips.length === 0 || allFailed) {
     return (
       <div className="flex flex-col items-center gap-4 py-12 text-center">
         <div className="flex items-center justify-center w-16 h-16 rounded-full bg-purple-100">
@@ -171,8 +190,10 @@ export default function ClipsViewer({ clips }: ClipsViewerProps) {
           </svg>
         </div>
         <div>
-          <h3 className="font-semibold text-purple-900">클립이 없습니다</h3>
-          <p className="text-sm text-purple-700/80">아직 등록된 클립이 없습니다.</p>
+          <h3 className="font-semibold text-purple-900">클립을 재생할 수 없습니다</h3>
+          <p className="text-sm text-purple-700/80">
+            파일이 없거나 브라우저에서 지원하지 않는 형식일 수 있습니다.
+          </p>
         </div>
       </div>
     );
@@ -199,9 +220,12 @@ export default function ClipsViewer({ clips }: ClipsViewerProps) {
               isTransitioning ? "opacity-0" : "opacity-100"
             }`}
             loop={clips.length === 1}
+            muted={isMuted}
+            autoPlay={isPlaying}
             playsInline
-            preload="auto"
+            preload="metadata"
             onEnded={handleVideoEnd}
+            onError={handleVideoError}
           />
 
           {/* 진행 바 */}

@@ -1,0 +1,2 @@
+# This directory is used as a shared volume between backend and frontend containers.
+# Clips collected by the backend are stored here and served by the frontend.

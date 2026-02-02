@@ -17,17 +17,22 @@ jobs:
         with:
           node-version: '22'
           cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
 
       - name: Install dependencies
+        working-directory: frontend
         run: npm install
 
       - name: TypeScript type check
+        working-directory: frontend
         run: npx tsc --noEmit
 
       - name: Lint
+        working-directory: frontend
         run: npm run lint
 
       - name: Build
+        working-directory: frontend
         run: npm run build
 
   deploy:
@@ -46,4 +51,4 @@ jobs:
             cd ${{ secrets.DEPLOY_PATH }}
             git fetch origin main
             git reset --hard origin/main
-            ./deploy.sh --clean
+            ./frontend/deploy.sh --clean
