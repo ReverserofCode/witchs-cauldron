@@ -98,16 +98,15 @@ build_image() {
 replace_application() {
     log_info "애플리케이션을 교체합니다 (무중단 배포)..."
 
-    # 이전 컨테이너 이름 충돌 방지 (container_name 고정 사용 시)
-    docker rm -f witchs-cauldron-backend-prod witchs-cauldron-frontend-prod >/dev/null 2>&1 || true
-
     # docker compose up -d는 자동으로:
     # 1. 새 이미지로 새 컨테이너 생성
     # 2. 이전 컨테이너 중지 및 제거
     # 3. 새 컨테이너 시작
     if docker compose version >/dev/null 2>&1; then
+        docker compose -f docker-compose.prod.yml down --remove-orphans
         docker compose -f docker-compose.prod.yml up -d --force-recreate --remove-orphans
     else
+        docker-compose -f docker-compose.prod.yml down --remove-orphans
         docker-compose -f docker-compose.prod.yml up -d --force-recreate --remove-orphans
     fi
 
