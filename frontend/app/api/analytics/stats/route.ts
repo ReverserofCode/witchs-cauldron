@@ -95,12 +95,12 @@ export async function GET(request: NextRequest) {
       pageviews: Number(row.pageviews ?? 0),
       menuClicks: Number(row.menu_clicks ?? 0),
     },
-    daily: dailyResult.rows.map((entry) => ({
+    daily: dailyResult.rows.map((entry: { day: string; pageviews: string | number | null; menu_clicks: string | number | null }) => ({
       day: entry.day,
       pageviews: Number(entry.pageviews ?? 0),
       menuClicks: Number(entry.menu_clicks ?? 0),
     })),
-    topMenuClicks: menuResult.rows.map((entry) => ({
+    topMenuClicks: menuResult.rows.map((entry: { element_id: string; element_label: string | null; clicks: string | number | null }) => ({
       elementId: entry.element_id,
       label: entry.element_label,
       clicks: Number(entry.clicks ?? 0),
