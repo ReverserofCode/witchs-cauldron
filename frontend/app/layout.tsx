@@ -4,7 +4,7 @@
 // - 페이지 본문은 {children}으로 주입
 import { Metadata } from 'next'
 import Script from 'next/script'
-import { ReactNode } from 'react'
+import { ReactNode, Suspense } from 'react'
 import './globals.css'
 import { Noto_Sans_KR } from 'next/font/google'
 import { Header, Footer } from '@/app/components/layout'
@@ -96,7 +96,9 @@ export default function RootLayout({ children }: RootLayoutProps) {
               '모잉(Moing) 팬들을 위한 비공식 커뮤니티 허브. 방송 일정, 하이라이트, 유튜브 최신/인기 영상 정보를 한곳에서 확인하세요.',
           })}
         </Script>
-        <AnalyticsProvider />
+        <Suspense fallback={null}>
+          <AnalyticsProvider />
+        </Suspense>
         <Header />
         <main className="flex flex-col flex-1">
           {children}
