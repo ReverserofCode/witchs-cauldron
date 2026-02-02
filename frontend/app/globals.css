@@ -1,0 +1,275 @@
+/* Tailwind v4: @import 방식 활성화 */
+@import "tailwindcss";
+
+/*
+    Moing Design Tokens (from app/ProjectAssets/moing_colors.json)
+    - primary: #9F6AF8
+    - accent:  #DBCEF7
+    - deep:    #5E4E75
+    - pink:    #B9A8CB
+    - gold:    #CCC5D2
+    - black:   #170D2B
+    - white:   #FFFFFF
+*/
+:root {
+    /* RGB tokens (updated palette)
+         #7B68EE  primary (vibrant purple)
+         #A020F0  magenta/purple accent
+         #ADD8E6  light sky accent
+         #FFFFFF  white
+         #191970  midnight deep
+     */
+    --moing-primary: 160 32 240;
+    /* #A020F0 */
+    --moing-accent: 173 216 230;
+    /* #ADD8E6 */
+    --moing-deep: 25 25 112;
+    /* #191970 */
+    --moing-pink: 160 32 240;
+    /* #A020F0 */
+    --moing-gold: 173 216 230;
+    /* repurposed to light sky */
+    --moing-black: 25 25 112;
+    /* use midnight as dark base */
+    --moing-white: 255 255 255;
+    /* #FFFFFF */
+
+    /* Semantic */
+    --ink: var(--moing-black);
+    --ink-muted: 160 160 190;
+    /* muted text tuned for midnight base */
+    --page: 25 25 112;
+    /* keep very light bg base */
+    --shadow-primary: 160 32 240;
+    /* primary shadow tint updated */
+    --shadow-deep: 25 25 112;
+    /* deep shadow tint */
+
+    color-scheme: light;
+}
+
+html, body {
+    height: 100%;
+}
+
+body {
+    margin: 0;
+}
+
+/* Text helpers: 잉크/서브텍스트 컬러 유틸리티 */
+.text-ink {
+    color: rgb(var(--ink));
+}
+
+.text-muted {
+    color: rgb(var(--ink-muted));
+}
+
+/* Typography helpers: 한국어 줄바꿈 개선 및 가독성 향상 */
+.typography-heading {
+    word-break: keep-all;
+    line-height: 1.15;
+    letter-spacing: -0.015em;
+}
+
+.typography-lead {
+    word-break: keep-all;
+    overflow-wrap: break-word;
+    hyphens: auto;
+    line-height: 1.7;
+    letter-spacing: -0.01em;
+}
+
+.typography-body {
+    word-break: keep-all;
+    overflow-wrap: break-word;
+    hyphens: auto;
+    line-height: 1.65;
+    letter-spacing: -0.008em;
+}
+
+.typography-small {
+    word-break: keep-all;
+    overflow-wrap: break-word;
+    hyphens: auto;
+    line-height: 1.5;
+}
+
+/* App background: Moing gradient with soft paper */
+.bg-page {
+    background:
+        radial-gradient(1200px 800px at 80% -10%, rgba(var(--moing-primary), 0.28), transparent 55%),
+        radial-gradient(800px 600px at -10% 10%, rgba(var(--moing-accent), 0.35), transparent 60%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.80), rgba(255, 255, 255, 0.92)),
+        rgb(var(--page));
+}
+
+/* Optional: Darker page with midnight base */
+.bg-page-midnight {
+    background:
+        radial-gradient(1200px 800px at 80% -10%, rgba(var(--moing-primary), 0.20), transparent 55%),
+        radial-gradient(800px 600px at -10% 10%, rgba(var(--moing-accent), 0.22), transparent 60%),
+        linear-gradient(180deg, rgba(25, 25, 112, 0.35), rgba(25, 25, 112, 0.55)),
+        rgb(var(--moing-deep));
+}
+
+/* Chips / tags: 작은 강조 레이블 스타일 */
+.bg-chip {
+    background-color: rgba(var(--moing-deep), 0.9);
+}
+
+.chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.375rem 0.625rem;
+    border-radius: 9999px;
+    font-weight: 600;
+    color: rgb(var(--moing-white));
+    background: linear-gradient(135deg, rgba(var(--moing-accent), 0.6), rgba(var(--moing-primary), 0.7));
+    border: 1px solid rgba(var(--moing-white), 0.25);
+}
+
+/* Buttons: 프라이머리/고스트 등 CTA 버튼 프리셋 */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1rem;
+    border-radius: 0.75rem;
+    font-weight: 700;
+    text-decoration: none;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.btn-primary {
+    color: #fff;
+    background-image: linear-gradient(90deg, rgb(var(--moing-primary)) 0%, rgb(var(--moing-deep)) 100%);
+    box-shadow: 0 10px 24px rgba(var(--shadow-primary), 0.25);
+}
+
+.btn-primary:hover {
+    filter: brightness(1.05);
+}
+
+.btn-pink {
+    color: #fff;
+    background-image: linear-gradient(90deg, rgb(var(--moing-pink)) 0%, rgb(var(--moing-primary)) 100%);
+    box-shadow: 0 10px 24px rgba(var(--shadow-primary), 0.22);
+}
+
+.btn-gold {
+    color: #2b223f;
+    background-image: linear-gradient(90deg, rgb(var(--moing-gold)) 0%, rgb(var(--moing-accent)) 100%);
+    box-shadow: 0 10px 24px rgba(var(--shadow-deep), 0.18);
+}
+
+.btn-ghost {
+    color: rgb(var(--moing-primary));
+    background: rgba(var(--moing-accent), 0.2);
+}
+
+.btn-ghost:hover {
+    background: rgba(var(--moing-accent), 0.3);
+}
+
+/* Cards: 유리감(blur) + 여백/섀도우 */
+.card {
+    padding: 1rem;
+    border-radius: 0.9rem;
+    border: 1px solid rgba(var(--moing-accent), 0.7);
+    background: rgba(255, 255, 255, 0.7);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 10px 26px rgba(var(--shadow-deep), 0.08);
+}
+
+.card-title {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: rgb(var(--ink-muted));
+}
+
+.card-value {
+    font-size: 1.25rem;
+    font-weight: 800;
+}
+
+/* Simple fade-in animation utilities */
+@keyframes fade-in {
+    from {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-fade-in {
+    animation-name: fade-in;
+    animation-duration: 700ms;
+    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+    animation-fill-mode: forwards;
+}
+
+/* Delay utilities to pair with animations */
+.animation-delay-100 {
+    animation-delay: 100ms;
+}
+
+.animation-delay-200 {
+    animation-delay: 200ms;
+}
+
+.animation-delay-300 {
+    animation-delay: 300ms;
+}
+
+.animation-delay-500 {
+    animation-delay: 500ms;
+}
+
+/* Avatar frame with optional image slot
+    - width/height는 Tailwind 유틸로 제어 (여기선 지정하지 않음) */
+.avatar-frame {
+    position: relative;
+    border-radius: 9999px;
+    overflow: hidden;
+    background: radial-gradient(circle at 50% 45%, rgba(var(--moing-primary), 0.35), rgba(var(--moing-deep), 0.15) 60%, transparent 70%);
+    box-shadow: 0 24px 60px rgba(var(--shadow-primary), 0.25);
+}
+
+.avatar-frame .glow {
+    position: absolute;
+    inset: -30%;
+    filter: blur(40px);
+    background: conic-gradient(from 180deg at 50% 50%, rgba(255, 255, 255, 0.2), rgba(var(--moing-primary), 0.4), rgba(255, 255, 255, 0.2));
+}
+
+.avatar-frame .inner {
+    position: absolute;
+    inset: 10px;
+    border-radius: 9999px;
+    border: 1px solid rgba(var(--moing-primary), 0.2);
+}
+
+.avatar-frame img {
+    position: absolute;
+    inset: 10px;
+    width: calc(100% - 20px);
+    height: calc(100% - 20px);
+    object-fit: cover;
+    border-radius: 9999px;
+}
+
+/* Header / Footer surface: 글래스모피즘 배경 */
+.surface {
+    background: rgba(255, 255, 255, 0.7);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(var(--moing-accent), 0.7);
+}

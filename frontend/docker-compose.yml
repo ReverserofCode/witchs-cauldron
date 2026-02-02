@@ -1,0 +1,47 @@
+# 기존 내용 유지 ...
+services:
+  frontend:
+    container_name: witchs-cauldron-frontend
+    image: node:22-alpine
+    working_dir: /app
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    environment:
+      - HOST=0.0.0.0
+      - NEXT_TELEMETRY_DISABLED=1
+      - CHOKIDAR_USEPOLLING=true
+      - WATCHPACK_POLLING=true
+    volumes:
+      - .:/app
+      - frontend_node_modules:/app/node_modules
+      - /app/.next
+    command:
+      - sh
+      - -lc
+      - |
+        set -e
+        if [ ! -f package.json ]; then
+          echo "[CHECK] No package.json in /app. Initialize the project: npx create-next-app@latest ." >&2
+          exit 1
+        fi
+        echo "[CHECK] package.json found."
+        if command -v node >/dev/null 2>&1; then node -v; else echo "[WARN] node not found in PATH" >&2; fi
+        if [ -f package-lock.json ]; then echo "[INFO] Using npm ci"; npm ci || npm install; else echo "[INFO] Using npm install"; npm install; fi
+        echo "[START] npm run dev"
+        npm run dev
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget -qO- http://localhost:3000/ >/dev/null 2>&1 || exit 1",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 40s
+    restart: unless-stopped
+
+volumes:
+  frontend_node_modules: null
