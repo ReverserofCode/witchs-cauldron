@@ -1,0 +1,11 @@
+frontend_local
+
+# local codex/claude settings
+.claude/settings.local.json
+
+# python cache
+**/__pycache__/
+
+# local clip artifacts (keep frontend/public/clips tracked)
+chizzkData/clips/
+clips/

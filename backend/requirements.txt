@@ -1,0 +1,22 @@
+# FastAPI and web server
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+python-multipart==0.0.18
+
+# Selenium for web scraping
+selenium==4.27.1
+webdriver-manager==4.0.2
+
+# HTTP requests
+requests==2.32.3
+httpx==0.28.1
+
+# Data validation
+pydantic==2.10.4
+pydantic-settings==2.7.0
+
+# Background tasks
+apscheduler==3.10.4
+
+# Utilities
+python-dateutil==2.9.0.post0

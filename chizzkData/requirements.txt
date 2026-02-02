@@ -1,0 +1,31 @@
+# 치지직 클립 수집기 (ChizzkData) 필수 라이브러리
+# 설치 명령: pip install -r requirements.txt
+
+# 웹 브라우저 자동화
+selenium==4.36.0
+
+# HTML 파싱 (확장 기능용)
+beautifulsoup4==4.14.2
+
+# HTTP 요청 및 파일 다운로드
+requests==2.32.5
+
+# ChromeDriver 자동 관리
+webdriver-manager==4.0.2
+
+# 표준 라이브러리 (별도 설치 불필요)
+# - os: 파일 시스템 작업
+# - time: 지연 시간 제어
+# - json: JSON 데이터 처리
+# - datetime: 날짜/시간 처리
+# - urllib.parse: URL 파싱
+
+# 개발 환경 정보
+# Python 버전: 3.9+
+# 운영체제: Windows 10/11 (테스트 완료)
+# Chrome 브라우저: 최신 버전 권장
+
+# 설치 순서:
+# 1. conda create -n chizzk_clips python=3.9 -y
+# 2. conda activate chizzk_clips  
+# 3. pip install -r requirements.txt

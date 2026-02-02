@@ -1,0 +1,85 @@
+##### docker-compose: 개발 환경 (Frontend + Backend) #####
+services:
+  # ===== Backend: FastAPI + Selenium 클립 수집 서비스 =====
+  backend:
+    container_name: witchs-cauldron-backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=true
+      - HEADLESS=false
+      - USE_XVFB=true
+    # Shared memory for Chrome/Xvfb (prevents crashes)
+    shm_size: '2gb'
+    volumes:
+      # 클립 공유 볼륨 (읽기/쓰기)
+      - shared_clips:/app/shared/clips
+      # 개발 시 소스 코드 마운트 (핫 리로드용)
+      - ./backend/app:/app/app
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - curl -f http://localhost:8000/api/health || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
+    # 메모리 제한 (Selenium 때문에 충분히 확보)
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+
+  # ===== Frontend: Next.js 개발 서버 =====
+  frontend:
+    container_name: witchs-cauldron-frontend
+    image: node:22-alpine
+    working_dir: /app
+    ports:
+      - "3000:3000"
+    environment:
+      - HOST=0.0.0.0
+      - NEXT_TELEMETRY_DISABLED=1
+      # Windows/OneDrive 환경 파일 감지 안정화
+      - CHOKIDAR_USEPOLLING=true
+      - WATCHPACK_POLLING=true
+      # Backend API URL
+      - BACKEND_URL=http://backend:8000
+    volumes:
+      - ./frontend:/app
+      - frontend_node_modules:/app/node_modules
+      # 로컬 clips 디렉터리를 직접 사용 (CI/CD 연동 시도 중단)
+      - ./frontend/public/clips:/app/public/clips:ro
+    depends_on:
+      backend:
+        condition: service_healthy
+    command:
+      'sh -lc "set -e; if [ ! -f package.json ]; then echo ''[CHECK] No package.json
+      in /app. Initialize the project: npx create-next-app@latest .'' >&2; exit 1;
+      fi; echo ''[CHECK] package.json found.''; if command -v node >/dev/null 2>&1;
+      then node -v; else echo ''[WARN] node not found in PATH'' >&2; fi; if [ -f package-lock.json
+      ]; then echo ''[INFO] Using npm ci''; npm ci || npm install; else echo ''[INFO]
+      Using npm install''; npm install; fi; echo ''[START] npm run dev''; npm run
+      dev"'
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - wget -qO- http://localhost:3000/ >/dev/null 2>&1 || exit 1
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 40s
+    restart: unless-stopped
+
+# 볼륨 정의
+volumes:
+  # Node.js 의존성 볼륨 (호스트 OS 차이 회피)
+  frontend_node_modules: null
+  # 클립 공유 볼륨 (Backend ↔ Frontend)
+  shared_clips: null

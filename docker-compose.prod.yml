@@ -1,0 +1,85 @@
+##### docker-compose.prod.yml: 프로덕션 환경 (Frontend + Backend) #####
+services:
+  # ===== Backend: FastAPI + Selenium 클립 수집 서비스 =====
+  backend:
+    container_name: witchs-cauldron-backend-prod
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: witchs-cauldron-backend:latest
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=false
+      - HEADLESS=false
+      - USE_XVFB=true
+    # Shared memory for Chrome/Xvfb (prevents crashes)
+    shm_size: '2gb'
+    volumes:
+      # 클립 공유 볼륨 (읽기/쓰기)
+      - shared_clips:/app/shared/clips
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - curl -f http://localhost:8000/api/health || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ===== Frontend: Next.js 프로덕션 서버 =====
+  frontend:
+    container_name: witchs-cauldron-frontend-prod
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: runner
+    image: witchs-cauldron-frontend:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - BACKEND_URL=http://backend:8000
+    volumes:
+      # 로컬 clips 디렉터리를 직접 사용 (CI/CD 연동 시도 중단)
+      - ./frontend/public/clips:/app/public/clips:ro
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - node healthcheck.js
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+# 볼륨 정의
+volumes:
+  # 클립 공유 볼륨 (Backend ↔ Frontend)
+  shared_clips: null
