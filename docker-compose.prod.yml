@@ -1,5 +1,31 @@
 ##### docker-compose.prod.yml: 프로덕션 환경 (Frontend + Backend) #####
 services:
+  # ===== Analytics: Postgres =====
+  analytics-db:
+    container_name: witchs-cauldron-analytics-db-prod
+    image: postgres:16-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=analytics
+      - POSTGRES_PASSWORD=analytics
+      - POSTGRES_DB=analytics
+    volumes:
+      - analytics_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U analytics -d analytics
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
   # ===== Backend: FastAPI + Selenium 클립 수집 서비스 =====
   backend:
     container_name: witchs-cauldron-backend-prod
@@ -64,6 +90,8 @@ services:
     depends_on:
       backend:
         condition: service_healthy
+      analytics-db:
+        condition: service_healthy
     healthcheck:
       test:
         - CMD-SHELL
@@ -89,3 +117,5 @@ services:
 volumes:
   # 클립 공유 볼륨 (Backend ↔ Frontend)
   shared_clips: null
+  # analytics db data
+  analytics_data: null
