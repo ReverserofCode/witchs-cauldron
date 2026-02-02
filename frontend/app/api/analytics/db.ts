@@ -1,15 +1,12 @@
 import { Pool } from "pg";
 
-const DEFAULT_DB_URL = process.env.ANALYTICS_DATABASE_URL || process.env.DATABASE_URL || "";
+const FALLBACK_DB_URL = "postgres://analytics:analytics@analytics-db:5432/analytics";
 let pool: Pool | null = null;
 let schemaReady = false;
 let schemaPromise: Promise<void> | null = null;
 
 function getDatabaseUrl() {
-  if (!DEFAULT_DB_URL) {
-    throw new Error("ANALYTICS_DATABASE_URL 환경변수가 설정되어 있지 않습니다.");
-  }
-  return DEFAULT_DB_URL;
+  return process.env.ANALYTICS_DATABASE_URL || process.env.DATABASE_URL || FALLBACK_DB_URL;
 }
 
 export function getPool() {
