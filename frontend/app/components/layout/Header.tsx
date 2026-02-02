@@ -1,6 +1,9 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { trackEvent } from "@/app/components/analytics/track";
 
 type HeaderItem = { label: string; href: string };
 
@@ -65,6 +68,18 @@ function HeaderIcon({ name, className }: { name: string; className?: string }) {
 }
 
 export default function Header({ brand, items = defaultItems }: HeaderProps) {
+  const handleMenuClick = (item: HeaderItem) => {
+    trackEvent({
+      type: "menu_click",
+      element: {
+        type: "header_menu",
+        id: item.href,
+        label: item.label,
+      },
+      metadata: { location: "header" },
+    });
+  };
+
   return (
     <header className="sticky top-0 z-50 flex justify-center w-full surface">
       <div className="flex items-center justify-between w-full max-w-screen-xl gap-4 px-4 py-3 md:px-6 md:py-2">
@@ -92,6 +107,7 @@ export default function Header({ brand, items = defaultItems }: HeaderProps) {
                     title={item.label}
                     target="_blank"
                     rel="noopener noreferrer"
+                    onClick={() => handleMenuClick(item)}
                   >
                     <HeaderIcon name={item.label} className="w-5 h-5 md:h-6 md:w-6" />
                     <span className="sr-only">{item.label}</span>
@@ -102,6 +118,7 @@ export default function Header({ brand, items = defaultItems }: HeaderProps) {
                     href={item.href}
                     aria-label={item.label}
                     title={item.label}
+                    onClick={() => handleMenuClick(item)}
                   >
                     <HeaderIcon name={item.label} className="w-5 h-5 md:h-6 md:w-6" />
                     <span className="sr-only">{item.label}</span>

@@ -7,6 +7,9 @@
 - 환경 파일: `.env`
   - `YOUTUBE_API_KEY` (필수)
   - `BROADCAST_SCHEDULE_CSV_URL` (선택, 미설정 시 기본 내장 시트를 사용)
+  - `ANALYTICS_DATABASE_URL` (운영자 통계용 Postgres, 필수)
+  - `ADMIN_ALLOWED_EMAILS` (운영자 이메일 allowlist, 콤마 구분)
+  - `ADMIN_ALLOW_NO_HEADER` (로컬 개발 임시 우회용, 운영에서 사용 금지)
 - 로그 및 관리 도구: `manage.sh` (start/stop/restart/status/logs/update/health/shell 제공)
 - Docker Compose 파일: `docker-compose.prod.yml` (로그 로테이션, 리소스 한도 포함)
 - 정적 자산: `public/rightAside`, `public/mainPage`, `public/broadcast-schedule.csv` (기본 일정 CSV)
@@ -23,6 +26,7 @@
 - 상태/헬스: `./manage.sh status` (Health: healthy 확인)
 - 리소스: `docker stats`, `df -h`, `free -h`
 - API 키 만료/쿼터 확인: `docker exec witchs-cauldron-frontend-prod printenv | grep YOUTUBE`
+ - 통계 DB 연결 확인: `docker exec witchs-cauldron-frontend-prod printenv | grep ANALYTICS_DATABASE_URL`
 
 ### 월간 (또는 배포 전/후)
 
@@ -33,7 +37,7 @@
 ## 3. 업데이트/배포 절차 (무중단 아님)
 
 1. 코드 동기화: `git pull` 또는 새 릴리스 파일 반영
-2. 환경 변수 확인: `.env`에서 `YOUTUBE_API_KEY`, `BROADCAST_SCHEDULE_CSV_URL` 등을 최신 값으로 업데이트하고 백업(`cp .env .env.bak`)
+2. 환경 변수 확인: `.env`에서 `YOUTUBE_API_KEY`, `BROADCAST_SCHEDULE_CSV_URL`, `ANALYTICS_DATABASE_URL` 등을 최신 값으로 업데이트하고 백업(`cp .env .env.bak`)
 3. 재배포: `./manage.sh update` (빌드 + 재생성). 캐시를 완전히 비우고 싶다면 `./deploy.sh --clean` 사용
 4. 검증:
    - `./manage.sh status` (헬스체크 필드가 healthy 인지)
@@ -48,6 +52,9 @@
   - 필요 시 `./manage.sh restart`
 - **YouTube API 오류/쿼터 초과**
   - `YOUTUBE_API_KEY` 값 확인 및 교체 후 `./manage.sh restart`
+- **운영자 통계 접근 불가**
+  - `ADMIN_ALLOWED_EMAILS` 설정 및 인증 헤더 전달 여부 확인
+  - `ANALYTICS_DATABASE_URL` 연결 확인 후 `./manage.sh restart`
 - **방송 일정 비정상**
   - `BROADCAST_SCHEDULE_CSV_URL` 확인, 미설정 시 내장 `public/broadcast-schedule.csv`가 사용됨
   - `GET /api/broadCastSchedule?diagnostics=1`로 단계별 상태 확인

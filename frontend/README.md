@@ -19,6 +19,7 @@
 - **방송 일정**: `/api/broadCastSchedule`이 구글 시트 CSV를 가져와 파싱합니다. 진단 쿼리 파라미터로 각 단계를 점검할 수 있습니다.
 - **유튜브**: `/api/youTubePlayer`, `/api/youTubePlayer/topOfficial`, `/api/youtubeShorts`가 업로드 플레이리스트 기반으로 최신 영상·월간 인기 영상·쇼츠를 제공합니다. 모든 엔드포인트는 `YOUTUBE_API_KEY`가 필요하며, 캐시와 Playlist API를 활용해 호출 수를 절감합니다.
 - **클라이언트 캐시**: `useYouTubeVideos` 훅이 5분 TTL 캐시와 중복 요청 방지를 담당하여, 동일 세션에서 API 호출을 최소화합니다.
+- **방문자/클릭 분석**: `/api/analytics/track`이 페이지뷰/메뉴 클릭 이벤트를 Postgres에 저장하고, `/api/analytics/stats`가 운영자용 대시보드 데이터를 제공합니다.
 
 ### 디렉터리 안내
 
@@ -134,6 +135,18 @@ docker exec -it witchs-cauldron-frontend npx tsc --noEmit
 - `/api/youtubeShorts`는 업로드 플레이리스트에서 후보를 가져온 뒤 `videos.list`로 길이를 확인하여 65초 이하의 쇼츠만 반환합니다. 페이지네이션과 중복 ID 처리를 통해 최소 호출만 수행하며, 모든 외부 요청에 `revalidate: 60` 캐시 힌트를 부여했습니다.
 - 클라이언트 훅 `useYouTubeVideos`는 5분 TTL 로컬 캐시를 사용하도록 개선되었습니다. 신선한 데이터만 재사용하고 만료 시 자동으로 재호출합니다. 강제로 초기화하려면 `resetYouTubeVideosCache()`를 호출하세요.
 - UI 측면에서는 오른쪽 사이드바가 팬 아트 이미지를 `public/rightAside` 디렉터리에서 자동으로 수집해 표시하며, 커뮤니티 카드만 유지하도록 단순화되었습니다.
+
+## 방문자/클릭 분석 (운영자 전용)
+
+- 대시보드 경로: `/admin/analytics`
+- 수집 이벤트: 페이지뷰, 메뉴 클릭(`header_menu`)
+- 재방문 집계 기준: 30일
+- 필수 환경 변수:
+  - `ANALYTICS_DATABASE_URL` (Postgres 접속 문자열)
+  - `ADMIN_ALLOWED_EMAILS` (콤마 구분, 예: `admin@example.com,owner@example.com`)
+- 로컬 개발 편의:
+  - 인증 헤더가 없는 환경에서는 `ADMIN_ALLOW_NO_HEADER=true`로 임시 우회할 수 있습니다. (운영 환경에서는 사용 금지)
+- 인증 방식: 기존 로그인 시스템이 내려주는 사용자 이메일 헤더(`x-forwarded-user`, `x-authenticated-user`, `x-user-email` 등) 기반으로 접근을 제한합니다.
 
 ## 디렉터리
 

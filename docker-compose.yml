@@ -1,5 +1,24 @@
 ##### docker-compose: 개발 환경 (Frontend + Backend) #####
 services:
+  analytics-db:
+    container_name: witchs-cauldron-analytics-db
+    image: postgres:16-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=analytics
+      - POSTGRES_PASSWORD=analytics
+      - POSTGRES_DB=analytics
+    volumes:
+      - analytics_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U analytics -d analytics
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
   # ===== Backend: FastAPI + Selenium 클립 수집 서비스 =====
   backend:
     container_name: witchs-cauldron-backend
@@ -53,6 +72,10 @@ services:
       - BACKEND_URL=http://backend:8000
       # YouTube Data API
       - YOUTUBE_API_KEY=${YOUTUBE_API_KEY:-}
+      # Analytics (Postgres)
+      - ANALYTICS_DATABASE_URL=${ANALYTICS_DATABASE_URL:-}
+      - ADMIN_ALLOWED_EMAILS=${ADMIN_ALLOWED_EMAILS:-}
+      - ADMIN_ALLOW_NO_HEADER=${ADMIN_ALLOW_NO_HEADER:-}
     volumes:
       - ./frontend:/app
       - frontend_node_modules:/app/node_modules
@@ -60,6 +83,8 @@ services:
       - ./frontend/public/clips:/app/public/clips:ro
     depends_on:
       backend:
+        condition: service_healthy
+      analytics-db:
         condition: service_healthy
     command:
       'sh -lc "set -e; if [ ! -f package.json ]; then echo ''[CHECK] No package.json
@@ -85,3 +110,5 @@ volumes:
   frontend_node_modules: null
   # 클립 공유 볼륨 (Backend ↔ Frontend)
   shared_clips: null
+  # analytics db data
+  analytics_data: null

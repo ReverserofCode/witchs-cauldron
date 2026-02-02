@@ -54,6 +54,9 @@ services:
       - BACKEND_URL=http://backend:8000
       # YouTube Data API
       - YOUTUBE_API_KEY=${YOUTUBE_API_KEY:-}
+      # Analytics (Postgres)
+      - ANALYTICS_DATABASE_URL=${ANALYTICS_DATABASE_URL:-}
+      - ADMIN_ALLOWED_EMAILS=${ADMIN_ALLOWED_EMAILS:-}
     volumes:
       # 로컬 clips 디렉터리를 직접 사용 (CI/CD 연동 시도 중단)
       - ./frontend/public/clips:/app/public/clips:ro

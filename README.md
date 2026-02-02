@@ -8,6 +8,12 @@
 - `backend/` FastAPI + Selenium 클립 수집 서비스
 - `chizzkData/` 로컬 클립 수집 유틸리티
 
+## 방문자/클릭 분석
+
+- Postgres 기반 자체 수집이며, 운영자 전용 대시보드는 `/admin/analytics`에서 확인합니다.
+- 자세한 설정은 `frontend/README.md`의 **방문자/클릭 분석** 섹션을 참고하세요.
+- 로컬 개발용으로 `docker-compose.yml`에 `analytics-db`(Postgres) 컨테이너가 포함됩니다.
+
 ## 클립 운영 정책
 
 - 운영 서버에는 클립 수집 기능이 없으므로 **클립 파일을 Git에 포함**합니다.
