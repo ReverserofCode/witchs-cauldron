@@ -17,15 +17,18 @@ witchs-cauldron/
 │   │   │   ├── broadCastSchedule/ # 방송 일정 (Google Sheets)
 │   │   │   ├── chzzkPlayer/     # 치지직 라이브 상태
 │   │   │   ├── youTubePlayer/   # 유튜브 비디오
-│   │   │   └── youtubeShorts/   # 유튜브 쇼츠
+│   │   │   ├── youtubeShorts/   # 유튜브 쇼츠
+│   │   │   └── analytics/       # 방문자/클릭 통계 (Postgres)
 │   │   ├── components/          # React 컴포넌트
 │   │   │   ├── cards/           # 카드 컴포넌트
 │   │   │   ├── gallery/         # 팬아트 갤러리
 │   │   │   ├── modals/          # 모달 (React Portal)
 │   │   │   ├── layout/          # 레이아웃 (Header, Footer, Sidebar)
+│   │   │   ├── analytics/       # 분석 추적 유틸
 │   │   │   ├── sections/        # 콘텐츠 섹션
 │   │   │   └── status/          # 상태 표시
 │   │   ├── hooks/               # 커스텀 React 훅
+│   │   ├── admin/               # 운영자 전용 페이지
 │   │   ├── layout.tsx           # 루트 레이아웃
 │   │   ├── page.tsx             # 홈페이지
 │   │   └── globals.css          # 전역 스타일
@@ -67,6 +70,7 @@ witchs-cauldron/
 - **YouTube Data API v3**: 비디오 메타데이터
 - **치지직 API**: 실시간 방송 상태
 - **Google Sheets**: 방송 일정 (CSV)
+- **Postgres**: 방문자/메뉴 클릭 통계 저장
 
 ---
 
@@ -86,6 +90,8 @@ witchs-cauldron/
 | `api/broadCastSchedule/schedule.tsx` | 방송 일정 파싱 (1,167줄) |
 | `api/chzzkPlayer/chzzkPlayer.ts` | 치지직 라이브 상태 |
 | `api/youTubePlayer/route.ts` | 최신 유튜브 영상 |
+| `api/analytics/track/route.ts` | 페이지뷰/메뉴 클릭 수집 |
+| `api/analytics/stats/route.ts` | 운영자 통계 집계 |
 
 ### 컴포넌트
 | 파일 | 기능 |
@@ -103,6 +109,10 @@ witchs-cauldron/
 - **피처드 카드**: 최신/인기 유튜브 영상
 - **콘텐츠 섹션**: 클립, 방송 일정, 유튜브 카테고리별 영상
 - **사이드바**: 일정 스냅샷, 커뮤니티 링크, 팬아트 갤러리
+
+### 운영자 통계
+- `/admin/analytics` 운영자 전용 대시보드
+- 메뉴 클릭/페이지뷰/재방문(30일 기준) 집계
 
 ### 갤러리
 - `public/rightAside/` 이미지 자동 감지
@@ -124,6 +134,8 @@ witchs-cauldron/
 | `/api/broadCastSchedule` | 방송 일정 |
 | `/api/chzzkPlayer` | 치지직 상태 |
 | `/api/youTubePlayer` | 유튜브 영상 |
+| `/api/analytics/track` | 방문자/클릭 이벤트 수집 |
+| `/api/analytics/stats` | 운영자 통계 조회 |
 
 ### Docker
 ```bash
@@ -150,12 +162,14 @@ python ShortForm.py
 | `tsconfig.json` | TypeScript 설정 (strict 모드) |
 | `tailwind.config.js` | Tailwind 커스텀 색상 |
 | `Dockerfile` | 3단계 프로덕션 빌드 |
-| `.env` | 환경 변수 (YOUTUBE_API_KEY) |
+| `.env` | 환경 변수 (YOUTUBE_API_KEY 등) |
 
 ### 환경 변수
 ```env
 YOUTUBE_API_KEY=<필수>
 BROADCAST_SCHEDULE_CSV_URL=<선택>
+ANALYTICS_DATABASE_URL=<필수>
+ADMIN_ALLOWED_EMAILS=<필수>
 NEXT_TELEMETRY_DISABLED=1
 ```
 
