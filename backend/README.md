@@ -87,3 +87,14 @@ curl http://localhost:8000/api/clips
 - Clip collection takes ~30-40 seconds per clip
 - Minimum 1GB RAM recommended for Selenium
 - Clips are saved to `/app/shared/clips` (Docker volume)
+
+## Repository Layout (Root)
+
+- `frontend/` Next.js app (served separately)
+- `backend/` this service
+- `chizzkData/` local collection utility
+
+## CI/CD (Root)
+
+- Workflows live at `.github/workflows`
+- CI/CD jobs run frontend steps under `frontend/`

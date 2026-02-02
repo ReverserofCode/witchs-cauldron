@@ -76,6 +76,12 @@ docker compose down
 - 클립 파일은 `frontend/public/clips/`에 있어야 하며, 컨테이너는 해당 경로를 읽기 전용으로 마운트합니다.
 - 한글/공백 파일명도 안전하게 로드되도록 클립 URL 인코딩을 적용했습니다.
 
+## CI/CD (루트 기준)
+
+- 워크플로우 경로: `.github/workflows`
+- 작업 디렉터리: `frontend/`
+- 배포 스크립트: `frontend/deploy.sh`
+
 ## 패키지 설치/명령 실행 (컨테이너 내부)
 
 로컬 호스트에서 직접 npm을 실행하지 말고 컨테이너를 통해 실행하세요.

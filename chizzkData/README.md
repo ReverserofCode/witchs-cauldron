@@ -77,6 +77,18 @@ collector.collect_clips(
 )
 ```
 
+### 명령줄 옵션 (추천)
+
+```bash
+python ShortForm.py --max-clips 10 --order POPULAR --filter ALL \
+  --idle-seconds 6 --max-wait-seconds 0 --min-segments 8 --min-duration 5
+```
+
+- `--idle-seconds`: 세그먼트 유입이 멈춘 것으로 간주하는 시간(초)
+- `--max-wait-seconds`: 최대 대기 시간(초). `0`이면 제한 없음
+- `--min-segments`: ts 세그먼트 최소 개수
+- `--min-duration`: 최소 영상 길이(초)
+
 ## 📁 파일 구조
 
 ```
@@ -119,6 +131,12 @@ clip_{클립ID}.mp4
 - `extract_media_urls_from_clip(clip_url)`: 개별 클립에서 미디어 URL 추출
 - `download_media(media_url, filename)`: 미디어 파일 다운로드
 - `collect_clips(max_clips, filter_type, order_type)`: 전체 수집 프로세스 실행
+
+## ✅ 안정화 개선 사항 (2026-02-02)
+
+- 세그먼트 혼합 방지: ts URL을 그룹화해 가장 큰 그룹만 사용
+- 세그먼트 유입 중지 감지: idle 기준으로 대기 종료
+- 다운로드 검증: 최소 세그먼트 수/길이 미달 시 실패 처리
 
 ## ✅ 최근 수정 사항 (2026-02-02)
 
