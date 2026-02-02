@@ -13,3 +13,6 @@ frontend_local
 # frontend clip temp artifacts
 frontend/public/clips/__trash/
 frontend/public/clips/__tslist_*.txt
+
+# local environment files
+.env
