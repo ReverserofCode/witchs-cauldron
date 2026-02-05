@@ -8,7 +8,7 @@
 
 **프로젝트명**: 마녀의 포션 공방 (Witchs Cauldron)
 **설명**: 버튜버 "모잉(Moing)"을 위한 팬 커뮤니티 웹사이트
-**주요 기능**: 방송 스케줄, YouTube 콘텐츠, 치지직 라이브 상태, 팬아트 갤러리, 하이라이트 숏폼, **클립 자동 수집**
+**주요 기능**: 방송 스케줄, YouTube 콘텐츠, 치지직 라이브 상태, 팬아트 갤러리, 하이라이트 숏폼, **클립 자동 수집**, **방문자/클릭 분석**
 **GitHub**: https://github.com/ReverserofCode/witchs-cauldron
 
 ---
@@ -28,6 +28,8 @@
 | 언어 | Python | 3.11 |
 | 브라우저 자동화 | Selenium | 4.27.1 |
 | 브라우저 | Chromium + Xvfb | - |
+| **데이터베이스** | | |
+| 분석용 DB | PostgreSQL (Alpine) | 16 |
 | **인프라** | | |
 | 배포 | Docker | multi-stage build |
 | CI/CD | GitHub Actions | - |
@@ -37,20 +39,20 @@
 ## 아키텍처
 
 ```
-┌─────────────────┐     ┌─────────────────┐
-│                 │     │                 │
-│    Frontend     │────▶│    Backend      │
-│   (Next.js)     │     │   (FastAPI)     │
-│   Port: 3000    │     │   Port: 8000    │
-│                 │     │                 │
-└────────┬────────┘     └────────┬────────┘
-         │                       │
-         │  shared_clips 볼륨    │
-         │  (/app/public/clips)  │
-         └───────────┬───────────┘
-                     │
-              ┌──────▼──────┐
-              │   Clips     │
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│                 │     │                 │     │                 │
+│    Frontend     │────▶│    Backend      │     │  Analytics DB   │
+│   (Next.js)     │     │   (FastAPI)     │     │  (PostgreSQL)   │
+│   Port: 3000    │     │   Port: 8000    │     │   Port: 5432    │
+│                 │     │                 │     │                 │
+└────────┬────────┘     └────────┬────────┘     └────────▲────────┘
+         │                       │                       │
+         │  shared_clips 볼륨    │       Analytics API   │
+         │  (/app/public/clips)  │       (/api/analytics)│
+         └───────────┬───────────┘                       │
+                     │                                   │
+              ┌──────▼──────┐                            │
+              │   Clips     │      Frontend ────────────┘
               │  (MP4 등)   │
               └─────────────┘
 ```
@@ -113,14 +115,23 @@ witchs-cauldron/                      # 프로젝트 루트
 │   │   │   ├── broadCastSchedule/    # 방송 일정
 │   │   │   ├── chzzkPlayer/          # 치지직 라이브/클립
 │   │   │   ├── youTubePlayer/        # YouTube 영상
-│   │   │   └── youtubeShorts/        # YouTube Shorts
+│   │   │   ├── youtubeShorts/        # YouTube Shorts
+│   │   │   └── analytics/            # 방문자/클릭 분석 API
+│   │   │       ├── db.ts             # PostgreSQL 연결/스키마
+│   │   │       ├── auth.ts           # 운영자 인증
+│   │   │       ├── track/route.ts    # 이벤트 수집
+│   │   │       └── stats/route.ts    # 통계 조회
+│   │   ├── admin/                    # 운영자 전용 페이지
+│   │   │   └── analytics/page.tsx    # 분석 대시보드
 │   │   ├── components/
 │   │   │   ├── cards/                # 카드 컴포넌트
 │   │   │   ├── gallery/              # 갤러리 (FanArtGallery)
 │   │   │   ├── modals/               # 모달 (FanArtModal)
 │   │   │   ├── layout/               # Header, Footer, Sidebars
 │   │   │   ├── sections/             # 메인 섹션 컴포넌트
-│   │   │   └── status/               # 상태 표시
+│   │   │   ├── status/               # 상태 표시
+│   │   │   └── analytics/            # 분석 추적 유틸
+│   │   │       └── track.ts          # 클라이언트 이벤트 전송
 │   │   ├── hooks/                    # 커스텀 훅
 │   │   ├── page.tsx                  # 홈페이지
 │   │   ├── layout.tsx                # 루트 레이아웃
@@ -163,6 +174,10 @@ witchs-cauldron/                      # 프로젝트 루트
 | 치지직 클립 뷰어 | `frontend/app/components/sections/ClipsViewer.tsx` |
 | YouTube Shorts 뷰어 | `frontend/app/components/sections/YouTubeShortsViewer.tsx` |
 | 팬아트 갤러리 | `frontend/app/components/gallery/FanArtGallery.tsx` |
+| 분석 대시보드 | `frontend/app/admin/analytics/page.tsx` |
+| 분석 DB 연결 | `frontend/app/api/analytics/db.ts` |
+| 이벤트 수집 API | `frontend/app/api/analytics/track/route.ts` |
+| 통계 조회 API | `frontend/app/api/analytics/stats/route.ts` |
 
 ### Backend
 
@@ -189,6 +204,9 @@ witchs-cauldron/                      # 프로젝트 루트
 | `/api/youTubePlayer/topOfficial` | 월간 인기 영상 | ISR 1분 |
 | `/api/youtubeShorts` | YouTube Shorts (팬채널) | ISR 1분 |
 | `/api/youtubeShorts/official` | YouTube Shorts (공식채널) | ISR 1분 |
+| `/api/analytics/track` | 페이지뷰/클릭 이벤트 수집 | no-store |
+| `/api/analytics/stats` | 운영자용 통계 조회 | no-store |
+| `/admin/analytics` | 운영자 분석 대시보드 | - |
 
 ### Backend API (FastAPI)
 
@@ -212,7 +230,15 @@ witchs-cauldron/                      # 프로젝트 루트
 # 필수
 YOUTUBE_API_KEY=your_youtube_api_key
 
-# 선택
+# 분석 기능 (선택)
+ANALYTICS_DATABASE_URL=postgres://analytics:analytics@analytics-db:5432/analytics
+ADMIN_ALLOWED_EMAILS=admin@example.com,owner@example.com  # 콤마 구분
+
+# 분석 옵션
+ANALYTICS_PUBLIC=true           # 인증 없이 통계 공개 (선택)
+ADMIN_ALLOW_NO_HEADER=true      # 로컬 개발용 인증 우회 (운영 금지)
+
+# 기타 선택
 BROADCAST_SCHEDULE_CSV_URL=custom_google_sheets_url
 NEXT_TELEMETRY_DISABLED=1
 BACKEND_URL=http://backend:8000  # Docker 환경
@@ -295,6 +321,17 @@ uvicorn app.main:app --reload
 
 ```yaml
 services:
+  analytics-db:
+    container_name: witchs-cauldron-analytics-db
+    image: postgres:16-alpine
+    ports: ["5432:5432"]
+    environment:
+      - POSTGRES_USER=analytics
+      - POSTGRES_PASSWORD=analytics
+      - POSTGRES_DB=analytics
+    volumes:
+      - analytics_data:/var/lib/postgresql/data
+
   backend:
     container_name: witchs-cauldron-backend
     build: ./backend
@@ -315,9 +352,12 @@ services:
     depends_on:
       backend:
         condition: service_healthy
+      analytics-db:
+        condition: service_healthy
 
 volumes:
-  shared_clips: null  # 클립 공유 볼륨
+  shared_clips: null    # 클립 공유 볼륨
+  analytics_data: null  # 분석 DB 데이터
 ```
 
 ### Backend Dockerfile
@@ -405,6 +445,7 @@ RootLayout
 | 치지직 | 라이브 상태, 클립 수집 | Chzzk API + Selenium |
 | YouTube | 영상 메타데이터 | YouTube Data API v3 |
 | Google Sheets | 방송 스케줄 | CSV export |
+| PostgreSQL | 방문자/클릭 분석 | pg (Node.js 드라이버) |
 
 ---
 
@@ -417,6 +458,13 @@ RootLayout
    - 메모리 부족 여부 확인 (최소 1GB 권장)
 4. **YouTube API 오류**: `YOUTUBE_API_KEY` 확인
 5. **디스크 부족**: `docker system prune -a`
+6. **Analytics DB 연결 실패**:
+   - `docker-compose logs analytics-db` 확인
+   - `ANALYTICS_DATABASE_URL` 환경 변수 확인
+   - 프로덕션: Fallback URL이 적용되는지 확인
+7. **Analytics 대시보드 접근 거부**:
+   - `ADMIN_ALLOWED_EMAILS`에 이메일 등록 여부 확인
+   - `ANALYTICS_PUBLIC=true` 설정 시 인증 없이 접근 가능
 
 ---
 
@@ -442,6 +490,8 @@ RootLayout
 
 ## 최근 변경
 
+- **방문자/클릭 분석 기능 추가** - Postgres 기반 자체 분석, 운영자 대시보드 `/admin/analytics`
+- **공개 분석 모드** - `ANALYTICS_PUBLIC=true` 설정 시 인증 없이 통계 공개
 - **Xvfb 가상 디스플레이 적용** - 헤드리스 모드 대신 Xvfb 사용하여 비디오 재생 문제 해결
 - **Backend 통합** - FastAPI + Selenium 클립 수집 서비스 추가
 - **docker-compose 통합** - 루트 레벨에서 Frontend + Backend 함께 실행
@@ -477,3 +527,25 @@ RootLayout
 ### 5) Claude 모델 확인 방법
 - `.claude/agents/*.md`에 각 에이전트의 **모델**이 명시되어 있습니다.
 - 본 문서의 **"Claude Code 에이전트"** 섹션에서 **모델 표**를 확인할 수 있습니다.
+
+## 2026-02-03 작업 요약 (Analytics 기능)
+
+### 1) 방문자/클릭 분석 시스템
+- **Postgres 기반 자체 분석** - 외부 서비스 없이 직접 이벤트 수집
+- **이벤트 종류**: 페이지뷰(`pageview`), 메뉴 클릭(`header_menu`)
+- **세션 관리**: UUID 기반 세션, IP/User-Agent 저장
+- **재방문자 집계**: 30일 기준
+
+### 2) 운영자 대시보드
+- **경로**: `/admin/analytics`
+- **인증**: 사용자 이메일 헤더 기반 (`x-forwarded-user`, `x-authenticated-user`, `x-user-email`)
+- **허용 이메일**: `ADMIN_ALLOWED_EMAILS` 환경 변수로 설정 (콤마 구분)
+
+### 3) 공개 모드
+- `ANALYTICS_PUBLIC=true` 설정 시 인증 없이 통계 공개
+- 로컬 개발 편의: `ADMIN_ALLOW_NO_HEADER=true`로 인증 우회 (운영 환경 사용 금지)
+
+### 4) 인프라 변경
+- **analytics-db 서비스 추가** - PostgreSQL 16 Alpine 컨테이너
+- **스키마 자동 생성** - `analytics_sessions`, `analytics_events` 테이블
+- **Fallback DB URL** - `ANALYTICS_DATABASE_URL` 미설정 시 기본 Docker 컨테이너 연결

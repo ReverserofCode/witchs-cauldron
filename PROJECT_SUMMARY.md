@@ -223,4 +223,21 @@ NEXT_TELEMETRY_DISABLED=1
 
 ---
 
-*생성일: 2026-01-30*
+---
+
+## 11. 최근 변경 (2026-02-03)
+
+### 방문자/클릭 분석 기능
+- **Postgres 기반 자체 분석** - 외부 서비스 없이 직접 이벤트 수집
+- **운영자 대시보드**: `/admin/analytics`
+- **이벤트 종류**: 페이지뷰(`pageview`), 메뉴 클릭(`header_menu`)
+- **재방문자 집계**: 30일 기준
+- **공개 모드**: `ANALYTICS_PUBLIC=true` 설정 시 인증 없이 통계 공개
+
+### 인프라 변경
+- **analytics-db 서비스 추가** - PostgreSQL 16 Alpine 컨테이너
+- **스키마 자동 생성** - `analytics_sessions`, `analytics_events` 테이블
+
+---
+
+*최종 수정일: 2026-02-03*

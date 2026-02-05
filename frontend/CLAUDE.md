@@ -59,9 +59,17 @@ witchs-cauldron/                      # 프로젝트 루트
 │   │   │   ├── shared.ts             # 공유 유틸리티 (API 키, 채널 메타)
 │   │   │   └── topOfficial/
 │   │   │       └── route.ts          # 월간 인기 영상
-│   │   └── youtubeShorts/
-│   │       ├── route.ts              # YouTube Shorts
-│   │       └── youTubeShorts.ts      # Shorts 필터링 로직
+│   │   ├── youtubeShorts/
+│   │   │   ├── route.ts              # YouTube Shorts
+│   │   │   └── youTubeShorts.ts      # Shorts 필터링 로직
+│   │   └── analytics/                # 방문자/클릭 분석 API
+│   │       ├── db.ts                 # PostgreSQL 연결/스키마
+│   │       ├── auth.ts               # 운영자 인증
+│   │       ├── track/route.ts        # 이벤트 수집
+│   │       └── stats/route.ts        # 통계 조회
+│   │
+│   ├── admin/                        # 운영자 전용 페이지
+│   │   └── analytics/page.tsx        # 분석 대시보드
 │   │
 │   ├── components/                   # React 컴포넌트
 │   │   ├── cards/                    # 재사용 가능한 카드 컴포넌트
@@ -98,6 +106,8 @@ witchs-cauldron/                      # 프로젝트 루트
 │   │   ├── status/
 │   │   │   ├── index.ts
 │   │   │   └── YouTubeSectionStatus.tsx
+│   │   ├── analytics/                # 분석 추적 유틸
+│   │   │   └── track.ts              # 클라이언트 이벤트 전송
 │   │   ├── footer.tsx                # 레거시 (사용하지 않음)
 │   │   ├── header.tsx                # 레거시 (사용하지 않음)
 │   │   └── latestYouTubeVideoCard.tsx # 레거시
@@ -219,6 +229,22 @@ RootLayout (app/layout.tsx)
 ### 7. `/api/youtubeShorts`
 - **목적**: 65초 이하 YouTube Shorts 필터링
 
+### 8. `/api/analytics/track`
+- **목적**: 페이지뷰/클릭 이벤트 수집
+- **메서드**: POST
+- **이벤트 타입**: `pageview`, `header_menu`
+- **세션 관리**: UUID 기반 (클라이언트에서 생성)
+
+### 9. `/api/analytics/stats`
+- **목적**: 운영자용 통계 집계
+- **메서드**: GET
+- **인증**: `ADMIN_ALLOWED_EMAILS` 기반 또는 `ANALYTICS_PUBLIC=true`
+- **응답**: 페이지뷰, 메뉴 클릭, 재방문자(30일) 통계
+
+### 10. `/admin/analytics`
+- **목적**: 운영자 분석 대시보드
+- **인증**: 사용자 이메일 헤더 기반
+
 ## 캐싱 전략
 
 ### 서버 사이드 (ISR)
@@ -258,7 +284,15 @@ const channelCache = new Map<string, ChannelMetadata>();
 # 필수
 YOUTUBE_API_KEY=your_youtube_api_key
 
-# 선택
+# 분석 기능 (선택)
+ANALYTICS_DATABASE_URL=postgres://analytics:analytics@analytics-db:5432/analytics
+ADMIN_ALLOWED_EMAILS=admin@example.com,owner@example.com  # 콤마 구분
+
+# 분석 옵션
+ANALYTICS_PUBLIC=true           # 인증 없이 통계 공개 (선택)
+ADMIN_ALLOW_NO_HEADER=true      # 로컬 개발용 인증 우회 (운영 금지)
+
+# 기타 선택
 BROADCAST_SCHEDULE_CSV_URL=custom_google_sheets_url
 NEXT_TELEMETRY_DISABLED=1
 ```
@@ -298,6 +332,11 @@ docker-compose -f docker-compose.prod.yml up -d
 | 팬아트 Modal | `app/components/modals/FanArtModal.tsx` |
 | 오른쪽 사이드바 | `app/components/layout/RightSidebar.tsx` |
 | 범용 카드 | `app/components/cards/SectionCard.tsx` |
+| 분석 대시보드 | `app/admin/analytics/page.tsx` |
+| 분석 DB 연결 | `app/api/analytics/db.ts` |
+| 이벤트 수집 API | `app/api/analytics/track/route.ts` |
+| 통계 조회 API | `app/api/analytics/stats/route.ts` |
+| 클라이언트 추적 | `app/components/analytics/track.ts` |
 
 ## 코드 작업 가이드
 
@@ -333,6 +372,7 @@ export async function GET(request: Request) {
 | 치지직 | 실시간 방송 상태, 클립 | Chzzk API |
 | YouTube | 영상 메타데이터 | YouTube Data API v3 |
 | Google Sheets | 방송 스케줄 | CSV export URL |
+| PostgreSQL | 방문자/클릭 분석 | pg (Node.js 드라이버) |
 
 ## 관련 문서
 
@@ -342,6 +382,8 @@ export async function GET(request: Request) {
 
 ## 최근 변경 이력
 
+- **방문자/클릭 분석 기능 추가** - Postgres 기반 자체 분석, 운영자 대시보드 `/admin/analytics`
+- **공개 분석 모드** - `ANALYTICS_PUBLIC=true` 설정 시 인증 없이 통계 공개
 - **ScheduleModal 추가** - 전체 일정 보기 캘린더 Modal (`app/components/modals/ScheduleModal.tsx`)
 - **코드베이스 정리** - 미사용 레거시 파일 11개 삭제, 518줄 dead code 제거
 - **deploy.sh 실행 권한 수정** - CD 배포 시 Permission denied 오류 해결 (chmod +x)
