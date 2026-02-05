@@ -107,13 +107,15 @@ witchs-cauldron/                      # 프로젝트 루트
 │   │   │   ├── index.ts
 │   │   │   └── YouTubeSectionStatus.tsx
 │   │   ├── analytics/                # 분석 추적 유틸
-│   │   │   └── track.ts              # 클라이언트 이벤트 전송
+│   │   │   ├── track.ts              # 클라이언트 이벤트 전송
+│   │   │   └── SectionTracker.tsx    # 섹션 뷰 추적 래퍼 컴포넌트
 │   │   ├── footer.tsx                # 레거시 (사용하지 않음)
 │   │   ├── header.tsx                # 레거시 (사용하지 않음)
 │   │   └── latestYouTubeVideoCard.tsx # 레거시
 │   │
 │   ├── hooks/
-│   │   └── useYouTubeVideos.ts       # YouTube 데이터 캐싱 훅 (5분 TTL)
+│   │   ├── useYouTubeVideos.ts       # YouTube 데이터 캐싱 훅 (5분 TTL)
+│   │   └── useSectionView.ts         # 섹션 뷰 추적 훅 (Intersection Observer)
 │   │
 │   ├── layout.tsx                    # 루트 레이아웃 (메타데이터, 폰트)
 │   ├── page.tsx                      # 홈페이지 (3-column 그리드)
@@ -230,16 +232,20 @@ RootLayout (app/layout.tsx)
 - **목적**: 65초 이하 YouTube Shorts 필터링
 
 ### 8. `/api/analytics/track`
-- **목적**: 페이지뷰/클릭 이벤트 수집
+- **목적**: 페이지뷰/클릭/섹션뷰 이벤트 수집
 - **메서드**: POST
-- **이벤트 타입**: `pageview`, `header_menu`
+- **이벤트 타입**: `pageview`, `menu_click`, `content_click`, `section_view`
 - **세션 관리**: UUID 기반 (클라이언트에서 생성)
 
 ### 9. `/api/analytics/stats`
 - **목적**: 운영자용 통계 집계
 - **메서드**: GET
 - **인증**: `ADMIN_ALLOWED_EMAILS` 기반 또는 `ANALYTICS_PUBLIC=true`
-- **응답**: 페이지뷰, 메뉴 클릭, 재방문자(30일) 통계
+- **응답**:
+  - `totals`: 순 방문자, 재방문자, 페이지뷰, 메뉴 클릭
+  - `daily[]`: 일별 순 방문자, 페이지뷰, 메뉴 클릭
+  - `topMenuClicks[]`: 메뉴 클릭 TOP 10
+  - `sectionViews[]`: 섹션별 조회 수
 
 ### 10. `/admin/analytics`
 - **목적**: 운영자 분석 대시보드
@@ -337,6 +343,8 @@ docker-compose -f docker-compose.prod.yml up -d
 | 이벤트 수집 API | `app/api/analytics/track/route.ts` |
 | 통계 조회 API | `app/api/analytics/stats/route.ts` |
 | 클라이언트 추적 | `app/components/analytics/track.ts` |
+| 섹션 뷰 훅 | `app/hooks/useSectionView.ts` |
+| 섹션 추적 래퍼 | `app/components/analytics/SectionTracker.tsx` |
 
 ## 코드 작업 가이드
 
@@ -382,6 +390,8 @@ export async function GET(request: Request) {
 
 ## 최근 변경 이력
 
+- **Analytics 대시보드 Recharts 개선** - 꺾은선 그래프(일별 순 방문자/페이지뷰/메뉴 클릭), 섹션별 조회 수 차트
+- **섹션 뷰 추적 기능** - `useSectionView` 훅, `SectionTracker` 컴포넌트, `section_view` 이벤트 타입
 - **방문자/클릭 분석 기능 추가** - Postgres 기반 자체 분석, 운영자 대시보드 `/admin/analytics`
 - **공개 분석 모드** - `ANALYTICS_PUBLIC=true` 설정 시 인증 없이 통계 공개
 - **ScheduleModal 추가** - 전체 일정 보기 캘린더 Modal (`app/components/modals/ScheduleModal.tsx`)

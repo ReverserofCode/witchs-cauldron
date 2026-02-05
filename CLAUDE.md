@@ -549,3 +549,151 @@ RootLayout
 - **analytics-db 서비스 추가** - PostgreSQL 16 Alpine 컨테이너
 - **스키마 자동 생성** - `analytics_sessions`, `analytics_events` 테이블
 - **Fallback DB URL** - `ANALYTICS_DATABASE_URL` 미설정 시 기본 Docker 컨테이너 연결
+
+## 2026-02-05 작업 요약 (Analytics 대시보드 개선)
+
+### 1) Recharts 기반 꺾은선 그래프
+- **recharts 패키지 추가** - `npm install recharts`
+- **일별 트래픽 추이 그래프** - 막대 그래프 → 꺾은선 그래프로 변경
+- **3개 라인 표시**: 순 방문자(보라), 페이지뷰(파랑), 메뉴 클릭(핑크)
+- **반응형 컨테이너** - `ResponsiveContainer` 적용
+
+### 2) 섹션 뷰 추적 기능
+- **`section_view` 이벤트 타입 추가** - `track.ts`에 새 이벤트 타입
+- **`useSectionView` 훅 생성** - Intersection Observer 기반, 50% 가시성 threshold
+- **`SectionTracker` 래퍼 컴포넌트** - 클라이언트 컴포넌트로 섹션 뷰 추적
+- **세션당 1회 추적** - 중복 이벤트 방지 (모듈 레벨 Set 사용)
+
+### 3) API 수정
+- **`/api/analytics/stats`에 새 필드 추가**:
+  - `daily[].uniqueVisitors` - 일별 고유 방문자 수 (COUNT DISTINCT ip)
+  - `sectionViews` - 섹션별 조회 수 배열
+
+### 4) 대시보드 UI 변경
+- **"일별 트래픽 추이"** - Recharts LineChart 컴포넌트
+- **"섹션별 조회 수"** - Recharts BarChart (가로 막대)
+- **섹션 한글 라벨 매핑** - `SECTION_LABELS` 상수
+
+### 5) 추적 대상 섹션 (7개)
+| 섹션 ID | 한글 라벨 |
+|---------|----------|
+| `featured-latest` | 최신 영상 |
+| `featured-top` | 인기 영상 |
+| `clips-section` | 숏폼 하이라이트 |
+| `schedule-section` | 방송 일정 |
+| `youtube-official` | 공식 유튜브 |
+| `youtube-full` | 다시보기 |
+| `youtube-fan` | 팬 영상 |
+
+### 6) 수정/생성된 파일
+
+| 파일 | 변경 내용 |
+|------|-----------|
+| `frontend/package.json` | recharts 의존성 추가 |
+| `frontend/app/components/analytics/track.ts` | `section_view` 이벤트 타입 추가 |
+| `frontend/app/hooks/useSectionView.ts` | **신규** - Intersection Observer 훅 |
+| `frontend/app/components/analytics/SectionTracker.tsx` | **신규** - 섹션 추적 래퍼 |
+| `frontend/app/api/analytics/stats/route.ts` | uniqueVisitors, sectionViews 추가 |
+| `frontend/app/admin/analytics/page.tsx` | Recharts 그래프 적용 |
+| `frontend/app/page.tsx` | SectionTracker 래퍼 적용 |
+
+---
+
+## 테스팅 가이드
+
+코드 변경 후 반드시 아래 절차를 수행하여 정상 동작을 확인해야 합니다.
+
+### 1) 코드 검증 (로컬)
+
+```bash
+cd frontend
+
+# TypeScript 타입 체크
+npx tsc --noEmit
+
+# ESLint 검사
+npm run lint
+```
+
+### 2) Docker 컨테이너 빌드 및 재시작
+
+```bash
+cd witchs-cauldron  # 프로젝트 루트
+
+# 프론트엔드 재빌드
+docker compose -f docker-compose.prod.yml build frontend
+
+# 컨테이너 재시작 (환경변수 적용)
+docker compose -f docker-compose.prod.yml up -d --force-recreate frontend
+
+# 헬스체크 대기 (약 10초)
+```
+
+### 3) API 엔드포인트 검증
+
+```bash
+# 헬스체크
+curl http://localhost:3000/api/health
+
+# YouTube API (YOUTUBE_API_KEY 필요)
+curl http://localhost:3000/api/youTubePlayer
+curl http://localhost:3000/api/youTubePlayer/topOfficial
+curl http://localhost:3000/api/youtubeShorts
+
+# Analytics API (ANALYTICS_PUBLIC=true 또는 인증 필요)
+curl http://localhost:3000/api/analytics/stats
+```
+
+### 4) 사이트 직접 방문 테스트
+
+브라우저에서 아래 URL에 직접 접속하여 확인:
+
+| URL | 확인 사항 |
+|-----|----------|
+| http://localhost:3000 | 메인 페이지 정상 렌더링, YouTube 영상 표시 |
+| http://localhost:3000/admin/analytics | 대시보드 로드, Recharts 그래프 표시 |
+
+**메인 페이지 확인 항목**:
+- [ ] Hero 섹션 (프로필, 치지직 라이브 상태)
+- [ ] 최신 영상 / 인기 영상 카드
+- [ ] 숏폼 하이라이트 섹션
+- [ ] 방송 일정 섹션
+- [ ] YouTube 공식/다시보기/팬 영상 섹션
+
+**Analytics 대시보드 확인 항목**:
+- [ ] 총계 카드 4개 (순 방문자, 재방문, 페이지뷰, 메뉴 클릭)
+- [ ] 일별 트래픽 추이 꺾은선 그래프
+- [ ] 섹션별 조회 수 가로 막대 그래프
+- [ ] 메뉴 클릭 TOP 10
+
+### 5) 컨테이너 로그 확인
+
+```bash
+# 최근 로그에서 오류 확인
+docker compose -f docker-compose.prod.yml logs frontend --tail 50 | grep -i "error"
+
+# 실시간 로그 모니터링
+docker compose -f docker-compose.prod.yml logs -f frontend
+```
+
+### 6) 환경 변수 체크리스트
+
+`.env` 파일에 아래 환경 변수가 설정되어 있는지 확인:
+
+```bash
+# 필수
+YOUTUBE_API_KEY=your_youtube_api_key
+
+# Analytics 기능
+ANALYTICS_DATABASE_URL=postgres://analytics:analytics@analytics-db:5432/analytics
+ANALYTICS_PUBLIC=true  # 또는 ADMIN_ALLOWED_EMAILS 설정
+```
+
+### 7) 문제 발생 시 체크리스트
+
+| 증상 | 원인 | 해결 방법 |
+|------|------|----------|
+| YouTube 콘텐츠 미표시 | `YOUTUBE_API_KEY` 미설정 | `.env`에 API 키 추가 후 컨테이너 재시작 |
+| Analytics 401 에러 | 인증 미설정 | `ANALYTICS_PUBLIC=true` 또는 `ADMIN_ALLOWED_EMAILS` 설정 |
+| 빌드 실패 (SWC) | Node.js 버전 불일치 | Docker 환경에서 빌드 (Node.js 22) |
+| 컴포넌트 렌더링 안됨 | 환경변수 미적용 | `--force-recreate` 옵션으로 컨테이너 재생성 |

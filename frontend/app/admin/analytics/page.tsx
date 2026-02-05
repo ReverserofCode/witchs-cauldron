@@ -1,6 +1,18 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+} from "recharts";
 
 type AnalyticsTotals = {
   uniqueVisitors: number;
@@ -11,6 +23,7 @@ type AnalyticsTotals = {
 
 type DailyPoint = {
   day: string;
+  uniqueVisitors: number;
   pageviews: number;
   menuClicks: number;
 };
@@ -21,11 +34,18 @@ type MenuClick = {
   clicks: number;
 };
 
+type SectionView = {
+  sectionId: string;
+  label: string;
+  views: number;
+};
+
 type AnalyticsResponse = {
   range: { from: string; to: string };
   totals: AnalyticsTotals;
   daily: DailyPoint[];
   topMenuClicks: MenuClick[];
+  sectionViews: SectionView[];
 };
 
 function startOfDayUTC(date: Date) {
@@ -35,6 +55,16 @@ function startOfDayUTC(date: Date) {
 function formatDateInput(date: Date) {
   return date.toISOString().slice(0, 10);
 }
+
+const SECTION_LABELS: Record<string, string> = {
+  "featured-latest": "최신 영상",
+  "featured-top": "인기 영상",
+  "clips-section": "숏폼 하이라이트",
+  "schedule-section": "방송 일정",
+  "youtube-official": "공식 유튜브",
+  "youtube-full": "다시보기",
+  "youtube-fan": "팬 영상",
+};
 
 export default function AnalyticsPage() {
   const today = useMemo(() => startOfDayUTC(new Date()), []);
@@ -77,10 +107,25 @@ export default function AnalyticsPage() {
     return () => controller.abort();
   }, [from, to]);
 
-  const maxDaily = Math.max(
-    1,
-    ...(data?.daily?.map((entry) => Math.max(entry.pageviews, entry.menuClicks)) ?? [1])
-  );
+  const chartData = useMemo(() => {
+    return (
+      data?.daily?.map((entry) => ({
+        date: new Date(entry.day).toLocaleDateString("ko-KR", { month: "short", day: "numeric" }),
+        uniqueVisitors: entry.uniqueVisitors,
+        pageviews: entry.pageviews,
+        menuClicks: entry.menuClicks,
+      })) ?? []
+    );
+  }, [data?.daily]);
+
+  const sectionData = useMemo(() => {
+    return (
+      data?.sectionViews?.map((entry) => ({
+        name: SECTION_LABELS[entry.sectionId] || entry.label || entry.sectionId,
+        views: entry.views,
+      })) ?? []
+    );
+  }, [data?.sectionViews]);
 
   return (
     <div className="min-h-screen bg-[#f6f0ff] text-[#1a1a1a] px-6 py-10">
@@ -132,40 +177,94 @@ export default function AnalyticsPage() {
         </section>
 
         <section className="rounded-2xl border border-[#ece2ff] bg-white p-6 shadow-[0_15px_35px_rgba(71,47,136,0.1)]">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold">일별 트래픽/메뉴 클릭</h2>
-            <span className="text-xs text-[#7b6bb0]">pageview vs menu click</span>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-lg font-bold">일별 트래픽 추이</h2>
+            <div className="flex gap-4 text-xs">
+              <span className="flex items-center gap-1.5">
+                <span className="w-3 h-3 rounded-full bg-[#7c5cff]" />
+                순 방문자
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-3 h-3 rounded-full bg-[#36b5ff]" />
+                페이지뷰
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-3 h-3 rounded-full bg-[#ff9ad5]" />
+                메뉴 클릭
+              </span>
+            </div>
           </div>
-          <div className="mt-6 grid gap-3">
-            {data?.daily?.length ? (
-              data.daily.map((entry) => (
-                <div key={entry.day} className="grid items-center gap-3 md:grid-cols-[120px_1fr_80px]">
-                  <p className="text-xs font-semibold text-[#5a4a90]">
-                    {new Date(entry.day).toISOString().slice(0, 10)}
-                  </p>
-                  <div className="flex flex-col gap-2">
-                    <div className="h-3 rounded-full bg-[#efe7ff]">
-                      <div
-                        className="h-3 rounded-full bg-[#7c5cff]"
-                        style={{ width: `${(entry.pageviews / maxDaily) * 100}%` }}
-                      />
-                    </div>
-                    <div className="h-3 rounded-full bg-[#f8f0ff]">
-                      <div
-                        className="h-3 rounded-full bg-[#ff9ad5]"
-                        style={{ width: `${(entry.menuClicks / maxDaily) * 100}%` }}
-                      />
-                    </div>
-                  </div>
-                  <div className="text-xs text-[#4b4b4b]">
-                    PV {entry.pageviews} / Click {entry.menuClicks}
-                  </div>
-                </div>
-              ))
-            ) : (
-              <p className="text-sm text-[#7b6bb0]">선택한 기간에 데이터가 없습니다.</p>
-            )}
-          </div>
+          {chartData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={chartData} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e6dcff" />
+                <XAxis dataKey="date" tick={{ fontSize: 12 }} stroke="#7b6bb0" />
+                <YAxis tick={{ fontSize: 12 }} stroke="#7b6bb0" />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "#fff",
+                    border: "1px solid #e6dcff",
+                    borderRadius: "8px",
+                    boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                  }}
+                />
+                <Legend wrapperStyle={{ fontSize: "12px" }} />
+                <Line
+                  type="monotone"
+                  dataKey="uniqueVisitors"
+                  name="순 방문자"
+                  stroke="#7c5cff"
+                  strokeWidth={2}
+                  dot={{ fill: "#7c5cff", strokeWidth: 0, r: 4 }}
+                  activeDot={{ r: 6 }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="pageviews"
+                  name="페이지뷰"
+                  stroke="#36b5ff"
+                  strokeWidth={2}
+                  dot={{ fill: "#36b5ff", strokeWidth: 0, r: 4 }}
+                  activeDot={{ r: 6 }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="menuClicks"
+                  name="메뉴 클릭"
+                  stroke="#ff9ad5"
+                  strokeWidth={2}
+                  dot={{ fill: "#ff9ad5", strokeWidth: 0, r: 4 }}
+                  activeDot={{ r: 6 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <p className="text-sm text-[#7b6bb0] py-8 text-center">선택한 기간에 데이터가 없습니다.</p>
+          )}
+        </section>
+
+        <section className="rounded-2xl border border-[#ece2ff] bg-white p-6 shadow-[0_15px_35px_rgba(71,47,136,0.1)]">
+          <h2 className="text-lg font-bold mb-6">섹션별 조회 수</h2>
+          {sectionData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={Math.max(200, sectionData.length * 50)}>
+              <BarChart data={sectionData} layout="vertical" margin={{ top: 5, right: 30, left: 80, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e6dcff" />
+                <XAxis type="number" tick={{ fontSize: 12 }} stroke="#7b6bb0" />
+                <YAxis type="category" dataKey="name" tick={{ fontSize: 12 }} stroke="#7b6bb0" width={80} />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "#fff",
+                    border: "1px solid #e6dcff",
+                    borderRadius: "8px",
+                    boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                  }}
+                />
+                <Bar dataKey="views" name="조회 수" fill="#7c5cff" radius={[0, 4, 4, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <p className="text-sm text-[#7b6bb0] py-8 text-center">섹션 조회 데이터가 없습니다.</p>
+          )}
         </section>
 
         <section className="rounded-2xl border border-[#ece2ff] bg-white p-6 shadow-[0_15px_35px_rgba(71,47,136,0.1)]">

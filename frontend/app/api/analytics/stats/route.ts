@@ -64,12 +64,24 @@ export async function GET(request: NextRequest) {
     `
       SELECT
         date_trunc('day', created_at) AS day,
+        COUNT(DISTINCT ip) AS unique_visitors,
         COUNT(*) FILTER (WHERE event_type = 'pageview') AS pageviews,
         COUNT(*) FILTER (WHERE event_type = 'menu_click') AS menu_clicks
       FROM analytics_events
       WHERE created_at >= $1 AND created_at < $2
       GROUP BY day
       ORDER BY day ASC
+    `,
+    [from.toISOString(), to.toISOString()]
+  );
+
+  const sectionViewsResult = await pool.query(
+    `
+      SELECT element_id, element_label, COUNT(*) AS views
+      FROM analytics_events
+      WHERE event_type = 'section_view' AND created_at >= $1 AND created_at < $2
+      GROUP BY element_id, element_label
+      ORDER BY views DESC
     `,
     [from.toISOString(), to.toISOString()]
   );
@@ -95,8 +107,9 @@ export async function GET(request: NextRequest) {
       pageviews: Number(row.pageviews ?? 0),
       menuClicks: Number(row.menu_clicks ?? 0),
     },
-    daily: dailyResult.rows.map((entry: { day: string; pageviews: string | number | null; menu_clicks: string | number | null }) => ({
+    daily: dailyResult.rows.map((entry: { day: string; unique_visitors: string | number | null; pageviews: string | number | null; menu_clicks: string | number | null }) => ({
       day: entry.day,
+      uniqueVisitors: Number(entry.unique_visitors ?? 0),
       pageviews: Number(entry.pageviews ?? 0),
       menuClicks: Number(entry.menu_clicks ?? 0),
     })),
@@ -104,6 +117,11 @@ export async function GET(request: NextRequest) {
       elementId: entry.element_id,
       label: entry.element_label,
       clicks: Number(entry.clicks ?? 0),
+    })),
+    sectionViews: sectionViewsResult.rows.map((entry: { element_id: string; element_label: string | null; views: string | number | null }) => ({
+      sectionId: entry.element_id,
+      label: entry.element_label,
+      views: Number(entry.views ?? 0),
     })),
   });
 }

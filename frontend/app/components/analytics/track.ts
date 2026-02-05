@@ -1,5 +1,5 @@
 export type AnalyticsEventPayload = {
-  type: "pageview" | "menu_click" | "content_click";
+  type: "pageview" | "menu_click" | "content_click" | "section_view";
   path?: string;
   referrer?: string;
   element?: {

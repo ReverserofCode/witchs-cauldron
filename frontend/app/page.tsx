@@ -15,6 +15,7 @@ import {
   YouTubeFullMoingVideosSection,
   YouTubeFanVideosSection,
 } from '@/app/components/sections'
+import { SectionTracker } from '@/app/components/analytics/SectionTracker'
 
 
 export default async function Page(): Promise<ReactElement> {
@@ -96,28 +97,28 @@ export default async function Page(): Promise<ReactElement> {
               </SectionCard>
 
               <div className="grid gap-5 md:grid-cols-1 lg:grid-cols-2">
-                <div id="featured-latest" className="h-full">
+                <SectionTracker sectionId="featured-latest" className="h-full">
                   <LatestYouTubeVideoCard className="h-full" />
-                </div>
-                <div id="featured-top" className="h-full">
+                </SectionTracker>
+                <SectionTracker sectionId="featured-top" className="h-full">
                   <TopOfficialYouTubeVideoCard className="h-full" />
-                </div>
+                </SectionTracker>
               </div>
-              <div id="clips-section">
+              <SectionTracker sectionId="clips-section">
                 <ClipsSection />
-              </div>
-              <div id="schedule-section">
+              </SectionTracker>
+              <SectionTracker sectionId="schedule-section">
                 <ScheduleSection />
-              </div>
-              <div id="youtube-official">
+              </SectionTracker>
+              <SectionTracker sectionId="youtube-official">
                 <YouTubeOfficialVideosSection />
-              </div>
-              <div id="youtube-full">
+              </SectionTracker>
+              <SectionTracker sectionId="youtube-full">
                 <YouTubeFullMoingVideosSection />
-              </div>
-              <div id="youtube-fan">
+              </SectionTracker>
+              <SectionTracker sectionId="youtube-fan">
                 <YouTubeFanVideosSection />
-              </div>
+              </SectionTracker>
             </div>
           </div>
           {/* Right Aside */}
