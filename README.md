@@ -30,3 +30,14 @@
 - `frontend/README.md` 프론트엔드 운영/개발 가이드
 - `backend/README.md` 백엔드 사용법
 - `chizzkData/README.md` 로컬 클립 수집기 사용법
+- `CLI_DOCKER_TESTING.md` CLI 모델용 Docker 테스트 체크리스트
+- `AGENT_TEAMS.md` Codex Agent Teams 운영 가이드
+
+## CLI 자동 컨텍스트 주입 (PowerShell)
+
+- PowerShell 프로필: `C:\Users\patte\OneDrive\Documents\PowerShell\Microsoft.PowerShell_profile.ps1`
+- `codex`, `claude` 실행 시 아래 MD를 자동 주입합니다.
+- `AGENT_TEAMS.md`
+- `CLAUDE.md`
+- `CLI_DOCKER_TESTING.md`
+- 현재 세션 즉시 반영: `. $PROFILE`

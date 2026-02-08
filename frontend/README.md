@@ -136,19 +136,14 @@ docker exec -it witchs-cauldron-frontend npx tsc --noEmit
 - 클라이언트 훅 `useYouTubeVideos`는 5분 TTL 로컬 캐시를 사용하도록 개선되었습니다. 신선한 데이터만 재사용하고 만료 시 자동으로 재호출합니다. 강제로 초기화하려면 `resetYouTubeVideosCache()`를 호출하세요.
 - UI 측면에서는 오른쪽 사이드바가 팬 아트 이미지를 `public/rightAside` 디렉터리에서 자동으로 수집해 표시하며, 커뮤니티 카드만 유지하도록 단순화되었습니다.
 
-## 방문자/클릭 분석 (운영자 전용)
+## 방문자/클릭 분석
 
 - 대시보드 경로: `/admin/analytics`
 - 수집 이벤트: 페이지뷰, 메뉴 클릭(`header_menu`)
 - 재방문 집계 기준: 30일
 - 필수 환경 변수:
   - `ANALYTICS_DATABASE_URL` (Postgres 접속 문자열)
-  - `ADMIN_ALLOWED_EMAILS` (콤마 구분, 예: `admin@example.com,owner@example.com`)
-- 로컬 개발 편의:
-  - 인증 헤더가 없는 환경에서는 `ADMIN_ALLOW_NO_HEADER=true`로 임시 우회할 수 있습니다. (운영 환경에서는 사용 금지)
-- 공개 모드:
-  - `ANALYTICS_PUBLIC=true` 설정 시 인증 없이 통계가 공개됩니다.
-- 인증 방식: 기존 로그인 시스템이 내려주는 사용자 이메일 헤더(`x-forwarded-user`, `x-authenticated-user`, `x-user-email` 등) 기반으로 접근을 제한합니다.
+- `/api/analytics/stats`는 인증 없이 조회됩니다.
 
 ## 디렉터리
 

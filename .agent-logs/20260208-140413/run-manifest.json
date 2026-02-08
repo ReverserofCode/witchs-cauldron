@@ -1,0 +1,59 @@
+{
+    "runner":  "shell",
+    "createdAt":  "2026-02-08T14:04:13.9987077+09:00",
+    "dryRun":  true,
+    "view":  "inline",
+    "logDir":  "C:\\Users\\patte\\OneDrive\\Desktop\\Projects\\witchs-cauldron\\.agent-logs\\20260208-140413",
+    "rootDir":  "C:\\Users\\patte\\OneDrive\\Desktop\\Projects\\witchs-cauldron",
+    "plan":  "quality",
+    "tasks":  [
+                  {
+                      "workDir":  "C:\\Users\\patte\\OneDrive\\Desktop\\Projects\\witchs-cauldron",
+                      "lastMessage":  null,
+                      "runner":  "shell",
+                      "jsonLog":  null,
+                      "command":  "Set-Location frontend; npx tsc --noEmit; npm run lint",
+                      "agent":  "lint-checker",
+                      "display":  "Set-Location frontend; npx tsc --noEmit; npm run lint",
+                      "index":  1,
+                      "streamLog":  "C:\\Users\\patte\\OneDrive\\Desktop\\Projects\\witchs-cauldron\\.agent-logs\\20260208-140413\\01-lint-checker.log",
+                      "prompt":  ""
+                  },
+                  {
+                      "workDir":  "C:\\Users\\patte\\OneDrive\\Desktop\\Projects\\witchs-cauldron",
+                      "lastMessage":  null,
+                      "runner":  "shell",
+                      "jsonLog":  null,
+                      "command":  "Set-Location backend; python -m compileall app",
+                      "agent":  "code-tester",
+                      "display":  "Set-Location backend; python -m compileall app",
+                      "index":  2,
+                      "streamLog":  "C:\\Users\\patte\\OneDrive\\Desktop\\Projects\\witchs-cauldron\\.agent-logs\\20260208-140413\\02-code-tester.log",
+                      "prompt":  ""
+                  },
+                  {
+                      "workDir":  "C:\\Users\\patte\\OneDrive\\Desktop\\Projects\\witchs-cauldron",
+                      "lastMessage":  null,
+                      "runner":  "shell",
+                      "jsonLog":  null,
+                      "command":  "Set-Location frontend; npm outdated",
+                      "agent":  "dependency-analyzer",
+                      "display":  "Set-Location frontend; npm outdated",
+                      "index":  3,
+                      "streamLog":  "C:\\Users\\patte\\OneDrive\\Desktop\\Projects\\witchs-cauldron\\.agent-logs\\20260208-140413\\03-dependency-analyzer.log",
+                      "prompt":  ""
+                  },
+                  {
+                      "workDir":  "C:\\Users\\patte\\OneDrive\\Desktop\\Projects\\witchs-cauldron",
+                      "lastMessage":  null,
+                      "runner":  "shell",
+                      "jsonLog":  null,
+                      "command":  "Write-Output \u0027Manual gate: review changed files and API contracts.\u0027",
+                      "agent":  "code-validator",
+                      "display":  "Write-Output \u0027Manual gate: review changed files and API contracts.\u0027",
+                      "index":  4,
+                      "streamLog":  "C:\\Users\\patte\\OneDrive\\Desktop\\Projects\\witchs-cauldron\\.agent-logs\\20260208-140413\\04-code-validator.log",
+                      "prompt":  ""
+                  }
+              ]
+}

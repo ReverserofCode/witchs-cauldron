@@ -118,7 +118,6 @@ witchs-cauldron/                      # 프로젝트 루트
 │   │   │   ├── youtubeShorts/        # YouTube Shorts
 │   │   │   └── analytics/            # 방문자/클릭 분석 API
 │   │   │       ├── db.ts             # PostgreSQL 연결/스키마
-│   │   │       ├── auth.ts           # 운영자 인증
 │   │   │       ├── track/route.ts    # 이벤트 수집
 │   │   │       └── stats/route.ts    # 통계 조회
 │   │   ├── admin/                    # 운영자 전용 페이지
@@ -205,8 +204,8 @@ witchs-cauldron/                      # 프로젝트 루트
 | `/api/youtubeShorts` | YouTube Shorts (팬채널) | ISR 1분 |
 | `/api/youtubeShorts/official` | YouTube Shorts (공식채널) | ISR 1분 |
 | `/api/analytics/track` | 페이지뷰/클릭 이벤트 수집 | no-store |
-| `/api/analytics/stats` | 운영자용 통계 조회 | no-store |
-| `/admin/analytics` | 운영자 분석 대시보드 | - |
+| `/api/analytics/stats` | 통계 조회 | no-store |
+| `/admin/analytics` | 분석 대시보드 | - |
 
 ### Backend API (FastAPI)
 
@@ -232,11 +231,6 @@ YOUTUBE_API_KEY=your_youtube_api_key
 
 # 분석 기능 (선택)
 ANALYTICS_DATABASE_URL=postgres://analytics:analytics@analytics-db:5432/analytics
-ADMIN_ALLOWED_EMAILS=admin@example.com,owner@example.com  # 콤마 구분
-
-# 분석 옵션
-ANALYTICS_PUBLIC=true           # 인증 없이 통계 공개 (선택)
-ADMIN_ALLOW_NO_HEADER=true      # 로컬 개발용 인증 우회 (운영 금지)
 
 # 기타 선택
 BROADCAST_SCHEDULE_CSV_URL=custom_google_sheets_url
@@ -462,9 +456,6 @@ RootLayout
    - `docker-compose logs analytics-db` 확인
    - `ANALYTICS_DATABASE_URL` 환경 변수 확인
    - 프로덕션: Fallback URL이 적용되는지 확인
-7. **Analytics 대시보드 접근 거부**:
-   - `ADMIN_ALLOWED_EMAILS`에 이메일 등록 여부 확인
-   - `ANALYTICS_PUBLIC=true` 설정 시 인증 없이 접근 가능
 
 ---
 
@@ -486,12 +477,24 @@ RootLayout
 | `requirements-analyzer` | 요구사항 분석 | sonnet | - |
 | `token-optimizer` | 토큰 최적화 | sonnet | - |
 
+### CLI 실행 시 MD 자동 주입
+
+- PowerShell 프로필 래퍼를 통해 `codex`/`claude` 실행 시 아래 문서를 자동 주입합니다.
+- `AGENT_TEAMS.md`
+- `CLAUDE.md`
+- `CLI_DOCKER_TESTING.md`
+- 프로필 경로: `C:\Users\patte\OneDrive\Documents\PowerShell\Microsoft.PowerShell_profile.ps1`
+- 현재 셸 즉시 반영: `. $PROFILE`
+
 ---
 
 ## 최근 변경
 
+- **PowerShell 프로필 자동 주입 설정** - `codex`/`claude` 실행 시 MD 컨텍스트 자동 첨부
+- **Analytics 대시보드 원복** - Recharts 기반 차트 제거, 오리지널 막대형 UI 복귀
+- **방문자 기준 변경** - 순 방문자에서 중복 허용 방문자(`totals.visitors`)로 변경
+- **CLI Docker 테스트 문서 추가** - `CLI_DOCKER_TESTING.md`
 - **방문자/클릭 분석 기능 추가** - Postgres 기반 자체 분석, 운영자 대시보드 `/admin/analytics`
-- **공개 분석 모드** - `ANALYTICS_PUBLIC=true` 설정 시 인증 없이 통계 공개
 - **Xvfb 가상 디스플레이 적용** - 헤드리스 모드 대신 Xvfb 사용하여 비디오 재생 문제 해결
 - **Backend 통합** - FastAPI + Selenium 클립 수집 서비스 추가
 - **docker-compose 통합** - 루트 레벨에서 Frontend + Backend 함께 실행
@@ -538,12 +541,10 @@ RootLayout
 
 ### 2) 운영자 대시보드
 - **경로**: `/admin/analytics`
-- **인증**: 사용자 이메일 헤더 기반 (`x-forwarded-user`, `x-authenticated-user`, `x-user-email`)
-- **허용 이메일**: `ADMIN_ALLOWED_EMAILS` 환경 변수로 설정 (콤마 구분)
+- **접근**: 별도 인증 없이 접근 가능
 
 ### 3) 공개 모드
-- `ANALYTICS_PUBLIC=true` 설정 시 인증 없이 통계 공개
-- 로컬 개발 편의: `ADMIN_ALLOW_NO_HEADER=true`로 인증 우회 (운영 환경 사용 금지)
+- (제거됨) 통계 API 인증/공개 모드 관련 설정은 더 이상 사용하지 않음
 
 ### 4) 인프라 변경
 - **analytics-db 서비스 추가** - PostgreSQL 16 Alpine 컨테이너
@@ -640,7 +641,7 @@ curl http://localhost:3000/api/youTubePlayer
 curl http://localhost:3000/api/youTubePlayer/topOfficial
 curl http://localhost:3000/api/youtubeShorts
 
-# Analytics API (ANALYTICS_PUBLIC=true 또는 인증 필요)
+# Analytics API
 curl http://localhost:3000/api/analytics/stats
 ```
 
@@ -686,7 +687,6 @@ YOUTUBE_API_KEY=your_youtube_api_key
 
 # Analytics 기능
 ANALYTICS_DATABASE_URL=postgres://analytics:analytics@analytics-db:5432/analytics
-ANALYTICS_PUBLIC=true  # 또는 ADMIN_ALLOWED_EMAILS 설정
 ```
 
 ### 7) 문제 발생 시 체크리스트
@@ -694,6 +694,5 @@ ANALYTICS_PUBLIC=true  # 또는 ADMIN_ALLOWED_EMAILS 설정
 | 증상 | 원인 | 해결 방법 |
 |------|------|----------|
 | YouTube 콘텐츠 미표시 | `YOUTUBE_API_KEY` 미설정 | `.env`에 API 키 추가 후 컨테이너 재시작 |
-| Analytics 401 에러 | 인증 미설정 | `ANALYTICS_PUBLIC=true` 또는 `ADMIN_ALLOWED_EMAILS` 설정 |
 | 빌드 실패 (SWC) | Node.js 버전 불일치 | Docker 환경에서 빌드 (Node.js 22) |
 | 컴포넌트 렌더링 안됨 | 환경변수 미적용 | `--force-recreate` 옵션으로 컨테이너 재생성 |

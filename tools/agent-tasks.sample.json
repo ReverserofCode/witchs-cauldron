@@ -2,21 +2,25 @@
   {
     "agent": "requirements-analyzer",
     "workDir": ".",
-    "command": "Write-Output 'Define Goal/Scope/Done/Risk/Evidence for this request.'"
+    "command": "Write-Output 'Define Goal/Scope/Done/Risk/Evidence for this request.'",
+    "prompt": "Act as requirements-analyzer. No file edits. Return [Goal], [Scope], [Done], [Risk], [Evidence]."
   },
   {
     "agent": "codebase-structure-analyzer",
     "workDir": ".",
-    "command": "Get-ChildItem frontend/app -Directory | Select-Object -ExpandProperty Name"
+    "command": "Get-ChildItem frontend/app -Directory | Select-Object -ExpandProperty Name",
+    "prompt": "Act as codebase-structure-analyzer. No file edits. Identify impacted directories for the request."
   },
   {
     "agent": "code-generator",
     "workDir": ".",
-    "command": "Write-Output 'Implement minimal patch in target files.'"
+    "command": "Write-Output 'Implement minimal patch in target files.'",
+    "prompt": "Act as code-generator. Provide a minimal implementation approach for the target files."
   },
   {
     "agent": "code-tester",
     "workDir": ".",
-    "command": "Set-Location frontend; npx tsc --noEmit"
+    "command": "Set-Location frontend; npx tsc --noEmit",
+    "prompt": "Act as code-tester. Run `Set-Location frontend; npx tsc --noEmit` and report PASS/FAIL."
   }
 ]

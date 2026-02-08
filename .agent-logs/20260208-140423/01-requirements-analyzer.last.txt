@@ -1,0 +1,16 @@
+[Goal]  
+Confirm the active working directory and summarize requirements-analysis output format.
+
+[Scope]  
+In scope: run `Get-Location` once, report results.  
+Out of scope: any file edits, additional commands, or code changes.
+
+[Done]  
+Executed `Get-Location` exactly once.  
+Performed no file edits.
+
+[Risk]  
+Low risk. Main constraint was command-count compliance; satisfied.
+
+[Evidence]  
+`Get-Location` output path: `C:\Users\patte\OneDrive\Desktop\Projects\witchs-cauldron`

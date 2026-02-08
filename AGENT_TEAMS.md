@@ -111,6 +111,9 @@
 
 - 에이전트별 실제 실행 로그를 시각적으로 확인하려면 `AGENT_RUNTIME_MONITORING.md`를 사용합니다.
 - 실행 스크립트: `tools/Invoke-AgentMonitor.ps1`
+- 실행 증빙 검증: `tools/Verify-AgentEvidence.ps1` (`codex exec --json` 로그 검사)
 - 모드:
   - `-View inline`: 단일 터미널 색상 태그 출력
   - `-View window`: 에이전트별 새 PowerShell 창 분리
+- 권장:
+  - 실제 에이전트 실행 증빙이 필요하면 `-Runner codex`로 실행 후 `Verify-AgentEvidence.ps1`를 수행합니다.

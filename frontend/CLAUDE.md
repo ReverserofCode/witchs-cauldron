@@ -64,7 +64,6 @@ witchs-cauldron/                      # 프로젝트 루트
 │   │   │   └── youTubeShorts.ts      # Shorts 필터링 로직
 │   │   └── analytics/                # 방문자/클릭 분석 API
 │   │       ├── db.ts                 # PostgreSQL 연결/스키마
-│   │       ├── auth.ts               # 운영자 인증
 │   │       ├── track/route.ts        # 이벤트 수집
 │   │       └── stats/route.ts        # 통계 조회
 │   │
@@ -238,18 +237,18 @@ RootLayout (app/layout.tsx)
 - **세션 관리**: UUID 기반 (클라이언트에서 생성)
 
 ### 9. `/api/analytics/stats`
-- **목적**: 운영자용 통계 집계
+- **목적**: 통계 집계
 - **메서드**: GET
-- **인증**: `ADMIN_ALLOWED_EMAILS` 기반 또는 `ANALYTICS_PUBLIC=true`
 - **응답**:
-  - `totals`: 순 방문자, 재방문자, 페이지뷰, 메뉴 클릭
-  - `daily[]`: 일별 순 방문자, 페이지뷰, 메뉴 클릭
+  - `totals`: 고유 방문자, 재방문자, 페이지뷰, 메뉴 클릭
+  - `daily[]`: 일별 페이지뷰, 고유 방문자, 메뉴 클릭
   - `topMenuClicks[]`: 메뉴 클릭 TOP 10
   - `sectionViews[]`: 섹션별 조회 수
+  - `topPaths[]`: 페이지뷰 경로 TOP 10
+  - `topReferrers[]`: referrer TOP 10
 
 ### 10. `/admin/analytics`
-- **목적**: 운영자 분석 대시보드
-- **인증**: 사용자 이메일 헤더 기반
+- **목적**: 분석 대시보드
 
 ## 캐싱 전략
 
@@ -292,11 +291,6 @@ YOUTUBE_API_KEY=your_youtube_api_key
 
 # 분석 기능 (선택)
 ANALYTICS_DATABASE_URL=postgres://analytics:analytics@analytics-db:5432/analytics
-ADMIN_ALLOWED_EMAILS=admin@example.com,owner@example.com  # 콤마 구분
-
-# 분석 옵션
-ANALYTICS_PUBLIC=true           # 인증 없이 통계 공개 (선택)
-ADMIN_ALLOW_NO_HEADER=true      # 로컬 개발용 인증 우회 (운영 금지)
 
 # 기타 선택
 BROADCAST_SCHEDULE_CSV_URL=custom_google_sheets_url
@@ -390,10 +384,11 @@ export async function GET(request: Request) {
 
 ## 최근 변경 이력
 
+- **Analytics 대시보드 원복** - Recharts 제거, 오리지널 막대형 UI로 복귀
+- **방문자 집계 기준 변경** - 순 방문자 → 중복 허용 방문자(`totals.visitors`)
 - **Analytics 대시보드 Recharts 개선** - 꺾은선 그래프(일별 순 방문자/페이지뷰/메뉴 클릭), 섹션별 조회 수 차트
 - **섹션 뷰 추적 기능** - `useSectionView` 훅, `SectionTracker` 컴포넌트, `section_view` 이벤트 타입
 - **방문자/클릭 분석 기능 추가** - Postgres 기반 자체 분석, 운영자 대시보드 `/admin/analytics`
-- **공개 분석 모드** - `ANALYTICS_PUBLIC=true` 설정 시 인증 없이 통계 공개
 - **ScheduleModal 추가** - 전체 일정 보기 캘린더 Modal (`app/components/modals/ScheduleModal.tsx`)
 - **코드베이스 정리** - 미사용 레거시 파일 11개 삭제, 518줄 dead code 제거
 - **deploy.sh 실행 권한 수정** - CD 배포 시 Permission denied 오류 해결 (chmod +x)
