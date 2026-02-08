@@ -17,8 +17,10 @@ export function trackEvent(payload: AnalyticsEventPayload) {
   try {
     if (navigator.sendBeacon) {
       const blob = new Blob([body], { type: "application/json" });
-      navigator.sendBeacon("/api/analytics/track", blob);
-      return;
+      const queued = navigator.sendBeacon("/api/analytics/track", blob);
+      if (queued) {
+        return;
+      }
     }
   } catch {
     // ignore sendBeacon failures
