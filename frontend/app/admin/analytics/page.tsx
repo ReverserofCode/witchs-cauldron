@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 
 type AnalyticsTotals = {
   visitors: number;
@@ -68,47 +68,6 @@ function formatDayLabel(dateString: string) {
   return date.toLocaleDateString("ko-KR", { month: "2-digit", day: "2-digit" });
 }
 
-type ChartBounds = {
-  left: number;
-  right: number;
-  top: number;
-  bottom: number;
-};
-
-function clamp(value: number, min: number, max: number) {
-  return Math.min(Math.max(value, min), max);
-}
-
-function mapToChartY(value: number, maxValue: number, bounds: ChartBounds) {
-  const safeValue = Number.isFinite(value) ? Math.max(0, value) : 0;
-  const ratio = maxValue > 0 ? safeValue / maxValue : 0;
-  const y = bounds.bottom - ratio * (bounds.bottom - bounds.top);
-  return clamp(y, bounds.top, bounds.bottom);
-}
-
-function buildPolyline(values: number[], maxValue: number, bounds: ChartBounds) {
-  if (values.length === 0) return "";
-  if (values.length === 1) {
-    const x = (bounds.left + bounds.right) / 2;
-    const y = mapToChartY(values[0], maxValue, bounds);
-    return `${x},${y}`;
-  }
-  return values
-    .map((value, index) => {
-      const x = bounds.left + (index / (values.length - 1)) * (bounds.right - bounds.left);
-      const y = mapToChartY(value, maxValue, bounds);
-      return `${x},${y}`;
-    })
-    .join(" ");
-}
-
-function buildYAxisTicks(maxValue: number) {
-  const half = Math.ceil(maxValue / 2);
-  const quarter = Math.ceil(maxValue / 4);
-  const values = Array.from(new Set([maxValue, half, quarter, 0])).sort((a, b) => b - a);
-  return values;
-}
-
 function ratioToPercent(value: number, total: number) {
   if (total <= 0) return 0;
   return Math.round((value / total) * 1000) / 10;
@@ -172,6 +131,300 @@ const SECTION_LABELS: Record<string, string> = {
   "youtube-fan": "팬 영상",
 };
 
+// Nice round number for axis
+function getNiceMax(value: number): number {
+  if (value <= 0) return 10;
+  const magnitude = Math.pow(10, Math.floor(Math.log10(value)));
+  const normalized = value / magnitude;
+  let nice = 10;
+  if (normalized <= 1) nice = 1;
+  else if (normalized <= 2) nice = 2;
+  else if (normalized <= 5) nice = 5;
+  return nice * magnitude;
+}
+
+// TrendChart Component
+function TrendChart({ daily }: { daily: DailyPoint[] }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [dimensions, setDimensions] = useState({ width: 800, height: 320 });
+  const [hoverIndex, setHoverIndex] = useState<number | null>(null);
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const { width, height } = entry.contentRect;
+        setDimensions({ width: width || 800, height: height || 320 });
+      }
+    });
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, []);
+
+  const padding = useMemo(() => ({ top: 28, right: 16, bottom: 44, left: 52 }), []);
+  const chartWidth = dimensions.width - padding.left - padding.right;
+  const chartHeight = dimensions.height - padding.top - padding.bottom;
+
+  const maxValue = useMemo(() => {
+    const raw = Math.max(1, ...daily.map((d) => Math.max(d.pageviews, d.uniqueVisitors, d.menuClicks)));
+    return getNiceMax(raw);
+  }, [daily]);
+
+  const yTicks = useMemo(() => {
+    const ticks = [];
+    for (let i = 0; i <= 5; i++) {
+      ticks.push((maxValue / 5) * i);
+    }
+    return ticks.reverse();
+  }, [maxValue]);
+
+  const xLabels = useMemo(() => {
+    if (daily.length === 0) return [];
+    if (daily.length <= 7) return daily.map((d, i) => ({ index: i, label: formatDayLabel(d.day) }));
+    const step = Math.ceil(daily.length / 6);
+    const labels = [];
+    for (let i = 0; i < daily.length; i += step) {
+      labels.push({ index: i, label: formatDayLabel(daily[i].day) });
+    }
+    if (labels[labels.length - 1].index !== daily.length - 1) {
+      labels.push({ index: daily.length - 1, label: formatDayLabel(daily[daily.length - 1].day) });
+    }
+    return labels;
+  }, [daily]);
+
+  const paths = useMemo(() => {
+    if (daily.length === 0) return { visitors: "", pageviews: "", menuClicks: "" };
+    const toX = (i: number) => padding.left + (i / Math.max(1, daily.length - 1)) * chartWidth;
+    const toY = (val: number) => padding.top + chartHeight - (val / maxValue) * chartHeight;
+
+    const visitorsPoints = daily.map((d, i) => ({ x: toX(i), y: toY(d.uniqueVisitors) }));
+    const pageviewsPoints = daily.map((d, i) => ({ x: toX(i), y: toY(d.pageviews) }));
+    const menuClicksPoints = daily.map((d, i) => ({ x: toX(i), y: toY(d.menuClicks) }));
+
+    return {
+      visitors: visitorsPoints.map((p) => `${p.x},${p.y}`).join(" "),
+      pageviews: pageviewsPoints.map((p) => `${p.x},${p.y}`).join(" "),
+      menuClicks: menuClicksPoints.map((p) => `${p.x},${p.y}`).join(" "),
+    };
+  }, [daily, chartWidth, chartHeight, maxValue, padding]);
+
+  const handleMouseMove = useCallback(
+    (e: React.MouseEvent<SVGSVGElement>) => {
+      if (daily.length === 0) return;
+      const svg = e.currentTarget;
+      const rect = svg.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      const chartX = x - padding.left;
+      if (chartX < 0 || chartX > chartWidth) {
+        setHoverIndex(null);
+        return;
+      }
+      const index = Math.round((chartX / chartWidth) * (daily.length - 1));
+      setHoverIndex(Math.max(0, Math.min(daily.length - 1, index)));
+      setMousePosition({ x, y });
+    },
+    [daily, chartWidth, padding]
+  );
+
+  const handleMouseLeave = useCallback(() => {
+    setHoverIndex(null);
+  }, []);
+
+  if (daily.length === 0) {
+    return <p className="text-sm text-gray-500">선택한 기간에 데이터가 없습니다.</p>;
+  }
+
+  const hoverData = hoverIndex !== null ? daily[hoverIndex] : null;
+  const hoverX = hoverIndex !== null ? padding.left + (hoverIndex / Math.max(1, daily.length - 1)) * chartWidth : 0;
+
+  return (
+    <div ref={containerRef} className="relative h-80 w-full">
+      <svg
+        width={dimensions.width}
+        height={dimensions.height}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
+        className="cursor-crosshair"
+      >
+        {/* Grid lines */}
+        {yTicks.map((tick) => {
+          const y = padding.top + chartHeight - (tick / maxValue) * chartHeight;
+          return (
+            <g key={tick}>
+              <line x1={padding.left} y1={y} x2={padding.left + chartWidth} y2={y} stroke="#E5E7EB" strokeWidth="1" />
+              <text x={padding.left - 8} y={y + 4} textAnchor="end" fontSize="11" fill="#9CA3AF">
+                {Math.round(tick).toLocaleString()}
+              </text>
+            </g>
+          );
+        })}
+
+        {/* Axes */}
+        <line x1={padding.left} y1={padding.top} x2={padding.left} y2={padding.top + chartHeight} stroke="#D1D5DB" strokeWidth="1.5" />
+        <line
+          x1={padding.left}
+          y1={padding.top + chartHeight}
+          x2={padding.left + chartWidth}
+          y2={padding.top + chartHeight}
+          stroke="#D1D5DB"
+          strokeWidth="1.5"
+        />
+
+        {/* Area fills */}
+        <defs>
+          <linearGradient id="grad-visitors" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor="#3B82F6" stopOpacity="0.1" />
+            <stop offset="100%" stopColor="#3B82F6" stopOpacity="0" />
+          </linearGradient>
+          <linearGradient id="grad-pageviews" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor="#8B5CF6" stopOpacity="0.1" />
+            <stop offset="100%" stopColor="#8B5CF6" stopOpacity="0" />
+          </linearGradient>
+          <linearGradient id="grad-menuClicks" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor="#F43F5E" stopOpacity="0.1" />
+            <stop offset="100%" stopColor="#F43F5E" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+
+        {paths.visitors && (
+          <polygon
+            points={`${padding.left},${padding.top + chartHeight} ${paths.visitors} ${padding.left + chartWidth},${padding.top + chartHeight}`}
+            fill="url(#grad-visitors)"
+          />
+        )}
+        {paths.pageviews && (
+          <polygon
+            points={`${padding.left},${padding.top + chartHeight} ${paths.pageviews} ${padding.left + chartWidth},${padding.top + chartHeight}`}
+            fill="url(#grad-pageviews)"
+          />
+        )}
+        {paths.menuClicks && (
+          <polygon
+            points={`${padding.left},${padding.top + chartHeight} ${paths.menuClicks} ${padding.left + chartWidth},${padding.top + chartHeight}`}
+            fill="url(#grad-menuClicks)"
+          />
+        )}
+
+        {/* Lines */}
+        {paths.visitors && <polyline points={paths.visitors} fill="none" stroke="#3B82F6" strokeWidth="2" strokeLinejoin="round" />}
+        {paths.pageviews && <polyline points={paths.pageviews} fill="none" stroke="#8B5CF6" strokeWidth="2" strokeLinejoin="round" />}
+        {paths.menuClicks && <polyline points={paths.menuClicks} fill="none" stroke="#F43F5E" strokeWidth="2" strokeLinejoin="round" />}
+
+        {/* Data points */}
+        {daily.map((d, i) => {
+          const x = padding.left + (i / Math.max(1, daily.length - 1)) * chartWidth;
+          const yVisitors = padding.top + chartHeight - (d.uniqueVisitors / maxValue) * chartHeight;
+          const yPageviews = padding.top + chartHeight - (d.pageviews / maxValue) * chartHeight;
+          const yMenuClicks = padding.top + chartHeight - (d.menuClicks / maxValue) * chartHeight;
+          const isHovered = hoverIndex === i;
+          const r = isHovered ? 4 : 2.5;
+          return (
+            <g key={i}>
+              <circle cx={x} cy={yVisitors} r={r} fill="#3B82F6" />
+              <circle cx={x} cy={yPageviews} r={r} fill="#8B5CF6" />
+              <circle cx={x} cy={yMenuClicks} r={r} fill="#F43F5E" />
+            </g>
+          );
+        })}
+
+        {/* Hover line */}
+        {hoverIndex !== null && (
+          <line x1={hoverX} y1={padding.top} x2={hoverX} y2={padding.top + chartHeight} stroke="#6B7280" strokeWidth="1" strokeDasharray="4 2" />
+        )}
+
+        {/* X-axis labels */}
+        {xLabels.map(({ index, label }) => {
+          const x = padding.left + (index / Math.max(1, daily.length - 1)) * chartWidth;
+          return (
+            <text key={index} x={x} y={padding.top + chartHeight + 20} textAnchor="middle" fontSize="11" fill="#9CA3AF">
+              {label}
+            </text>
+          );
+        })}
+      </svg>
+
+      {/* Tooltip */}
+      {hoverData && (
+        <div
+          className="pointer-events-none absolute rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs shadow-lg"
+          style={{
+            left: Math.min(mousePosition.x + 10, dimensions.width - 120),
+            top: Math.max(mousePosition.y - 60, 10),
+          }}
+        >
+          <div className="mb-1 font-semibold text-gray-700">{formatDayLabel(hoverData.day)}</div>
+          <div className="flex items-center gap-2">
+            <span className="inline-block h-2 w-2 rounded-full bg-blue-500" />
+            <span className="text-gray-600">방문자: {hoverData.uniqueVisitors.toLocaleString()}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="inline-block h-2 w-2 rounded-full bg-violet-500" />
+            <span className="text-gray-600">페이지뷰: {hoverData.pageviews.toLocaleString()}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="inline-block h-2 w-2 rounded-full bg-rose-500" />
+            <span className="text-gray-600">메뉴 클릭: {hoverData.menuClicks.toLocaleString()}</span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Period Summary Sidebar
+function PeriodSummary({ daily, totals, ctr }: { daily: DailyPoint[]; totals: AnalyticsTotals | null; ctr: number }) {
+  const days = daily.length || 1;
+  const avgVisitors = Math.round((totals?.visitors ?? 0) / days);
+  const avgPageviews = Math.round((totals?.pageviews ?? 0) / days);
+  const avgClicks = Math.round((totals?.menuClicks ?? 0) / days);
+  const peakDay = daily.length
+    ? daily.reduce((best, d) => (d.pageviews > best.pageviews ? d : best), daily[0])
+    : null;
+  const lowDay = daily.length
+    ? daily.reduce((worst, d) => (d.pageviews < worst.pageviews ? d : worst), daily[0])
+    : null;
+
+  const items = [
+    { label: "일평균 방문자", value: avgVisitors.toLocaleString(), color: "#3B82F6" },
+    { label: "일평균 페이지뷰", value: avgPageviews.toLocaleString(), color: "#8B5CF6" },
+    { label: "일평균 클릭", value: avgClicks.toLocaleString(), color: "#F43F5E" },
+    {
+      label: "최고 트래픽",
+      value: peakDay ? peakDay.pageviews.toLocaleString() : "-",
+      sub: peakDay ? formatDayLabel(peakDay.day) : undefined,
+      color: "#10B981",
+    },
+    {
+      label: "최저 트래픽",
+      value: lowDay ? lowDay.pageviews.toLocaleString() : "-",
+      sub: lowDay ? formatDayLabel(lowDay.day) : undefined,
+      color: "#F59E0B",
+    },
+    { label: "CTR", value: `${ctr}%`, color: "#6366F1" },
+  ];
+
+  return (
+    <article className="flex flex-col rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
+      <h2 className="text-sm font-bold text-gray-900">기간 요약</h2>
+      <div className="mt-4 flex flex-1 flex-col gap-3">
+        {items.map((item) => (
+          <div key={item.label} className="rounded-lg bg-gray-50 px-3 py-2.5">
+            <p className="text-[11px] font-medium text-gray-500">{item.label}</p>
+            <div className="mt-0.5 flex items-baseline gap-1.5">
+              <span className="text-lg font-bold" style={{ color: item.color }}>{item.value}</span>
+              {item.sub && (
+                <span className="text-[11px] text-gray-400">{item.sub}</span>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </article>
+  );
+}
+
 export default function AnalyticsPage() {
   const today = useMemo(() => startOfDayUTC(new Date()), []);
   const [from, setFrom] = useState(() => {
@@ -223,20 +476,17 @@ export default function AnalyticsPage() {
   }, [from, to, reloadToken]);
 
   const daily = data?.daily ?? [];
-  const maxDaily = Math.max(1, ...daily.map((entry) => Math.max(entry.pageviews, entry.menuClicks, entry.uniqueVisitors)));
   const sectionViews = data?.sectionViews ?? [];
   const maxSectionViews = Math.max(1, ...sectionViews.map((item) => item.views));
   const topMenuClicks = data?.topMenuClicks ?? [];
   const topPaths = data?.topPaths ?? [];
   const topReferrers = data?.topReferrers ?? [];
-  const chartBounds: ChartBounds = { left: 12, right: 98, top: 8, bottom: 92 };
-  const yAxisTicks = buildYAxisTicks(maxDaily);
 
   const sectionViewTotal = sectionViews.reduce((sum, item) => sum + item.views, 0);
   const compositionSlices = [
-    { label: "페이지뷰", value: data?.totals.pageviews ?? 0, color: "#5B4BFF" },
-    { label: "메뉴 클릭", value: data?.totals.menuClicks ?? 0, color: "#FF4FA3" },
-    { label: "섹션 조회", value: sectionViewTotal, color: "#0EA5E9" },
+    { label: "페이지뷰", value: data?.totals.pageviews ?? 0, color: "#8B5CF6" },
+    { label: "메뉴 클릭", value: data?.totals.menuClicks ?? 0, color: "#F43F5E" },
+    { label: "섹션 조회", value: sectionViewTotal, color: "#3B82F6" },
   ];
   const compositionTotal = compositionSlices.reduce((sum, item) => sum + item.value, 0);
   const donutBackground = compositionTotal
@@ -248,11 +498,8 @@ export default function AnalyticsPage() {
           return `${item.color} ${start}% ${end}%`;
         })
         .join(", ")})`
-    : "conic-gradient(#d8d5e8 0% 100%)";
+    : "conic-gradient(#E5E7EB 0% 100%)";
 
-  const pageviewLine = buildPolyline(daily.map((entry) => entry.pageviews), maxDaily, chartBounds);
-  const visitorsLine = buildPolyline(daily.map((entry) => entry.uniqueVisitors), maxDaily, chartBounds);
-  const menuLine = buildPolyline(daily.map((entry) => entry.menuClicks), maxDaily, chartBounds);
   const ctr = ratioToPercent(data?.totals.menuClicks ?? 0, data?.totals.pageviews ?? 0);
 
   const fromLabel = data?.range?.from ? formatDateInput(new Date(data.range.from)) : from;
@@ -265,271 +512,341 @@ export default function AnalyticsPage() {
     setTo(nextTo);
   };
 
-  return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,#f7f4ff_0%,#eef7ff_45%,#f9fafb_100%)] px-6 py-10 text-[#1a1a1a]">
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-7">
-        <header className="rounded-3xl border border-[#ddd5ff] bg-white/80 p-6 shadow-[0_24px_44px_rgba(88,66,190,0.12)] backdrop-blur">
-          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#6855d8]">Admin Analytics</p>
-          <h1 className="mt-2 text-3xl font-black text-[#26145f]">방문자/이용자 분석 대시보드</h1>
-          <p className="mt-2 text-sm text-[#4a4670]">
-            범위: {fromLabel} ~ {toLabel} (UTC, To 포함)
-          </p>
-        </header>
+  const stats = [
+    {
+      label: "방문자",
+      value: data?.totals.visitors ?? 0,
+      color: "#3B82F6",
+      icon: (
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"
+        />
+      ),
+    },
+    {
+      label: "재방문",
+      value: data?.totals.returningVisitors ?? 0,
+      color: "#10B981",
+      icon: (
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"
+        />
+      ),
+    },
+    {
+      label: "페이지뷰",
+      value: data?.totals.pageviews ?? 0,
+      color: "#8B5CF6",
+      icon: (
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+        />
+      ),
+    },
+    {
+      label: "메뉴 클릭",
+      value: data?.totals.menuClicks ?? 0,
+      color: "#F43F5E",
+      icon: (
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M15.042 21.672L13.684 16.6m0 0l-2.51 2.225.569-9.47 5.227 7.917-3.286-.672zm-7.518-.267A8.25 8.25 0 1120.25 10.5M8.288 14.212A5.25 5.25 0 1117.25 10.5"
+        />
+      ),
+    },
+    {
+      label: "CTR",
+      value: `${ctr}%`,
+      color: "#F59E0B",
+      icon: (
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941"
+        />
+      ),
+    },
+  ];
 
-        <section className="flex flex-wrap items-end gap-4 rounded-2xl border border-[#e4ddff] bg-white p-5 shadow-[0_18px_36px_rgba(88,66,190,0.1)]">
-          <div className="flex flex-col gap-2">
-            <label className="text-xs font-semibold text-[#5a4a90]">From (UTC)</label>
-            <input
-              type="date"
-              className="rounded-lg border border-[#d9c8ff] px-3 py-2 text-sm"
-              value={from}
-              onChange={(e) => {
-                const value = e.target.value;
-                setFrom(value);
-                if (value > to) setTo(value);
-              }}
-            />
-          </div>
-          <div className="flex flex-col gap-2">
-            <label className="text-xs font-semibold text-[#5a4a90]">To (UTC, 포함)</label>
-            <input
-              type="date"
-              className="rounded-lg border border-[#d9c8ff] px-3 py-2 text-sm"
-              value={to}
-              onChange={(e) => {
-                const value = e.target.value;
-                setTo(value);
-                if (value < from) setFrom(value);
-              }}
-            />
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {[
-              { label: "오늘", days: 1 },
-              { label: "7일", days: 7 },
-              { label: "30일", days: 30 },
-            ].map((preset) => (
-              <button
-                key={preset.label}
-                type="button"
-                onClick={() => handlePreset(preset.days)}
-                className="rounded-lg border border-[#d7ceff] bg-[#f5f2ff] px-3 py-2 text-xs font-semibold text-[#5b49c4] transition hover:bg-[#ece6ff]"
-              >
-                {preset.label}
-              </button>
-            ))}
+  return (
+    <div className="min-h-screen bg-gray-50 px-6 py-10">
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-bold text-gray-900">Analytics Dashboard</h1>
+          <div className="text-sm text-gray-500">
+            {fromLabel} ~ {toLabel}
           </div>
           <button
             type="button"
             onClick={() => setReloadToken((prev) => prev + 1)}
-            className="ml-auto rounded-lg bg-[#5f4de7] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#4f3fd0]"
+            className="rounded-lg bg-blue-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-600"
           >
             새로고침
           </button>
-          {error && (
-            <div className="w-full rounded-lg border border-[#f2b3b3] bg-[#fff5f5] px-4 py-2 text-sm text-[#b00020]">
+        </div>
+
+        {/* Loading banner */}
+        {isLoading && (
+          <div className="flex items-center gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-medium text-blue-700">
+            <svg className="h-5 w-5 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+              />
+            </svg>
+            통계 데이터를 불러오는 중...
+          </div>
+        )}
+
+        {/* Error banner */}
+        {error && (
+          <div className="flex items-center justify-between rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+            <div className="flex items-center gap-3">
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                />
+              </svg>
               {error}
-              <button
-                type="button"
-                onClick={() => setReloadToken((prev) => prev + 1)}
-                className="ml-3 rounded-md border border-[#f2b3b3] px-2 py-1 text-xs font-semibold"
-              >
-                다시 시도
-              </button>
             </div>
-          )}
+            <button
+              type="button"
+              onClick={() => setReloadToken((prev) => prev + 1)}
+              className="rounded-md border border-red-300 px-3 py-1 text-xs font-semibold transition hover:bg-red-100"
+            >
+              다시 시도
+            </button>
+          </div>
+        )}
+
+        {/* Date picker */}
+        <section className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
+          <div className="flex flex-wrap items-end gap-4">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-gray-500">시작일</label>
+              <input
+                type="date"
+                className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                value={from}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setFrom(value);
+                  if (value > to) setTo(value);
+                }}
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-gray-500">종료일</label>
+              <input
+                type="date"
+                className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                value={to}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setTo(value);
+                  if (value < from) setFrom(value);
+                }}
+              />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {[
+                { label: "오늘", days: 1 },
+                { label: "7일", days: 7 },
+                { label: "30일", days: 30 },
+              ].map((preset) => (
+                <button
+                  key={preset.label}
+                  type="button"
+                  onClick={() => handlePreset(preset.days)}
+                  className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-gray-700 transition hover:bg-gray-50"
+                >
+                  {preset.label}
+                </button>
+              ))}
+            </div>
+          </div>
         </section>
 
-        <section className="grid gap-4 md:grid-cols-5">
-          {[
-            { label: "방문자(고유)", value: data?.totals.visitors ?? 0 },
-            { label: "재방문", value: data?.totals.returningVisitors ?? 0 },
-            { label: "페이지뷰", value: data?.totals.pageviews ?? 0 },
-            { label: "메뉴 클릭", value: data?.totals.menuClicks ?? 0 },
-            { label: "CTR", value: `${ctr}%` },
-          ].map((stat) => (
-            <div key={stat.label} className="rounded-2xl border border-[#ece2ff] bg-white p-4 shadow-[0_10px_25px_rgba(71,47,136,0.08)]">
-              <p className="text-xs font-semibold uppercase text-[#7b6bb0]">{stat.label}</p>
-              <p className="mt-3 text-2xl font-extrabold text-[#2a1b59]">
-                {typeof stat.value === "number" ? stat.value.toLocaleString() : stat.value}
-              </p>
+        {/* Stats cards */}
+        <section className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
+          {stats.map((stat) => (
+            <div key={stat.label} className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="rounded-full p-2" style={{ backgroundColor: `${stat.color}15` }}>
+                  <svg className="h-5 w-5" style={{ color: stat.color }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+                    {stat.icon}
+                  </svg>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-medium text-gray-500">{stat.label}</p>
+                  <p className="mt-1 text-xl font-bold" style={{ color: stat.color }}>
+                    {typeof stat.value === "number" ? stat.value.toLocaleString() : stat.value}
+                  </p>
+                </div>
+              </div>
             </div>
           ))}
         </section>
 
-        <section className="rounded-2xl border border-[#ece2ff] bg-white p-6 shadow-[0_15px_35px_rgba(71,47,136,0.1)]">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold">일별 트렌드</h2>
-            <span className="text-xs text-[#7b6bb0]">고유 방문자 / 페이지뷰 / 메뉴 클릭</span>
-          </div>
-          <div className="mt-5">
-            {daily.length ? (
-              <>
-                <div className="h-64 rounded-2xl border border-[#efe9ff] bg-[#fcfbff] p-4">
-                  <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="h-full w-full">
-                    <defs>
-                      <clipPath id="daily-trend-plot">
-                        <rect
-                          x={chartBounds.left}
-                          y={chartBounds.top}
-                          width={chartBounds.right - chartBounds.left}
-                          height={chartBounds.bottom - chartBounds.top}
-                        />
-                      </clipPath>
-                    </defs>
-                    {yAxisTicks.map((tick) => {
-                      const y = mapToChartY(tick, maxDaily, chartBounds);
-                      return (
-                        <g key={tick}>
-                          <line x1={chartBounds.left} y1={y} x2={chartBounds.right} y2={y} stroke="#ebe5ff" strokeWidth="0.4" />
-                          <text x={chartBounds.left - 1.2} y={y + 1} textAnchor="end" fontSize="3" fill="#7b6bb0">
-                            {tick.toLocaleString()}
-                          </text>
-                        </g>
-                      );
-                    })}
-                    <line x1={chartBounds.left} y1={chartBounds.top} x2={chartBounds.left} y2={chartBounds.bottom} stroke="#dcd3ff" strokeWidth="0.6" />
-                    <line x1={chartBounds.left} y1={chartBounds.bottom} x2={chartBounds.right} y2={chartBounds.bottom} stroke="#dcd3ff" strokeWidth="0.6" />
-                    <g clipPath="url(#daily-trend-plot)">
-                      <polyline points={visitorsLine} fill="none" stroke="#0ea5e9" strokeWidth="1.6" strokeLinecap="round" />
-                      <polyline points={pageviewLine} fill="none" stroke="#5b4bff" strokeWidth="1.8" strokeLinecap="round" />
-                      <polyline points={menuLine} fill="none" stroke="#ff4fa3" strokeWidth="1.6" strokeLinecap="round" />
-                    </g>
-                  </svg>
-                </div>
-                <div className="mt-3 flex flex-wrap items-center gap-4 text-xs font-semibold text-[#4e4772]">
-                  <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-[#0ea5e9]" /> 고유 방문자</span>
-                  <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-[#5b4bff]" /> 페이지뷰</span>
-                  <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-[#ff4fa3]" /> 메뉴 클릭</span>
-                </div>
-                <div className="mt-2 flex justify-between text-xs text-[#7b6bb0]">
-                  <span>{formatDayLabel(daily[0]?.day)}</span>
-                  <span>{formatDayLabel(daily[Math.floor(daily.length / 2)]?.day)}</span>
-                  <span>{formatDayLabel(daily[daily.length - 1]?.day)}</span>
-                </div>
-              </>
-            ) : (
-              <p className="text-sm text-[#7b6bb0]">선택한 기간에 데이터가 없습니다.</p>
-            )}
-          </div>
+        {/* Trend chart + Period summary */}
+        <section className="grid gap-4 lg:grid-cols-[1fr_280px]">
+          <article className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-lg font-bold text-gray-900">일별 트렌드</h2>
+            </div>
+            <TrendChart daily={daily} />
+            <div className="mt-4 flex flex-wrap items-center justify-center gap-6 text-xs font-medium text-gray-600">
+              <span className="flex items-center gap-2">
+                <span className="h-3 w-3 rounded-full bg-blue-500" />
+                방문자
+              </span>
+              <span className="flex items-center gap-2">
+                <span className="h-3 w-3 rounded-full bg-violet-500" />
+                페이지뷰
+              </span>
+              <span className="flex items-center gap-2">
+                <span className="h-3 w-3 rounded-full bg-rose-500" />
+                메뉴 클릭
+              </span>
+            </div>
+          </article>
+
+          <PeriodSummary daily={daily} totals={data?.totals ?? null} ctr={ctr} />
         </section>
 
+        {/* Composition & Section Views */}
         <section className="grid gap-4 lg:grid-cols-2">
-          <article className="rounded-2xl border border-[#ece2ff] bg-white p-6 shadow-[0_15px_35px_rgba(71,47,136,0.1)]">
-            <h2 className="text-lg font-bold">이벤트 구성</h2>
+          {/* Event composition donut */}
+          <article className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+            <h2 className="text-lg font-bold text-gray-900">이벤트 구성</h2>
             <div className="mt-5 grid grid-cols-1 items-center gap-5 sm:grid-cols-[180px_1fr]">
               <div className="relative mx-auto h-40 w-40 rounded-full" style={{ background: donutBackground }}>
                 <div className="absolute inset-5 flex items-center justify-center rounded-full bg-white text-center">
                   <div>
-                    <p className="text-xs font-semibold text-[#7b6bb0]">TOTAL</p>
-                    <p className="text-xl font-black text-[#26145f]">{compositionTotal.toLocaleString()}</p>
+                    <p className="text-xs font-semibold text-gray-500">TOTAL</p>
+                    <p className="text-xl font-black text-gray-900">{compositionTotal.toLocaleString()}</p>
                   </div>
                 </div>
               </div>
               <div className="space-y-2">
                 {compositionSlices.map((slice) => (
-                  <div key={slice.label} className="rounded-lg border border-[#f0ebff] px-3 py-2">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="inline-flex items-center gap-2 font-semibold text-[#36256b]">
-                        <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: slice.color }} />
-                        {slice.label}
-                      </span>
-                      <span className="font-bold">{slice.value.toLocaleString()}</span>
+                  <div key={slice.label} className="flex items-center justify-between rounded-lg border border-gray-100 px-3 py-2">
+                    <span className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                      <span className="h-3 w-3 rounded-full" style={{ backgroundColor: slice.color }} />
+                      {slice.label}
+                    </span>
+                    <div className="text-right">
+                      <p className="text-sm font-bold text-gray-900">{slice.value.toLocaleString()}</p>
+                      <p className="text-xs text-gray-500">{ratioToPercent(slice.value, compositionTotal)}%</p>
                     </div>
-                    <p className="mt-1 text-xs text-[#7b6bb0]">{ratioToPercent(slice.value, compositionTotal)}%</p>
                   </div>
                 ))}
               </div>
             </div>
           </article>
 
-          <article className="rounded-2xl border border-[#ece2ff] bg-white p-6 shadow-[0_15px_35px_rgba(71,47,136,0.1)]">
-            <h2 className="text-lg font-bold">섹션별 조회</h2>
-            <div className="mt-4 grid gap-3">
+          {/* Section views */}
+          <article className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+            <h2 className="text-lg font-bold text-gray-900">섹션별 조회</h2>
+            <div className="mt-4 space-y-3">
               {sectionViews.length ? (
                 sectionViews.slice(0, 10).map((entry) => {
                   const width = (entry.views / maxSectionViews) * 100;
                   const label = SECTION_LABELS[entry.sectionId] || entry.label || entry.sectionId;
                   return (
-                    <div key={entry.sectionId} className="grid gap-1">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="font-semibold text-[#2a1b59]">{label}</span>
-                        <span className="text-xs font-bold text-[#6b4de6]">{entry.views.toLocaleString()}</span>
+                    <div key={entry.sectionId}>
+                      <div className="mb-1 flex items-center justify-between text-sm">
+                        <span className="font-semibold text-gray-700">{label}</span>
+                        <span className="font-bold text-blue-500">{entry.views.toLocaleString()}</span>
                       </div>
-                      <div className="h-2 rounded-full bg-[#ecf6ff]">
-                        <div className="h-2 rounded-full bg-[#0ea5e9]" style={{ width: `${width}%` }} />
+                      <div className="h-2 overflow-hidden rounded-full bg-gray-100">
+                        <div className="h-full rounded-full bg-blue-500 transition-all" style={{ width: `${width}%` }} />
                       </div>
                     </div>
                   );
                 })
               ) : (
-                <p className="text-sm text-[#7b6bb0]">섹션 조회 데이터가 없습니다.</p>
+                <p className="text-sm text-gray-500">섹션 조회 데이터가 없습니다.</p>
               )}
             </div>
           </article>
         </section>
 
+        {/* Bottom 3 lists */}
         <section className="grid gap-4 lg:grid-cols-3">
-          <article className="rounded-2xl border border-[#ece2ff] bg-white p-6 shadow-[0_15px_35px_rgba(71,47,136,0.1)]">
-            <h2 className="text-lg font-bold">메뉴 클릭 TOP 10</h2>
-            <div className="mt-4 grid gap-3">
-              {topMenuClicks.length ? (
-                topMenuClicks.map((entry, index) => (
-                  <div key={`${entry.elementId}-${index}`} className="rounded-xl border border-[#f1e7ff] p-3">
-                    <div className="flex min-w-0 items-center justify-between gap-3">
-                      <p className="min-w-0 truncate text-sm font-semibold text-[#2a1b59]">{formatMenuLabel(entry)}</p>
-                      <span className="text-sm font-bold text-[#6b4de6]">{entry.clicks.toLocaleString()}</span>
+          {/* Menu Clicks */}
+          <article className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+            <h2 className="mb-4 text-lg font-bold text-gray-900">메뉴 클릭 TOP 10</h2>
+            {topMenuClicks.length ? (
+              <div className="divide-y divide-gray-100">
+                {topMenuClicks.map((entry, index) => (
+                  <div key={`${entry.elementId}-${index}`} className="flex items-center gap-3 py-3">
+                    <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-rose-100 text-xs font-bold text-rose-600">
+                      {index + 1}
                     </div>
+                    <p className="min-w-0 flex-1 truncate text-sm font-medium text-gray-700">{formatMenuLabel(entry)}</p>
+                    <span className="text-sm font-bold text-rose-500">{entry.clicks.toLocaleString()}</span>
                   </div>
-                ))
-              ) : (
-                <p className="text-sm text-[#7b6bb0]">메뉴 클릭 데이터가 없습니다.</p>
-              )}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500">메뉴 클릭 데이터가 없습니다.</p>
+            )}
           </article>
 
-          <article className="rounded-2xl border border-[#ece2ff] bg-white p-6 shadow-[0_15px_35px_rgba(71,47,136,0.1)]">
-            <h2 className="text-lg font-bold">페이지 경로 TOP 10</h2>
-            <div className="mt-4 grid gap-3">
-              {topPaths.length ? (
-                topPaths.map((entry) => (
-                  <div key={entry.path} className="rounded-xl border border-[#f1e7ff] p-3">
-                    <div className="flex min-w-0 items-center justify-between gap-3">
-                      <p className="min-w-0 truncate text-sm font-semibold text-[#2a1b59]">{formatPathLabel(entry.path)}</p>
-                      <span className="text-sm font-bold text-[#5b4bff]">{entry.views.toLocaleString()}</span>
+          {/* Top Paths */}
+          <article className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+            <h2 className="mb-4 text-lg font-bold text-gray-900">페이지 경로 TOP 10</h2>
+            {topPaths.length ? (
+              <div className="divide-y divide-gray-100">
+                {topPaths.map((entry, index) => (
+                  <div key={entry.path} className="flex items-center gap-3 py-3">
+                    <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-violet-100 text-xs font-bold text-violet-600">
+                      {index + 1}
                     </div>
+                    <p className="min-w-0 flex-1 truncate text-sm font-medium text-gray-700">{formatPathLabel(entry.path)}</p>
+                    <span className="text-sm font-bold text-violet-500">{entry.views.toLocaleString()}</span>
                   </div>
-                ))
-              ) : (
-                <p className="text-sm text-[#7b6bb0]">페이지 경로 데이터가 없습니다.</p>
-              )}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500">페이지 경로 데이터가 없습니다.</p>
+            )}
           </article>
 
-          <article className="rounded-2xl border border-[#ece2ff] bg-white p-6 shadow-[0_15px_35px_rgba(71,47,136,0.1)]">
-            <h2 className="text-lg font-bold">유입 Referrer TOP 10</h2>
-            <div className="mt-4 grid gap-3">
-              {topReferrers.length ? (
-                topReferrers.map((entry) => (
-                  <div key={entry.referrer} className="rounded-xl border border-[#f1e7ff] p-3">
-                    <div className="flex min-w-0 items-center justify-between gap-3">
-                      <p className="min-w-0 truncate text-sm font-semibold text-[#2a1b59]">{formatReferrerLabel(entry.referrer)}</p>
-                      <span className="text-sm font-bold text-[#0ea5e9]">{entry.visits.toLocaleString()}</span>
+          {/* Top Referrers */}
+          <article className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+            <h2 className="mb-4 text-lg font-bold text-gray-900">유입 Referrer TOP 10</h2>
+            {topReferrers.length ? (
+              <div className="divide-y divide-gray-100">
+                {topReferrers.map((entry, index) => (
+                  <div key={entry.referrer} className="flex items-center gap-3 py-3">
+                    <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-600">
+                      {index + 1}
                     </div>
+                    <p className="min-w-0 flex-1 truncate text-sm font-medium text-gray-700">{formatReferrerLabel(entry.referrer)}</p>
+                    <span className="text-sm font-bold text-blue-500">{entry.visits.toLocaleString()}</span>
                   </div>
-                ))
-              ) : (
-                <p className="text-sm text-[#7b6bb0]">referrer 데이터가 없습니다.</p>
-              )}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500">referrer 데이터가 없습니다.</p>
+            )}
           </article>
         </section>
-
-        {isLoading && (
-          <div className="rounded-xl border border-[#d9d0ff] bg-white px-4 py-3 text-sm font-semibold text-[#5b49c4]">
-            통계 데이터를 불러오는 중입니다...
-          </div>
-        )}
       </div>
     </div>
   );

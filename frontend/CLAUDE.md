@@ -384,6 +384,7 @@ export async function GET(request: Request) {
 
 ## 최근 변경 이력
 
+- **Analytics 대시보드 전면 리디자인** - ResizeObserver 기반 인터랙티브 SVG 차트(호버 툴팁, 데이터 포인트), 메트릭별 고유 색상, `TrendChart`/`PeriodSummary` 컴포넌트 분리, 기간 요약 사이드 패널(일평균/최고/최저 트래픽/CTR)
 - **Analytics 대시보드 원복** - Recharts 제거, 오리지널 막대형 UI로 복귀
 - **방문자 집계 기준 변경** - 순 방문자 → 중복 허용 방문자(`totals.visitors`)
 - **Analytics 대시보드 Recharts 개선** - 꺾은선 그래프(일별 순 방문자/페이지뷰/메뉴 클릭), 섹션별 조회 수 차트

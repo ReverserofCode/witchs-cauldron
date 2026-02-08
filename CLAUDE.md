@@ -490,6 +490,7 @@ RootLayout
 
 ## 최근 변경
 
+- **Analytics 대시보드 전면 리디자인** - 커스텀 SVG 차트를 ResizeObserver 기반 인터랙티브 차트로 교체, 호버 툴팁/데이터 포인트 추가, 메트릭별 고유 색상 체계(Blue/Violet/Rose/Emerald/Amber), 기간 요약 사이드 패널(`PeriodSummary`) 추가
 - **PowerShell 프로필 자동 주입 설정** - `codex`/`claude` 실행 시 MD 컨텍스트 자동 첨부
 - **Analytics 대시보드 원복** - Recharts 기반 차트 제거, 오리지널 막대형 UI 복귀
 - **방문자 기준 변경** - 순 방문자에서 중복 허용 방문자(`totals.visitors`)로 변경
