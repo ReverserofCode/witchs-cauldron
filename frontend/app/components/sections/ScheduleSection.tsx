@@ -208,11 +208,11 @@ export default function ScheduleSection({
           </div>
 
           <div className="overflow-x-auto">
-            <ul className="grid min-w-[560px] grid-cols-4 gap-4">
+            <ul className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
               {weekColumns.map((day) => (
                 <li
                   key={day.isoDate}
-                  className={`flex min-h-[200px] flex-col rounded-2xl border p-4 shadow-sm transition ${
+                  className={`flex min-h-[160px] flex-col rounded-2xl border p-3 shadow-sm transition md:min-h-[200px] md:p-4 ${
                     day.isWeekend ? 'border-purple-300/70 bg-purple-50/80' : 'border-white/60 bg-white/80'
                   }`}
                 >
@@ -572,7 +572,7 @@ function formatMetadataDisplay(metadata: Record<string, unknown>): string {
 function ScheduleSkeleton({ daysToShow }: { daysToShow: number }) {
   return (
     <div className="overflow-x-auto">
-      <div className="grid min-w-[560px] grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
   {Array.from({ length: daysToShow }).map((_, index) => (
           <div
             key={index}

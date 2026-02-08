@@ -83,7 +83,7 @@ interface RootLayoutProps { children: ReactNode }
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <html lang="ko" suppressHydrationWarning>
-      <body className={`${notoSansKr.className} min-h-screen bg-[#7B68EE] text-ink antialiased flex flex-col`}>
+      <body className={`${notoSansKr.className} min-h-screen bg-[rgb(var(--moing-bg))] text-ink antialiased flex flex-col`}>
         {/* Structured Data: Website */}
         <Script id="ldjson-website" type="application/ld+json" strategy="afterInteractive">
           {JSON.stringify({

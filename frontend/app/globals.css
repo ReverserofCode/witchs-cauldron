@@ -13,29 +13,25 @@
 */
 :root {
     /* RGB tokens (updated palette)
-         #7B68EE  primary (vibrant purple)
-         #A020F0  magenta/purple accent
-         #ADD8E6  light sky accent
+         #7B68EE  page background (vibrant purple)
+         #A020F0  primary magenta/purple
+         #ADD8E6  accent light sky
+         #191970  deep midnight navy
          #FFFFFF  white
-         #191970  midnight deep
      */
+    --moing-bg: 123 104 238;
+    /* #7B68EE */
     --moing-primary: 160 32 240;
     /* #A020F0 */
     --moing-accent: 173 216 230;
     /* #ADD8E6 */
     --moing-deep: 25 25 112;
     /* #191970 */
-    --moing-pink: 160 32 240;
-    /* #A020F0 */
-    --moing-gold: 173 216 230;
-    /* repurposed to light sky */
-    --moing-black: 25 25 112;
-    /* use midnight as dark base */
     --moing-white: 255 255 255;
     /* #FFFFFF */
 
     /* Semantic */
-    --ink: var(--moing-black);
+    --ink: 25 25 112;
     --ink-muted: 160 160 190;
     /* muted text tuned for midnight base */
     --page: 25 25 112;
@@ -155,13 +151,13 @@ body {
 
 .btn-pink {
     color: #fff;
-    background-image: linear-gradient(90deg, rgb(var(--moing-pink)) 0%, rgb(var(--moing-primary)) 100%);
+    background-image: linear-gradient(90deg, rgb(var(--moing-primary)) 0%, rgb(var(--moing-primary)) 100%);
     box-shadow: 0 10px 24px rgba(var(--shadow-primary), 0.22);
 }
 
 .btn-gold {
     color: #2b223f;
-    background-image: linear-gradient(90deg, rgb(var(--moing-gold)) 0%, rgb(var(--moing-accent)) 100%);
+    background-image: linear-gradient(90deg, rgb(var(--moing-accent)) 0%, rgb(var(--moing-accent)) 100%);
     box-shadow: 0 10px 24px rgba(var(--shadow-deep), 0.18);
 }
 
@@ -194,6 +190,23 @@ body {
 .card-value {
     font-size: 1.25rem;
     font-weight: 800;
+}
+
+/* Slide-down animation for mobile menu */
+@keyframes slide-down {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-slide-down {
+    animation: slide-down 200ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 /* Simple fade-in animation utilities */
