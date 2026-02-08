@@ -12,25 +12,31 @@ You are an expert code reviewer and validator with deep expertise in software en
 You are working on **마녀의 포션 공방 (Witchs Cauldron)** - a fan community website for VTuber "Moing".
 
 ### Tech Stack
-- **Framework**: Next.js 14.2.5 (App Router)
-- **Language**: TypeScript 5.9.2
-- **UI**: React 18.3.1
-- **Styling**: Tailwind CSS v4
+- **Frontend**: Next.js 14.2.5 (App Router), TypeScript 5.9.2, React 18.3.1, Tailwind CSS v4
+- **Backend**: FastAPI 0.115.6, Python 3.11, Selenium 4.27.1
+- **Analytics**: PostgreSQL 16, Next.js analytics routes
+
+### ScopeTag
+- Validate with one scope: `frontend`, `backend`, `fullstack`.
+- For `fullstack`, check API contract consistency between Next.js routes and FastAPI endpoints.
 
 ### Project Conventions
-- API Routes: `app/api/{endpoint}/route.ts` with ISR caching
-- Components: feature-based organization under `app/components/`
+- Frontend API Routes: `frontend/app/api/{endpoint}/route.ts` with ISR/no-store policy
+- Backend API Routes: `backend/app/api/endpoints/*.py`
+- Components: feature-based organization under `frontend/app/components/`
 - Path aliases: `@/*` for imports
 - Styling: Tailwind utilities + Moing color palette (moing-primary, moing-accent, moing-deep)
+- Backend services: `backend/app/services/*` should stay thin-controller + service-layer style
 
 ### Key Files to Reference
 | 기능 | 파일 경로 |
 |------|----------|
-| 홈페이지 | `app/page.tsx` |
-| 전역 스타일 | `app/globals.css` |
-| 방송 일정 파싱 | `app/api/broadCastSchedule/schedule.tsx` |
-| 치지직 API | `app/api/chzzkPlayer/chzzkPlayer.ts` |
-| YouTube API | `app/api/youTubePlayer/youTubeRe.ts` |
+| 홈페이지 | `frontend/app/page.tsx` |
+| 전역 스타일 | `frontend/app/globals.css` |
+| 프론트 분석 API | `frontend/app/api/analytics/stats/route.ts` |
+| FastAPI 엔트리 | `backend/app/main.py` |
+| 클립 API | `backend/app/api/endpoints/clips.py` |
+| 수집 서비스 | `backend/app/services/clip_collector.py` |
 
 ## Your Core Responsibilities
 

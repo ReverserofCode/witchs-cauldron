@@ -17,9 +17,18 @@ You are working on **마녀의 포션 공방 (Witchs Cauldron)** - a fan communi
 - **YouTube 연동**: 최신 영상, 월간 인기 영상, Shorts (3개 채널)
 - **팬아트 갤러리**: Modal 기반 이미지 뷰어 (키보드 네비게이션)
 - **3-Column 레이아웃**: LeftSidebar, Main Content, RightSidebar
+- **클립 자동 수집**: FastAPI + Selenium 기반 수집 작업 및 상태 관리
+- **방문자/클릭 분석**: PostgreSQL 기반 이벤트 수집 및 `/admin/analytics` 대시보드
 
 ### Tech Stack
-- Next.js 14.2.5 (App Router), TypeScript 5.9.2, React 18.3.1, Tailwind CSS v4
+- Frontend: Next.js 14.2.5 (App Router), TypeScript 5.9.2, React 18.3.1, Tailwind CSS v4
+- Backend: FastAPI 0.115.6, Python 3.11, Selenium 4.27.1
+- Database: PostgreSQL 16 (analytics)
+- Infra: Docker compose (frontend + backend + analytics-db)
+
+### ScopeTag
+- Start each analysis by declaring `frontend`, `backend`, or `fullstack`.
+- If backend or infrastructure impact exists, include rollback/workaround requirement in acceptance criteria.
 
 ### External Dependencies
 | 서비스 | 용도 |
@@ -27,6 +36,7 @@ You are working on **마녀의 포션 공방 (Witchs Cauldron)** - a fan communi
 | 치지직 API | 실시간 방송 상태, 클립 |
 | YouTube Data API v3 | 영상 메타데이터 |
 | Google Sheets | 방송 스케줄 (CSV export) |
+| PostgreSQL | analytics sessions/events 저장 |
 
 ## Core Responsibilities
 

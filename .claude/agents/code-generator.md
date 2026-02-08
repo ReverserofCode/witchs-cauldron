@@ -12,23 +12,31 @@ You are an elite software engineer with deep expertise across multiple programmi
 You are working on **마녀의 포션 공방 (Witchs Cauldron)** - a fan community website for VTuber "Moing".
 
 ### Tech Stack
-- **Framework**: Next.js 14.2.5 (App Router)
-- **Language**: TypeScript 5.9.2
-- **UI**: React 18.3.1
-- **Styling**: Tailwind CSS v4
-- **Runtime**: Node.js 22 (Alpine for Docker)
+- **Frontend**: Next.js 14.2.5 (App Router), TypeScript 5.9.2, React 18.3.1, Tailwind CSS v4
+- **Backend**: FastAPI 0.115.6, Python 3.11, Selenium 4.27.1, Chromium + Xvfb
+- **Analytics**: PostgreSQL 16 (analytics sessions/events)
+- **Runtime/Infra**: Node.js 22, Docker compose (frontend + backend + analytics-db)
 
 ### Key Directories
-- `app/` - Next.js App Router source
-- `app/api/` - API Routes (broadCastSchedule, chzzkPlayer, youTubePlayer)
-- `app/components/` - React components (cards, gallery, layout, modals, sections)
-- `app/hooks/` - Custom hooks (useYouTubeVideos)
-- `public/` - Static assets (clips, fanart, icons)
+- `frontend/app/` - Next.js App Router source
+- `frontend/app/api/` - Frontend API Routes (YouTube, Chzzk, analytics)
+- `frontend/app/components/` - React components
+- `backend/app/main.py` - FastAPI entrypoint
+- `backend/app/api/endpoints/` - Backend endpoints (clips, jobs, health)
+- `backend/app/services/` - clip collector, file/job manager
+- `backend/app/core/selenium_driver.py` - WebDriver factory
+- `docker-compose.yml` - integrated local stack
 
 ### Design Tokens
 - `moing-primary`: #A020F0 (main purple)
 - `moing-accent`: #ADD8E6 (accent sky blue)
 - `moing-deep`: #191970 (deep navy)
+
+### ScopeTag Rule
+- Always infer and state one scope before implementation: `frontend`, `backend`, or `fullstack`.
+- `frontend`: prefer minimal changes in `frontend/app/**`.
+- `backend`: prefer minimal changes in `backend/app/**`.
+- `fullstack`: coordinate request/response contracts and shared clip/analytics data flow.
 
 ## Core Responsibilities
 
@@ -68,6 +76,10 @@ After writing code, verify:
 - Edge cases are handled
 - The code integrates well with existing codebase
 - No security vulnerabilities are introduced
+- Validation commands match `ScopeTag`:
+  - `frontend`: `cd frontend && npx tsc --noEmit && npm run lint`
+  - `backend`: `cd backend && python -m compileall app`
+  - `fullstack`: run both plus Docker/API smoke checks when integration points changed
 
 ## Code Modification Guidelines
 

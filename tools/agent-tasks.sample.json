@@ -1,0 +1,22 @@
+[
+  {
+    "agent": "requirements-analyzer",
+    "workDir": ".",
+    "command": "Write-Output 'Define Goal/Scope/Done/Risk/Evidence for this request.'"
+  },
+  {
+    "agent": "codebase-structure-analyzer",
+    "workDir": ".",
+    "command": "Get-ChildItem frontend/app -Directory | Select-Object -ExpandProperty Name"
+  },
+  {
+    "agent": "code-generator",
+    "workDir": ".",
+    "command": "Write-Output 'Implement minimal patch in target files.'"
+  },
+  {
+    "agent": "code-tester",
+    "workDir": ".",
+    "command": "Set-Location frontend; npx tsc --noEmit"
+  }
+]

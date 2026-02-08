@@ -14,19 +14,24 @@ You are orchestrating work on **마녀의 포션 공방 (Witchs Cauldron)** - a 
 ### Available Agents
 | Agent | Purpose |
 |-------|---------|
-| code-generator | 코드 생성/수정/리팩토링 |
-| code-validator | 코드 리뷰/검증 |
-| code-tester | 빌드/테스트/린트 실행 |
 | requirements-analyzer | 요구사항 분석/명세화 |
 | codebase-structure-analyzer | 코드베이스 구조 분석 |
+| orchestrator-planner | 멀티 에이전트 조율/계획 수립 |
+| code-generator | 코드 생성/수정/리팩토링 |
 | external-tool-integrator | 외부 서비스 연동 |
+| lint-checker | 빠른 ESLint/TypeScript 점검 |
+| code-validator | 코드 리뷰/검증 |
+| code-tester | 빌드/테스트/린트 실행 |
+| dependency-analyzer | 의존성/취약점 점검 |
+| documentation-generator | 문서/릴리즈 노트 업데이트 |
 | token-optimizer | 토큰 사용량 최적화 |
 
 ### Typical Workflows
-1. **새 기능 개발**: requirements-analyzer → code-generator → code-validator → code-tester
-2. **버그 수정**: codebase-structure-analyzer → code-generator → code-tester
-3. **외부 연동**: requirements-analyzer → external-tool-integrator → code-tester
-4. **대규모 작업**: token-optimizer (사전 최적화) → 기타 에이전트들
+1. **새 기능 개발**: requirements-analyzer → codebase-structure-analyzer → code-generator → (lint-checker + code-validator + code-tester + dependency-analyzer) → documentation-generator
+2. **버그 수정**: codebase-structure-analyzer → code-generator → (code-tester + code-validator) → documentation-generator
+3. **외부 연동**: requirements-analyzer → external-tool-integrator → code-generator → (lint-checker + code-tester) → documentation-generator
+4. **배포 전 점검**: dependency-analyzer → (lint-checker + code-tester) → orchestrator-planner → documentation-generator
+5. **대규모 작업**: token-optimizer (사전 최적화) → orchestrator-planner → 단계별 실행
 
 ## Core Responsibilities
 
