@@ -10,6 +10,8 @@ export default function AnalyticsProvider() {
   const lastTrackedPathRef = useRef<string>("");
 
   useEffect(() => {
+    if (pathname.startsWith("/admin")) return;
+
     const query = searchParams?.toString();
     const path = query ? `${pathname}?${query}` : pathname;
     if (!path || path === lastTrackedPathRef.current) {

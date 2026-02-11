@@ -117,10 +117,22 @@ export async function GET(request: NextRequest) {
 
   const topReferrersResult = await pool.query(
     `
-      SELECT COALESCE(NULLIF(referrer, ''), '(direct)') AS referrer, COUNT(*) AS visits
-      FROM analytics_events
-      WHERE event_type = 'pageview' AND created_at >= $1 AND created_at < $2
-      GROUP BY referrer
+      SELECT referrer_host AS referrer, SUM(cnt) AS visits
+      FROM (
+        SELECT
+          CASE
+            WHEN referrer IS NULL OR referrer = '' THEN '(direct)'
+            WHEN referrer NOT LIKE '%://%' THEN '(direct)'
+            WHEN referrer LIKE 'android-app://%'
+              THEN 'android-app://' || split_part(split_part(referrer, '://', 2), '/', 1)
+            ELSE COALESCE(NULLIF(split_part(split_part(referrer, '://', 2), '/', 1), ''), '(direct)')
+          END AS referrer_host,
+          COUNT(*) AS cnt
+        FROM analytics_events
+        WHERE event_type = 'pageview' AND created_at >= $1 AND created_at < $2
+        GROUP BY referrer
+      ) sub
+      GROUP BY referrer_host
       ORDER BY visits DESC
       LIMIT 10
     `,

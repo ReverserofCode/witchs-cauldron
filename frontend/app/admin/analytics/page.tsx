@@ -118,7 +118,10 @@ function formatPathLabel(path: string) {
 
 function formatReferrerLabel(referrer: string) {
   if (!referrer || referrer === "(direct)") return "직접 유입";
-  return ellipsis(toHostname(referrer), 30);
+  if (REFERRER_LABELS[referrer]) return REFERRER_LABELS[referrer];
+  const hostname = toHostname(referrer);
+  if (REFERRER_LABELS[hostname]) return REFERRER_LABELS[hostname];
+  return ellipsis(hostname, 30);
 }
 
 const SECTION_LABELS: Record<string, string> = {
@@ -129,6 +132,17 @@ const SECTION_LABELS: Record<string, string> = {
   "youtube-official": "공식 유튜브",
   "youtube-full": "다시보기",
   "youtube-fan": "팬 영상",
+};
+
+const REFERRER_LABELS: Record<string, string> = {
+  "(direct)": "직접 유입",
+  "cafe.naver.com": "네이버 카페",
+  "m.cafe.naver.com": "네이버 카페 (모바일)",
+  "www.google.com": "Google",
+  "google.com": "Google",
+  "android-app://com.google.android.googlequicksearchbox": "Google (Android)",
+  "www.bing.com": "Bing",
+  "bing.com": "Bing",
 };
 
 // Nice round number for axis
