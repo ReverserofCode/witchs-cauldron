@@ -21,10 +21,25 @@ type ApiResponse = {
 type LoadState = "idle" | "loading" | "ready" | "error";
 
 interface LatestYouTubeVideoCardProps {
+  channel: "moing" | "fullmoing";
   className?: string;
 }
 
-export default function LatestYouTubeVideoCard({ className }: LatestYouTubeVideoCardProps = {}) {
+const CHANNEL_META = {
+  moing: {
+    eyebrow: "Latest Upload",
+    title: "공식 최신 영상",
+    description: "공식 채널의 최신 영상입니다.",
+  },
+  fullmoing: {
+    eyebrow: "Latest VOD",
+    title: "최신 다시보기",
+    description: "다시보기 채널의 최신 영상입니다.",
+  },
+} as const;
+
+export default function LatestYouTubeVideoCard({ channel, className }: LatestYouTubeVideoCardProps) {
+  const meta = CHANNEL_META[channel];
   const [state, setState] = useState<LoadState>("idle");
   const [video, setVideo] = useState<VideoItem | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -47,7 +62,8 @@ export default function LatestYouTubeVideoCard({ className }: LatestYouTubeVideo
           return;
         }
 
-        const latest = selectLatestVideo(data);
+        const videos = data[channel] ?? [];
+        const latest = videos.length > 0 ? selectLatestVideo(videos) : null;
         setVideo(latest);
         setState("ready");
       } catch (err) {
@@ -63,15 +79,15 @@ export default function LatestYouTubeVideoCard({ className }: LatestYouTubeVideo
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [channel]);
 
   return (
     <SectionCard
       className={className}
       tone="neutral"
-      eyebrow="Latest Upload"
-      title="최신 유튜브 영상"
-      description="마지막으로 올라온 영상을 빠르게 확인해 보세요."
+      eyebrow={meta.eyebrow}
+      title={meta.title}
+      description={meta.description}
       bodyClassName="gap-3"
     >
       {state === "loading" && <LoadingState />}
@@ -93,14 +109,12 @@ export default function LatestYouTubeVideoCard({ className }: LatestYouTubeVideo
   );
 }
 
-function selectLatestVideo(response: ApiResponse): VideoItem | null {
-  const allVideos = [...(response.moing ?? []), ...(response.fullmoing ?? [])];
-
-  if (!allVideos.length) {
+function selectLatestVideo(videos: VideoItem[]): VideoItem | null {
+  if (!videos.length) {
     return null;
   }
 
-  return allVideos.reduce<VideoItem | null>((latest, candidate) => {
+  return videos.reduce<VideoItem | null>((latest, candidate) => {
     if (!latest) {
       return candidate;
     }

@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { checkYouTubeApiKey, resolveChannelMetadata } from "../shared";
 
-// 단일 채널(fullmoing)만 대상으로 지난달 최다 조회수 영상 선정
-const CHANNEL_HANDLES = ["fullmoing"] as const;
+// 공식 + 다시보기 채널 대상으로 지난달 최다 조회수 영상 선정
+const CHANNEL_HANDLES = ["moing", "fullmoing"] as const;
 type ChannelHandle = (typeof CHANNEL_HANDLES)[number];
 
 interface TopVideoPayload {
@@ -90,7 +90,10 @@ export async function GET() {
   }
 
   if (candidates.length === 0) {
-    return NextResponse.json({ video: null }, { status: 200 });
+    return NextResponse.json(
+      { moing: null, fullmoing: null, month: { from: monthStart.toISOString(), to: nextMonthStart.toISOString() } },
+      { status: 200 }
+    );
   }
 
   let viewCounts: Record<string, number> = {};
@@ -103,7 +106,7 @@ export async function GET() {
     viewCounts = {};
   }
 
-  const enriched = candidates.map<TopVideoPayload>((item) => ({
+  const enriched = candidates.map((item) => ({
     videoId: item.videoId,
     title: item.title,
     thumbnail: item.thumbnail,
@@ -111,39 +114,33 @@ export async function GET() {
     publishedAt: item.publishedAt,
     url: item.url,
     viewCount: viewCounts[item.videoId] ?? null,
+    channelHandle: item.channelHandle,
   }));
 
-  const topVideo = enriched.reduce<TopVideoPayload | null>((best, current) => {
-    if (!best) {
-      return current;
-    }
-
-    const bestCount = typeof best.viewCount === "number" ? best.viewCount : -1;
-    const currentCount =
-      typeof current.viewCount === "number" ? current.viewCount : -1;
-
-    if (currentCount > bestCount) {
-      return current;
-    }
-
-    if (currentCount === bestCount) {
-      const bestTime = Date.parse(best.publishedAt);
-      const currentTime = Date.parse(current.publishedAt);
-      if (
-        !Number.isNaN(currentTime) &&
-        (Number.isNaN(bestTime) || currentTime > bestTime)
-      ) {
-        // 조회수 동률 시 더 최근 업로드를 선택
-        return current;
+  function pickTop(items: typeof enriched): TopVideoPayload | null {
+    return items.reduce<TopVideoPayload | null>((best, current) => {
+      if (!best) return current;
+      const bestCount = typeof best.viewCount === "number" ? best.viewCount : -1;
+      const currentCount = typeof current.viewCount === "number" ? current.viewCount : -1;
+      if (currentCount > bestCount) return current;
+      if (currentCount === bestCount) {
+        const bestTime = Date.parse(best.publishedAt);
+        const currentTime = Date.parse(current.publishedAt);
+        if (!Number.isNaN(currentTime) && (Number.isNaN(bestTime) || currentTime > bestTime)) {
+          return current;
+        }
       }
-    }
+      return best;
+    }, null);
+  }
 
-    return best;
-  }, null);
+  const moingTop = pickTop(enriched.filter((v) => v.channelHandle === "moing"));
+  const fullmoingTop = pickTop(enriched.filter((v) => v.channelHandle === "fullmoing"));
 
   return NextResponse.json(
     {
-      video: topVideo,
+      moing: moingTop,
+      fullmoing: fullmoingTop,
       month: {
         from: monthStart.toISOString(),
         to: nextMonthStart.toISOString(),

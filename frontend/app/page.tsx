@@ -156,12 +156,23 @@ export default async function Page(): Promise<ReactElement> {
                 </div>
               </SectionCard>
 
-              <div className="grid gap-5 md:grid-cols-1 lg:grid-cols-2">
-                <SectionTracker sectionId="featured-latest" className="h-full">
-                  <LatestYouTubeVideoCard className="h-full" />
+              {/* 공식 채널 */}
+              <div className="grid gap-5 grid-cols-1 sm:grid-cols-2">
+                <SectionTracker sectionId="featured-latest-moing" className="h-full">
+                  <LatestYouTubeVideoCard channel="moing" className="h-full" />
                 </SectionTracker>
-                <SectionTracker sectionId="featured-top" className="h-full">
-                  <TopOfficialYouTubeVideoCard className="h-full" />
+                <SectionTracker sectionId="featured-top-moing" className="h-full">
+                  <TopOfficialYouTubeVideoCard channel="moing" className="h-full" />
+                </SectionTracker>
+              </div>
+
+              {/* 다시보기 채널 */}
+              <div className="grid gap-5 grid-cols-1 sm:grid-cols-2">
+                <SectionTracker sectionId="featured-latest-fullmoing" className="h-full">
+                  <LatestYouTubeVideoCard channel="fullmoing" className="h-full" />
+                </SectionTracker>
+                <SectionTracker sectionId="featured-top-fullmoing" className="h-full">
+                  <TopOfficialYouTubeVideoCard channel="fullmoing" className="h-full" />
                 </SectionTracker>
               </div>
               <SectionTracker sectionId="clips-section">

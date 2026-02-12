@@ -17,12 +17,24 @@ type TopVideo = {
 type LoadState = "idle" | "loading" | "ready" | "error";
 
 interface TopOfficialYouTubeVideoCardProps {
+  channel: "moing" | "fullmoing";
   className?: string;
 }
 
+const CHANNEL_META = {
+  moing: {
+    title: "공식 인기 영상",
+  },
+  fullmoing: {
+    title: "다시보기 인기 영상",
+  },
+} as const;
+
 export default function TopOfficialYouTubeVideoCard({
+  channel,
   className,
-}: TopOfficialYouTubeVideoCardProps = {}) {
+}: TopOfficialYouTubeVideoCardProps) {
+  const meta = CHANNEL_META[channel];
   const [state, setState] = useState<LoadState>("idle");
   const [video, setVideo] = useState<TopVideo | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -41,12 +53,12 @@ export default function TopOfficialYouTubeVideoCard({
           throw new Error(`영상 정보를 불러오지 못했습니다. (${res.status})`);
         }
 
-        const data = (await res.json()) as { video: TopVideo | null };
+        const data = (await res.json()) as { moing: TopVideo | null; fullmoing: TopVideo | null };
         if (cancelled) {
           return;
         }
 
-        setVideo(data.video ?? null);
+        setVideo(data[channel] ?? null);
         setState("ready");
       } catch (err) {
         if (!cancelled) {
@@ -61,14 +73,14 @@ export default function TopOfficialYouTubeVideoCard({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [channel]);
 
   return (
     <SectionCard
       className={className}
       tone="lavender"
       eyebrow="Most Viewed"
-      title="지난달 최다 조회수 영상"
+      title={meta.title}
       description={`지난 달(${monthLabel}) 조회수 1위 영상을 확인하세요.`}
       bodyClassName="gap-3"
     >
