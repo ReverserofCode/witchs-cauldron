@@ -90,7 +90,7 @@ export default function RightSidebar({ className, images }: RightSidebarProps = 
         title="커뮤니티"
         description="팬들과 함께하는 공식 채널"
       >
-        <ul className="flex flex-col gap-2 text-[11px] text-purple-900/85">
+        <ul className="flex flex-col gap-2 text-xs text-purple-900/85">
           {COMMUNITY_LINKS.map((link) => (
             <li key={link.href} className="px-3 py-2 border shadow-sm rounded-xl border-purple-200/60 bg-white/70">
               <a
@@ -98,9 +98,14 @@ export default function RightSidebar({ className, images }: RightSidebarProps = 
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex flex-col gap-1 transition-colors hover:text-[rgb(var(--moing-deep))]"
+                data-analytics-menu="true"
+                data-analytics-id={link.href}
+                data-analytics-label={link.label}
+                data-analytics-location="right_sidebar"
+                data-analytics-type="community_link"
               >
                 <span className="text-xs font-semibold text-purple-950/95">{link.label}</span>
-                <span className="text-[10px] text-purple-700/80">{link.description}</span>
+                <span className="text-xs text-purple-700/80">{link.description}</span>
               </a>
             </li>
           ))}

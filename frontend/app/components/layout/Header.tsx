@@ -3,7 +3,6 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import { trackEvent } from "@/app/components/analytics/track";
 
 type HeaderItem = { label: string; href: string };
 
@@ -71,18 +70,6 @@ export default function Header({ brand, items = defaultItems }: HeaderProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  const handleMenuClick = (item: HeaderItem) => {
-    trackEvent({
-      type: "menu_click",
-      element: {
-        type: "header_menu",
-        id: item.href,
-        label: item.label,
-      },
-      metadata: { location: "header" },
-    });
-  };
-
   const closeMenu = useCallback(() => setIsMenuOpen(false), []);
 
   // Close on Escape key
@@ -134,7 +121,11 @@ export default function Header({ brand, items = defaultItems }: HeaderProps) {
                   title={item.label}
                   target="_blank"
                   rel="noopener noreferrer"
-                  onClick={() => handleMenuClick(item)}
+                  data-analytics-menu="true"
+                  data-analytics-id={item.href}
+                  data-analytics-label={item.label}
+                  data-analytics-location="header"
+                  data-analytics-type="header_menu"
                 >
                   <HeaderIcon name={item.label} className="w-5 h-5 md:h-6 md:w-6" />
                   <span className="sr-only">{item.label}</span>
@@ -178,8 +169,12 @@ export default function Header({ brand, items = defaultItems }: HeaderProps) {
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-purple-900 transition-colors hover:bg-purple-100/80"
+                      data-analytics-menu="true"
+                      data-analytics-id={item.href}
+                      data-analytics-label={item.label}
+                      data-analytics-location="header_mobile"
+                      data-analytics-type="header_menu"
                       onClick={() => {
-                        handleMenuClick(item);
                         closeMenu();
                       }}
                     >

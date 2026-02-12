@@ -161,9 +161,9 @@ export default function LeftSidebar({ className, images }: LeftSidebarProps = {}
           <YouTubeSectionStatus tone="error">{scheduleError}</YouTubeSectionStatus>
         )}
         {scheduleStatus === "ready" && nextEvent && (
-          <div className="flex flex-col gap-2 rounded-xl border border-purple-200/60 bg-purple-100/40 px-3 py-2 text-[11px] text-purple-950/90">
+          <div className="flex flex-col gap-2 rounded-xl border border-purple-200/60 bg-purple-100/40 px-3 py-2 text-xs text-purple-950/90">
             <span className="text-xs font-semibold text-purple-900/95 line-clamp-2">{nextEvent.title}</span>
-            <div className="flex flex-wrap items-center gap-2 text-[10px] text-purple-700/80">
+            <div className="flex flex-wrap items-center gap-2 text-xs text-purple-700/80">
               <span>{formatEventDateTime(nextEvent)}</span>
               {nextEvent.platform && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-purple-200/80 px-2 py-0.5 font-semibold uppercase tracking-wide">
@@ -174,7 +174,7 @@ export default function LeftSidebar({ className, images }: LeftSidebarProps = {}
           </div>
         )}
         {scheduleStatus === "ready" && upcomingEvents.length > 1 && (
-          <ul className="space-y-1 text-[10px] text-purple-800/80">
+          <ul className="space-y-1 text-xs text-purple-800/80">
             {upcomingEvents.slice(1).map((event) => (
               <li key={event.id} className="flex flex-col gap-0.5 rounded-lg px-2 py-1 bg-white/70">
                 <span className="font-semibold text-purple-900/85 line-clamp-1">{event.title}</span>
@@ -183,7 +183,15 @@ export default function LeftSidebar({ className, images }: LeftSidebarProps = {}
             ))}
           </ul>
         )}
-        <Link href="#schedule-section" className="btn btn-primary mt-2 w-full justify-center text-[11px]">
+        <Link
+          href="#schedule-section"
+          className="btn btn-primary mt-2 w-full justify-center text-xs"
+          data-analytics-menu="true"
+          data-analytics-id="#schedule-section"
+          data-analytics-label="전체 일정 보기"
+          data-analytics-location="left_sidebar"
+          data-analytics-type="schedule_link"
+        >
           전체 일정 보기
         </Link>
       </SectionCard>
@@ -236,13 +244,22 @@ export default function LeftSidebar({ className, images }: LeftSidebarProps = {}
                     priority={index === 0}
                   />
                 </div>
-                {item.credit && <figcaption className="text-[11px] text-purple-900/70">{item.credit}</figcaption>}
-                <div className="flex items-center justify-between text-[11px] text-purple-900/60">
+                {item.credit && <figcaption className="text-xs text-purple-900/70">{item.credit}</figcaption>}
+                <div className="flex items-center justify-between text-xs text-purple-900/60">
                   <span>
                     {index + 1} / {gallery.length}
                   </span>
                   {item.download && (
-                    <a href={item.download} download className="btn btn-primary h-8 min-w-[5rem] justify-center text-xs">
+                    <a
+                      href={item.download}
+                      download
+                      className="btn btn-primary h-8 min-w-[5rem] justify-center text-xs"
+                      data-analytics-menu="true"
+                      data-analytics-id={item.download}
+                      data-analytics-label="팬아트 다운로드"
+                      data-analytics-location="left_sidebar_gallery"
+                      data-analytics-type="download_link"
+                    >
                       다운로드
                     </a>
                   )}
@@ -424,16 +441,21 @@ function QuickVideoItem({
       href={video.url}
       target="_blank"
       rel="noopener noreferrer"
-      className={`flex flex-col gap-1 rounded-xl border px-3 py-2 text-[11px] transition-colors ${
+      data-analytics-menu="true"
+      data-analytics-id={video.url}
+      data-analytics-label={video.title}
+      data-analytics-location="left_sidebar_video_pick"
+      data-analytics-type="video_link"
+      className={`flex flex-col gap-1 rounded-xl border px-3 py-2 text-xs transition-colors ${
         highlight
           ? "border-purple-300 bg-purple-50/80 hover:bg-purple-100/80"
           : "border-purple-200/60 bg-white/70 hover:bg-purple-100/70"
       }`}
       title={video.title}
     >
-      <span className="text-[10px] font-semibold uppercase tracking-wide text-purple-700/80">{label}</span>
+      <span className="text-xs font-semibold uppercase tracking-wide text-purple-700/80">{label}</span>
       <span className="font-semibold line-clamp-2 text-purple-950/95">{video.title}</span>
-      <span className="text-[10px] text-purple-700/75">{video.channelTitle || "모잉 채널"}</span>
+      <span className="text-xs text-purple-700/75">{video.channelTitle || "모잉 채널"}</span>
     </a>
   );
 }

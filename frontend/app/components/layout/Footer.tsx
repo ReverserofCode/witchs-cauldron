@@ -41,6 +41,11 @@ export default function Footer() {
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-sm text-purple-900/80 transition-colors hover:text-purple-700"
+                    data-analytics-menu="true"
+                    data-analytics-id={link.href}
+                    data-analytics-label={link.label}
+                    data-analytics-location="footer_community"
+                    data-analytics-type="footer_link"
                   >
                     {link.label}
                   </a>
@@ -58,6 +63,11 @@ export default function Footer() {
                   <Link
                     href={link.href}
                     className="text-sm text-purple-900/80 transition-colors hover:text-purple-700"
+                    data-analytics-menu="true"
+                    data-analytics-id={link.href}
+                    data-analytics-label={link.label}
+                    data-analytics-location="footer_site"
+                    data-analytics-type="footer_link"
                   >
                     {link.label}
                   </Link>

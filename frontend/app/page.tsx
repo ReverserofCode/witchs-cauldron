@@ -17,6 +17,13 @@ import {
 } from '@/app/components/sections'
 import { SectionTracker } from '@/app/components/analytics/SectionTracker'
 
+const MOBILE_QUICK_LINKS = [
+  { label: '치지직', href: 'https://chzzk.naver.com/1d333ff175b4db5bd06f87a88579ec1e' },
+  { label: '유튜브', href: 'https://www.youtube.com/channel/UCHzre37UF4o64HRhp-7CDzQ' },
+  { label: '다시보기', href: 'https://www.youtube.com/@fullmoing' },
+  { label: '팬카페', href: 'https://cafe.naver.com/moinge' },
+]
+
 
 export default async function Page(): Promise<ReactElement> {
   const liveStatus = await getChzzkLiveStatus()
@@ -68,7 +75,7 @@ export default async function Page(): Promise<ReactElement> {
                         <p className="text-sm font-light typography-lead max-w-prose sm:text-base">
                           포션을 만들면 폭발하거나, 고백하게 만드는 재앙 제조기. &quot;진짜 감기약 맞아요?&quot; 음... 아마도요.
                         </p>
-                        <p className="hidden text-base font-light opacity-0 typography-lead animate-fade-in animation-delay-200 sm:block">
+                        <p className="text-sm font-light opacity-0 typography-lead animate-fade-in animation-delay-200 sm:text-base">
                           {liveStatusDescription}
                         </p>
                       </div>
@@ -94,6 +101,59 @@ export default async function Page(): Promise<ReactElement> {
                 <p className="text-sm typography-body text-purple-100/80">
                   팬 여러분이 가장 궁금해하는 정보, 최신 방송 일정, 그리고 하이라이트 영상들을 한 곳에 모았습니다.
                 </p>
+              </SectionCard>
+
+              <SectionCard
+                tone="lavender"
+                className="lg:hidden"
+                eyebrow="Quick Access"
+                title="모바일 빠른 이동"
+                description="사이드바 핵심 정보와 링크를 모바일 화면에서도 바로 확인하세요."
+              >
+                <div className="grid grid-cols-2 gap-2">
+                  {MOBILE_QUICK_LINKS.map((link) => (
+                    <a
+                      key={link.href}
+                      href={link.href}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center justify-center rounded-xl border border-purple-200/70 bg-white/80 px-3 py-2 text-xs font-semibold text-purple-900 transition-colors hover:bg-purple-100/70"
+                      data-analytics-menu="true"
+                      data-analytics-id={link.href}
+                      data-analytics-label={link.label}
+                      data-analytics-location="mobile_quick_links"
+                      data-analytics-type="mobile_quick_link"
+                    >
+                      {link.label}
+                    </a>
+                  ))}
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <a
+                    href="#schedule-section"
+                    className="inline-flex items-center justify-center rounded-xl border border-purple-300/70 bg-purple-100/80 px-3 py-2 text-xs font-semibold text-purple-900 transition-colors hover:bg-purple-200/70"
+                    data-analytics-menu="true"
+                    data-analytics-id="#schedule-section"
+                    data-analytics-label="방송 일정 보기"
+                    data-analytics-location="mobile_quick_links"
+                    data-analytics-type="schedule_anchor"
+                  >
+                    방송 일정 보기
+                  </a>
+                  <a
+                    href="https://cafe.naver.com/moinge"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center justify-center rounded-xl border border-purple-300/70 bg-purple-100/80 px-3 py-2 text-xs font-semibold text-purple-900 transition-colors hover:bg-purple-200/70"
+                    data-analytics-menu="true"
+                    data-analytics-id="https://cafe.naver.com/moinge"
+                    data-analytics-label="팬카페 바로가기"
+                    data-analytics-location="mobile_quick_links"
+                    data-analytics-type="community_link"
+                  >
+                    팬카페 바로가기
+                  </a>
+                </div>
               </SectionCard>
 
               <div className="grid gap-5 md:grid-cols-1 lg:grid-cols-2">

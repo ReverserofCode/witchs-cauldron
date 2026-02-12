@@ -160,9 +160,12 @@ function getNiceMax(value: number): number {
 // TrendChart Component
 function TrendChart({ daily }: { daily: DailyPoint[] }) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [dimensions, setDimensions] = useState({ width: 800, height: 320 });
-  const [hoverIndex, setHoverIndex] = useState<number | null>(null);
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const tooltipRef = useRef<HTMLDivElement>(null);
+  const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const [pointerPosition, setPointerPosition] = useState({ x: 0, y: 0 });
+  const [tooltipSize, setTooltipSize] = useState({ width: 140, height: 80 });
+  const isCompact = dimensions.width < 640;
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -176,7 +179,17 @@ function TrendChart({ daily }: { daily: DailyPoint[] }) {
     return () => observer.disconnect();
   }, []);
 
-  const padding = useMemo(() => ({ top: 28, right: 16, bottom: 44, left: 52 }), []);
+  useEffect(() => {
+    if (!tooltipRef.current) return;
+    const rect = tooltipRef.current.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    setTooltipSize({ width: rect.width, height: rect.height });
+  }, [activeIndex, isCompact]);
+
+  const padding = useMemo(
+    () => (isCompact ? { top: 16, right: 12, bottom: 34, left: 38 } : { top: 28, right: 16, bottom: 44, left: 52 }),
+    [isCompact]
+  );
   const chartWidth = dimensions.width - padding.left - padding.right;
   const chartHeight = dimensions.height - padding.top - padding.bottom;
 
@@ -186,26 +199,31 @@ function TrendChart({ daily }: { daily: DailyPoint[] }) {
   }, [daily]);
 
   const yTicks = useMemo(() => {
+    const steps = isCompact ? 4 : 5;
     const ticks = [];
-    for (let i = 0; i <= 5; i++) {
-      ticks.push((maxValue / 5) * i);
+    for (let i = 0; i <= steps; i++) {
+      ticks.push((maxValue / steps) * i);
     }
     return ticks.reverse();
-  }, [maxValue]);
+  }, [maxValue, isCompact]);
 
   const xLabels = useMemo(() => {
     if (daily.length === 0) return [];
-    if (daily.length <= 7) return daily.map((d, i) => ({ index: i, label: formatDayLabel(d.day) }));
-    const step = Math.ceil(daily.length / 6);
+    const maxLabels = isCompact ? 4 : 7;
+    if (daily.length <= maxLabels) return daily.map((d, i) => ({ index: i, label: formatDayLabel(d.day) }));
+
     const labels = [];
+    const step = Math.max(1, Math.ceil((daily.length - 1) / (maxLabels - 1)));
     for (let i = 0; i < daily.length; i += step) {
       labels.push({ index: i, label: formatDayLabel(daily[i].day) });
     }
+
     if (labels[labels.length - 1].index !== daily.length - 1) {
       labels.push({ index: daily.length - 1, label: formatDayLabel(daily[daily.length - 1].day) });
     }
+
     return labels;
-  }, [daily]);
+  }, [daily, isCompact]);
 
   const paths = useMemo(() => {
     if (daily.length === 0) return { visitors: "", pageviews: "", menuClicks: "" };
@@ -223,164 +241,204 @@ function TrendChart({ daily }: { daily: DailyPoint[] }) {
     };
   }, [daily, chartWidth, chartHeight, maxValue, padding]);
 
-  const handleMouseMove = useCallback(
-    (e: React.MouseEvent<SVGSVGElement>) => {
+  const updatePointer = useCallback(
+    (clientX: number, clientY: number, rect: DOMRect, clearWhenOut: boolean) => {
       if (daily.length === 0) return;
-      const svg = e.currentTarget;
-      const rect = svg.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
+      const x = clientX - rect.left;
+      const y = clientY - rect.top;
       const chartX = x - padding.left;
+
       if (chartX < 0 || chartX > chartWidth) {
-        setHoverIndex(null);
+        if (clearWhenOut) setActiveIndex(null);
         return;
       }
+
       const index = Math.round((chartX / chartWidth) * (daily.length - 1));
-      setHoverIndex(Math.max(0, Math.min(daily.length - 1, index)));
-      setMousePosition({ x, y });
+      setActiveIndex(Math.max(0, Math.min(daily.length - 1, index)));
+      setPointerPosition({ x, y });
     },
     [daily, chartWidth, padding]
   );
 
-  const handleMouseLeave = useCallback(() => {
-    setHoverIndex(null);
+  const handlePointerMove = useCallback((e: React.PointerEvent<SVGSVGElement>) => {
+    updatePointer(e.clientX, e.clientY, e.currentTarget.getBoundingClientRect(), true);
+  }, [updatePointer]);
+
+  const handlePointerLeave = useCallback(() => {
+    setActiveIndex(null);
   }, []);
 
-  if (daily.length === 0) {
-    return <p className="text-sm text-gray-500">선택한 기간에 데이터가 없습니다.</p>;
-  }
+  const handleTouchMove = useCallback((e: React.TouchEvent<SVGSVGElement>) => {
+    const touch = e.touches[0];
+    if (!touch) return;
+    updatePointer(touch.clientX, touch.clientY, e.currentTarget.getBoundingClientRect(), false);
+  }, [updatePointer]);
 
-  const hoverData = hoverIndex !== null ? daily[hoverIndex] : null;
-  const hoverX = hoverIndex !== null ? padding.left + (hoverIndex / Math.max(1, daily.length - 1)) * chartWidth : 0;
+  const ready = dimensions.width > 0 && dimensions.height > 0;
+  const hasData = daily.length > 0;
+
+  const selectedIndex = hasData ? (activeIndex ?? daily.length - 1) : 0;
+  const selectedData = hasData ? daily[selectedIndex] : null;
+  const hoverX =
+    activeIndex !== null ? padding.left + (activeIndex / Math.max(1, daily.length - 1)) * chartWidth : 0;
+
+  const tooltipLeft = Math.min(
+    Math.max(8, pointerPosition.x + 12),
+    Math.max(8, dimensions.width - tooltipSize.width - 8)
+  );
+  const preferredTop = pointerPosition.y - tooltipSize.height - 10;
+  const fallbackTop = pointerPosition.y + 10;
+  const tooltipTop =
+    preferredTop >= 8 ? preferredTop : Math.min(Math.max(8, fallbackTop), Math.max(8, dimensions.height - tooltipSize.height - 8));
 
   return (
-    <div ref={containerRef} className="relative h-80 w-full">
-      <svg
-        width={dimensions.width}
-        height={dimensions.height}
-        onMouseMove={handleMouseMove}
-        onMouseLeave={handleMouseLeave}
-        className="cursor-crosshair"
-      >
-        {/* Grid lines */}
-        {yTicks.map((tick) => {
-          const y = padding.top + chartHeight - (tick / maxValue) * chartHeight;
-          return (
-            <g key={tick}>
-              <line x1={padding.left} y1={y} x2={padding.left + chartWidth} y2={y} stroke="#E5E7EB" strokeWidth="1" />
-              <text x={padding.left - 8} y={y + 4} textAnchor="end" fontSize="11" fill="#9CA3AF">
-                {Math.round(tick).toLocaleString()}
-              </text>
-            </g>
-          );
-        })}
-
-        {/* Axes */}
-        <line x1={padding.left} y1={padding.top} x2={padding.left} y2={padding.top + chartHeight} stroke="#D1D5DB" strokeWidth="1.5" />
-        <line
-          x1={padding.left}
-          y1={padding.top + chartHeight}
-          x2={padding.left + chartWidth}
-          y2={padding.top + chartHeight}
-          stroke="#D1D5DB"
-          strokeWidth="1.5"
-        />
-
-        {/* Area fills */}
-        <defs>
-          <linearGradient id="grad-visitors" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="#3B82F6" stopOpacity="0.1" />
-            <stop offset="100%" stopColor="#3B82F6" stopOpacity="0" />
-          </linearGradient>
-          <linearGradient id="grad-pageviews" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="#8B5CF6" stopOpacity="0.1" />
-            <stop offset="100%" stopColor="#8B5CF6" stopOpacity="0" />
-          </linearGradient>
-          <linearGradient id="grad-menuClicks" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="#F43F5E" stopOpacity="0.1" />
-            <stop offset="100%" stopColor="#F43F5E" stopOpacity="0" />
-          </linearGradient>
-        </defs>
-
-        {paths.visitors && (
-          <polygon
-            points={`${padding.left},${padding.top + chartHeight} ${paths.visitors} ${padding.left + chartWidth},${padding.top + chartHeight}`}
-            fill="url(#grad-visitors)"
-          />
+    <div>
+      <div ref={containerRef} className="relative h-72 w-full overflow-hidden sm:h-80">
+        {!hasData && (
+          <div className="flex h-full items-center justify-center">
+            <p className="text-sm text-gray-500">선택한 기간에 데이터가 없습니다.</p>
+          </div>
         )}
-        {paths.pageviews && (
-          <polygon
-            points={`${padding.left},${padding.top + chartHeight} ${paths.pageviews} ${padding.left + chartWidth},${padding.top + chartHeight}`}
-            fill="url(#grad-pageviews)"
-          />
-        )}
-        {paths.menuClicks && (
-          <polygon
-            points={`${padding.left},${padding.top + chartHeight} ${paths.menuClicks} ${padding.left + chartWidth},${padding.top + chartHeight}`}
-            fill="url(#grad-menuClicks)"
-          />
-        )}
-
-        {/* Lines */}
-        {paths.visitors && <polyline points={paths.visitors} fill="none" stroke="#3B82F6" strokeWidth="2" strokeLinejoin="round" />}
-        {paths.pageviews && <polyline points={paths.pageviews} fill="none" stroke="#8B5CF6" strokeWidth="2" strokeLinejoin="round" />}
-        {paths.menuClicks && <polyline points={paths.menuClicks} fill="none" stroke="#F43F5E" strokeWidth="2" strokeLinejoin="round" />}
-
-        {/* Data points */}
-        {daily.map((d, i) => {
-          const x = padding.left + (i / Math.max(1, daily.length - 1)) * chartWidth;
-          const yVisitors = padding.top + chartHeight - (d.uniqueVisitors / maxValue) * chartHeight;
-          const yPageviews = padding.top + chartHeight - (d.pageviews / maxValue) * chartHeight;
-          const yMenuClicks = padding.top + chartHeight - (d.menuClicks / maxValue) * chartHeight;
-          const isHovered = hoverIndex === i;
-          const r = isHovered ? 4 : 2.5;
-          return (
-            <g key={i}>
-              <circle cx={x} cy={yVisitors} r={r} fill="#3B82F6" />
-              <circle cx={x} cy={yPageviews} r={r} fill="#8B5CF6" />
-              <circle cx={x} cy={yMenuClicks} r={r} fill="#F43F5E" />
-            </g>
-          );
-        })}
-
-        {/* Hover line */}
-        {hoverIndex !== null && (
-          <line x1={hoverX} y1={padding.top} x2={hoverX} y2={padding.top + chartHeight} stroke="#6B7280" strokeWidth="1" strokeDasharray="4 2" />
-        )}
-
-        {/* X-axis labels */}
-        {xLabels.map(({ index, label }) => {
-          const x = padding.left + (index / Math.max(1, daily.length - 1)) * chartWidth;
-          return (
-            <text key={index} x={x} y={padding.top + chartHeight + 20} textAnchor="middle" fontSize="11" fill="#9CA3AF">
-              {label}
-            </text>
-          );
-        })}
-      </svg>
-
-      {/* Tooltip */}
-      {hoverData && (
-        <div
-          className="pointer-events-none absolute rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs shadow-lg"
-          style={{
-            left: Math.min(mousePosition.x + 10, dimensions.width - 120),
-            top: Math.max(mousePosition.y - 60, 10),
-          }}
+        {ready && hasData && <svg
+          width={dimensions.width}
+          height={dimensions.height}
+          onPointerMove={handlePointerMove}
+          onPointerDown={handlePointerMove}
+          onPointerLeave={handlePointerLeave}
+          onTouchStart={handleTouchMove}
+          onTouchMove={handleTouchMove}
+          className="block max-w-full touch-pan-y cursor-crosshair"
         >
-          <div className="mb-1 font-semibold text-gray-700">{formatDayLabel(hoverData.day)}</div>
-          <div className="flex items-center gap-2">
-            <span className="inline-block h-2 w-2 rounded-full bg-blue-500" />
-            <span className="text-gray-600">방문자: {hoverData.uniqueVisitors.toLocaleString()}</span>
+          {/* Grid lines */}
+          {yTicks.map((tick) => {
+            const y = padding.top + chartHeight - (tick / maxValue) * chartHeight;
+            return (
+              <g key={tick}>
+                <line x1={padding.left} y1={y} x2={padding.left + chartWidth} y2={y} stroke="#E5E7EB" strokeWidth="1" />
+                <text x={padding.left - 6} y={y + 4} textAnchor="end" fontSize={isCompact ? "10" : "11"} fill="#9CA3AF">
+                  {Math.round(tick).toLocaleString()}
+                </text>
+              </g>
+            );
+          })}
+
+          {/* Axes */}
+          <line x1={padding.left} y1={padding.top} x2={padding.left} y2={padding.top + chartHeight} stroke="#D1D5DB" strokeWidth="1.5" />
+          <line
+            x1={padding.left}
+            y1={padding.top + chartHeight}
+            x2={padding.left + chartWidth}
+            y2={padding.top + chartHeight}
+            stroke="#D1D5DB"
+            strokeWidth="1.5"
+          />
+
+          {/* Area fills */}
+          <defs>
+            <linearGradient id="grad-visitors" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="#3B82F6" stopOpacity="0.1" />
+              <stop offset="100%" stopColor="#3B82F6" stopOpacity="0" />
+            </linearGradient>
+            <linearGradient id="grad-pageviews" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="#8B5CF6" stopOpacity="0.1" />
+              <stop offset="100%" stopColor="#8B5CF6" stopOpacity="0" />
+            </linearGradient>
+            <linearGradient id="grad-menuClicks" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="#F43F5E" stopOpacity="0.1" />
+              <stop offset="100%" stopColor="#F43F5E" stopOpacity="0" />
+            </linearGradient>
+          </defs>
+
+          {paths.visitors && (
+            <polygon
+              points={`${padding.left},${padding.top + chartHeight} ${paths.visitors} ${padding.left + chartWidth},${padding.top + chartHeight}`}
+              fill="url(#grad-visitors)"
+            />
+          )}
+          {paths.pageviews && (
+            <polygon
+              points={`${padding.left},${padding.top + chartHeight} ${paths.pageviews} ${padding.left + chartWidth},${padding.top + chartHeight}`}
+              fill="url(#grad-pageviews)"
+            />
+          )}
+          {paths.menuClicks && (
+            <polygon
+              points={`${padding.left},${padding.top + chartHeight} ${paths.menuClicks} ${padding.left + chartWidth},${padding.top + chartHeight}`}
+              fill="url(#grad-menuClicks)"
+            />
+          )}
+
+          {/* Lines */}
+          {paths.visitors && <polyline points={paths.visitors} fill="none" stroke="#3B82F6" strokeWidth="2" strokeLinejoin="round" />}
+          {paths.pageviews && <polyline points={paths.pageviews} fill="none" stroke="#8B5CF6" strokeWidth="2" strokeLinejoin="round" />}
+          {paths.menuClicks && <polyline points={paths.menuClicks} fill="none" stroke="#F43F5E" strokeWidth="2" strokeLinejoin="round" />}
+
+          {/* Data points */}
+          {daily.map((d, i) => {
+            const x = padding.left + (i / Math.max(1, daily.length - 1)) * chartWidth;
+            const yVisitors = padding.top + chartHeight - (d.uniqueVisitors / maxValue) * chartHeight;
+            const yPageviews = padding.top + chartHeight - (d.pageviews / maxValue) * chartHeight;
+            const yMenuClicks = padding.top + chartHeight - (d.menuClicks / maxValue) * chartHeight;
+            const isActive = activeIndex === i;
+            const r = isActive ? 4 : isCompact ? 1.8 : 2.5;
+            return (
+              <g key={i}>
+                <circle cx={x} cy={yVisitors} r={r} fill="#3B82F6" />
+                <circle cx={x} cy={yPageviews} r={r} fill="#8B5CF6" />
+                <circle cx={x} cy={yMenuClicks} r={r} fill="#F43F5E" />
+              </g>
+            );
+          })}
+
+          {/* Hover line */}
+          {activeIndex !== null && (
+            <line x1={hoverX} y1={padding.top} x2={hoverX} y2={padding.top + chartHeight} stroke="#6B7280" strokeWidth="1" strokeDasharray="4 2" />
+          )}
+
+          {/* X-axis labels */}
+          {xLabels.map(({ index, label }) => {
+            const x = padding.left + (index / Math.max(1, daily.length - 1)) * chartWidth;
+            return (
+              <text key={index} x={x} y={padding.top + chartHeight + 18} textAnchor="middle" fontSize={isCompact ? "10" : "11"} fill="#9CA3AF">
+                {label}
+              </text>
+            );
+          })}
+        </svg>}
+
+        {/* Tooltip */}
+        {ready && hasData && activeIndex !== null && selectedData && (
+          <div
+            ref={tooltipRef}
+            className="pointer-events-none absolute z-10 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs shadow-lg"
+            style={{
+              left: tooltipLeft,
+              top: tooltipTop,
+            }}
+          >
+            <div className="mb-1 font-semibold text-gray-700">{formatDayLabel(selectedData.day)}</div>
+            <div className="flex items-center gap-2">
+              <span className="inline-block h-2 w-2 rounded-full bg-blue-500" />
+              <span className="text-gray-600">방문자: {selectedData.uniqueVisitors.toLocaleString()}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="inline-block h-2 w-2 rounded-full bg-violet-500" />
+              <span className="text-gray-600">페이지뷰: {selectedData.pageviews.toLocaleString()}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="inline-block h-2 w-2 rounded-full bg-rose-500" />
+              <span className="text-gray-600">메뉴 클릭: {selectedData.menuClicks.toLocaleString()}</span>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="inline-block h-2 w-2 rounded-full bg-violet-500" />
-            <span className="text-gray-600">페이지뷰: {hoverData.pageviews.toLocaleString()}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="inline-block h-2 w-2 rounded-full bg-rose-500" />
-            <span className="text-gray-600">메뉴 클릭: {hoverData.menuClicks.toLocaleString()}</span>
-          </div>
+        )}
+      </div>
+
+      {selectedData && (
+        <div className="mt-3 grid grid-cols-2 gap-2 rounded-xl border border-purple-100 bg-purple-50/60 p-3 text-xs text-gray-700 sm:grid-cols-4">
+          <span className="font-semibold text-gray-900">{formatDayLabel(selectedData.day)}</span>
+          <span>방문자 {selectedData.uniqueVisitors.toLocaleString()}</span>
+          <span>페이지뷰 {selectedData.pageviews.toLocaleString()}</span>
+          <span>메뉴 클릭 {selectedData.menuClicks.toLocaleString()}</span>
         </div>
       )}
     </div>
@@ -420,16 +478,16 @@ function PeriodSummary({ daily, totals, ctr }: { daily: DailyPoint[]; totals: An
   ];
 
   return (
-    <article className="flex flex-col rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
-      <h2 className="text-sm font-bold text-gray-900">기간 요약</h2>
-      <div className="mt-4 flex flex-1 flex-col gap-3">
+    <article className="min-w-0 rounded-2xl border border-purple-200/70 bg-white/85 p-4 shadow-md shadow-purple-900/10 backdrop-blur sm:p-5">
+      <h2 className="text-sm font-bold text-purple-950">기간 요약</h2>
+      <div className="mt-3 grid grid-cols-2 gap-2 lg:grid-cols-1 lg:gap-3">
         {items.map((item) => (
-          <div key={item.label} className="rounded-lg bg-gray-50 px-3 py-2.5">
-            <p className="text-[11px] font-medium text-gray-500">{item.label}</p>
-            <div className="mt-0.5 flex items-baseline gap-1.5">
-              <span className="text-lg font-bold" style={{ color: item.color }}>{item.value}</span>
+          <div key={item.label} className="rounded-xl border border-purple-100/80 bg-purple-50/70 px-2.5 py-2 sm:px-3 sm:py-2.5">
+            <p className="text-[11px] font-medium text-gray-600 sm:text-xs">{item.label}</p>
+            <div className="mt-0.5 flex items-baseline gap-1">
+              <span className="text-base font-bold sm:text-lg" style={{ color: item.color }}>{item.value}</span>
               {item.sub && (
-                <span className="text-[11px] text-gray-400">{item.sub}</span>
+                <span className="text-[10px] text-purple-500/80 sm:text-xs">{item.sub}</span>
               )}
             </div>
           </div>
@@ -590,18 +648,20 @@ export default function AnalyticsPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 px-6 py-10">
+    <div className="min-h-screen bg-page px-4 py-8 sm:px-6 sm:py-10">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold text-gray-900">Analytics Dashboard</h1>
-          <div className="text-sm text-gray-500">
-            {fromLabel} ~ {toLabel}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div className="min-w-0">
+            <h1 className="text-2xl font-black text-purple-950 sm:text-3xl">Analytics Dashboard</h1>
+            <div className="text-xs text-purple-700/80 sm:text-sm">
+              {fromLabel} ~ {toLabel}
+            </div>
           </div>
           <button
             type="button"
             onClick={() => setReloadToken((prev) => prev + 1)}
-            className="rounded-lg bg-blue-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-600"
+            className="self-start rounded-xl bg-[rgb(var(--moing-primary))] px-4 py-2 text-sm font-semibold text-white shadow-md shadow-purple-900/20 transition hover:brightness-105 sm:self-auto"
           >
             새로고침
           </button>
@@ -609,7 +669,7 @@ export default function AnalyticsPage() {
 
         {/* Loading banner */}
         {isLoading && (
-          <div className="flex items-center gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-medium text-blue-700">
+          <div className="flex items-center gap-3 rounded-xl border border-purple-200 bg-purple-50/90 px-4 py-3 text-sm font-medium text-purple-700">
             <svg className="h-5 w-5 animate-spin" fill="none" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
               <path
@@ -647,13 +707,13 @@ export default function AnalyticsPage() {
         )}
 
         {/* Date picker */}
-        <section className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
+        <section className="rounded-2xl border border-purple-200/70 bg-white/85 p-5 shadow-md shadow-purple-900/10 backdrop-blur">
           <div className="flex flex-wrap items-end gap-4">
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-medium text-gray-500">시작일</label>
               <input
                 type="date"
-                className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                className="rounded-lg border border-purple-200 bg-white px-3 py-2 text-sm"
                 value={from}
                 onChange={(e) => {
                   const value = e.target.value;
@@ -666,7 +726,7 @@ export default function AnalyticsPage() {
               <label className="text-xs font-medium text-gray-500">종료일</label>
               <input
                 type="date"
-                className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                className="rounded-lg border border-purple-200 bg-white px-3 py-2 text-sm"
                 value={to}
                 onChange={(e) => {
                   const value = e.target.value;
@@ -685,7 +745,7 @@ export default function AnalyticsPage() {
                   key={preset.label}
                   type="button"
                   onClick={() => handlePreset(preset.days)}
-                  className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-gray-700 transition hover:bg-gray-50"
+                  className="rounded-lg border border-purple-200 bg-white px-3 py-2 text-xs font-semibold text-purple-800 transition hover:bg-purple-50"
                 >
                   {preset.label}
                 </button>
@@ -697,7 +757,7 @@ export default function AnalyticsPage() {
         {/* Stats cards */}
         <section className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
           {stats.map((stat) => (
-            <div key={stat.label} className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+            <div key={stat.label} className="rounded-2xl border border-purple-200/70 bg-white/85 p-4 shadow-md shadow-purple-900/10 backdrop-blur">
               <div className="flex items-center gap-3">
                 <div className="rounded-full p-2" style={{ backgroundColor: `${stat.color}15` }}>
                   <svg className="h-5 w-5" style={{ color: stat.color }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
@@ -717,9 +777,9 @@ export default function AnalyticsPage() {
 
         {/* Trend chart + Period summary */}
         <section className="grid gap-4 lg:grid-cols-[1fr_280px]">
-          <article className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+          <article className="min-w-0 overflow-hidden rounded-2xl border border-purple-200/70 bg-white/85 p-4 shadow-md shadow-purple-900/10 backdrop-blur sm:p-6">
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-bold text-gray-900">일별 트렌드</h2>
+              <h2 className="text-lg font-bold text-purple-950">일별 트렌드</h2>
             </div>
             <TrendChart daily={daily} />
             <div className="mt-4 flex flex-wrap items-center justify-center gap-6 text-xs font-medium text-gray-600">
@@ -744,8 +804,8 @@ export default function AnalyticsPage() {
         {/* Composition & Section Views */}
         <section className="grid gap-4 lg:grid-cols-2">
           {/* Event composition donut */}
-          <article className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-            <h2 className="text-lg font-bold text-gray-900">이벤트 구성</h2>
+          <article className="rounded-2xl border border-purple-200/70 bg-white/85 p-6 shadow-md shadow-purple-900/10 backdrop-blur">
+            <h2 className="text-lg font-bold text-purple-950">이벤트 구성</h2>
             <div className="mt-5 grid grid-cols-1 items-center gap-5 sm:grid-cols-[180px_1fr]">
               <div className="relative mx-auto h-40 w-40 rounded-full" style={{ background: donutBackground }}>
                 <div className="absolute inset-5 flex items-center justify-center rounded-full bg-white text-center">
@@ -773,8 +833,8 @@ export default function AnalyticsPage() {
           </article>
 
           {/* Section views */}
-          <article className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-            <h2 className="text-lg font-bold text-gray-900">섹션별 조회</h2>
+          <article className="rounded-2xl border border-purple-200/70 bg-white/85 p-6 shadow-md shadow-purple-900/10 backdrop-blur">
+            <h2 className="text-lg font-bold text-purple-950">섹션별 조회</h2>
             <div className="mt-4 space-y-3">
               {sectionViews.length ? (
                 sectionViews.slice(0, 10).map((entry) => {
@@ -802,8 +862,8 @@ export default function AnalyticsPage() {
         {/* Bottom 3 lists */}
         <section className="grid gap-4 lg:grid-cols-3">
           {/* Menu Clicks */}
-          <article className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-            <h2 className="mb-4 text-lg font-bold text-gray-900">메뉴 클릭 TOP 10</h2>
+          <article className="rounded-2xl border border-purple-200/70 bg-white/85 p-6 shadow-md shadow-purple-900/10 backdrop-blur">
+            <h2 className="mb-4 text-lg font-bold text-purple-950">메뉴 클릭 TOP 10</h2>
             {topMenuClicks.length ? (
               <div className="divide-y divide-gray-100">
                 {topMenuClicks.map((entry, index) => (
@@ -822,8 +882,8 @@ export default function AnalyticsPage() {
           </article>
 
           {/* Top Paths */}
-          <article className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-            <h2 className="mb-4 text-lg font-bold text-gray-900">페이지 경로 TOP 10</h2>
+          <article className="rounded-2xl border border-purple-200/70 bg-white/85 p-6 shadow-md shadow-purple-900/10 backdrop-blur">
+            <h2 className="mb-4 text-lg font-bold text-purple-950">페이지 경로 TOP 10</h2>
             {topPaths.length ? (
               <div className="divide-y divide-gray-100">
                 {topPaths.map((entry, index) => (
@@ -842,8 +902,8 @@ export default function AnalyticsPage() {
           </article>
 
           {/* Top Referrers */}
-          <article className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-            <h2 className="mb-4 text-lg font-bold text-gray-900">유입 Referrer TOP 10</h2>
+          <article className="rounded-2xl border border-purple-200/70 bg-white/85 p-6 shadow-md shadow-purple-900/10 backdrop-blur">
+            <h2 className="mb-4 text-lg font-bold text-purple-950">유입 Referrer TOP 10</h2>
             {topReferrers.length ? (
               <div className="divide-y divide-gray-100">
                 {topReferrers.map((entry, index) => (
