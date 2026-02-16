@@ -7,13 +7,12 @@ import { ReactElement } from 'react'
 import { getChzzkLiveStatus } from './api/chzzkPlayer/chzzkPlayer'
 import profileImg from '../public/mainPage/Profile.png'
 import { LeftSidebar, RightSidebar } from '@/app/components/layout'
-import { SectionCard, LatestYouTubeVideoCard, TopOfficialYouTubeVideoCard } from '@/app/components/cards'
+import { SectionCard } from '@/app/components/cards'
 import {
   ClipsSection,
   ScheduleSection,
-  YouTubeOfficialVideosSection,
-  YouTubeFullMoingVideosSection,
-  YouTubeFanVideosSection,
+  FeaturedVideoSection,
+  YouTubeHubSection,
 } from '@/app/components/sections'
 import { SectionTracker } from '@/app/components/analytics/SectionTracker'
 
@@ -46,7 +45,7 @@ export default async function Page(): Promise<ReactElement> {
           {/* Left Aside */}
           <LeftSidebar className="hidden lg:flex lg:sticky lg:top-24" />
           {/* Center Content Wrapper: 중앙 컬럼에 본문을 모아 배치 */}
-          <div className="flex min-w-0 flex-col gap-14 text-[15px] leading-relaxed lg:px-3">
+          <div className="flex min-w-0 flex-col gap-10 text-[15px] leading-relaxed lg:px-3">
             {/* HERO */}
             {/* 텍스트 2, 이미지 1 비율의 그리드 */}
             {/* 초기 소개용 섹션 */}
@@ -156,39 +155,17 @@ export default async function Page(): Promise<ReactElement> {
                 </div>
               </SectionCard>
 
-              {/* 공식 채널 */}
-              <div className="grid gap-5 grid-cols-1 sm:grid-cols-2">
-                <SectionTracker sectionId="featured-latest-moing" className="h-full">
-                  <LatestYouTubeVideoCard channel="moing" className="h-full" />
-                </SectionTracker>
-                <SectionTracker sectionId="featured-top-moing" className="h-full">
-                  <TopOfficialYouTubeVideoCard channel="moing" className="h-full" />
-                </SectionTracker>
-              </div>
-
-              {/* 다시보기 채널 */}
-              <div className="grid gap-5 grid-cols-1 sm:grid-cols-2">
-                <SectionTracker sectionId="featured-latest-fullmoing" className="h-full">
-                  <LatestYouTubeVideoCard channel="fullmoing" className="h-full" />
-                </SectionTracker>
-                <SectionTracker sectionId="featured-top-fullmoing" className="h-full">
-                  <TopOfficialYouTubeVideoCard channel="fullmoing" className="h-full" />
-                </SectionTracker>
-              </div>
+              <SectionTracker sectionId="featured-videos">
+                <FeaturedVideoSection />
+              </SectionTracker>
               <SectionTracker sectionId="clips-section">
                 <ClipsSection />
               </SectionTracker>
               <SectionTracker sectionId="schedule-section">
                 <ScheduleSection />
               </SectionTracker>
-              <SectionTracker sectionId="youtube-official">
-                <YouTubeOfficialVideosSection />
-              </SectionTracker>
-              <SectionTracker sectionId="youtube-full">
-                <YouTubeFullMoingVideosSection />
-              </SectionTracker>
-              <SectionTracker sectionId="youtube-fan">
-                <YouTubeFanVideosSection />
+              <SectionTracker sectionId="youtube-hub">
+                <YouTubeHubSection />
               </SectionTracker>
             </div>
           </div>

@@ -125,10 +125,17 @@ function formatReferrerLabel(referrer: string) {
 }
 
 const SECTION_LABELS: Record<string, string> = {
-  "featured-latest": "최신 영상",
-  "featured-top": "인기 영상",
+  "featured-videos": "주요 영상",
+  "youtube-hub": "YouTube 허브",
   "clips-section": "숏폼 하이라이트",
   "schedule-section": "방송 일정",
+  // Legacy IDs (backward compatibility with historical data)
+  "featured-latest": "최신 영상",
+  "featured-top": "인기 영상",
+  "featured-latest-moing": "공식 최신 영상",
+  "featured-top-moing": "공식 인기 영상",
+  "featured-latest-fullmoing": "다시보기 최신 영상",
+  "featured-top-fullmoing": "다시보기 인기 영상",
   "youtube-official": "공식 유튜브",
   "youtube-full": "다시보기",
   "youtube-fan": "팬 영상",
