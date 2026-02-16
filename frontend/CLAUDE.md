@@ -384,6 +384,7 @@ export async function GET(request: Request) {
 
 ## 최근 변경 이력
 
+- **YouTube Shorts 최신 영상 미반영 수정** - Shorts 필터링 기준 65초→185초 (YouTube 2024.10 3분 정책 반영), YouTube API fetch 캐시 `revalidate:60`→`no-store`로 변경, `MAX_LOOKAHEAD` 50→100 확대
 - **프로젝트 전반 디자인 개선** - 모바일 햄버거 메뉴(Header), Footer 강화(커뮤니티/사이트 링크 3열), 일정 그리드 반응형(`grid-cols-2 md:grid-cols-4`), 컬러 토큰 정리(`--moing-pink`/`--moing-gold`/`--moing-black` 제거, `--moing-bg` 추가)
 - **Analytics 대시보드 전면 리디자인** - ResizeObserver 기반 인터랙티브 SVG 차트(호버 툴팁, 데이터 포인트), 메트릭별 고유 색상, `TrendChart`/`PeriodSummary` 컴포넌트 분리, 기간 요약 사이드 패널(일평균/최고/최저 트래픽/CTR)
 - **Analytics 대시보드 원복** - Recharts 제거, 오리지널 막대형 UI로 복귀
