@@ -94,19 +94,28 @@ build_image() {
     log_success "Docker 이미지 빌드가 완료되었습니다."
 }
 
+# 잔여 컨테이너 강제 정리
+cleanup_stale_containers() {
+    log_info "잔여 컨테이너를 정리합니다..."
+    for name in witchs-cauldron-frontend-prod witchs-cauldron-backend-prod witchs-cauldron-analytics-db-prod; do
+        if docker ps -a --format '{{.Names}}' | grep -q "^${name}$"; then
+            log_info "잔여 컨테이너 제거: ${name}"
+            docker rm -f "$name" 2>/dev/null || true
+        fi
+    done
+}
+
 # 애플리케이션 교체 (무중단)
 replace_application() {
     log_info "애플리케이션을 교체합니다 (무중단 배포)..."
 
-    # docker compose up -d는 자동으로:
-    # 1. 새 이미지로 새 컨테이너 생성
-    # 2. 이전 컨테이너 중지 및 제거
-    # 3. 새 컨테이너 시작
     if docker compose version >/dev/null 2>&1; then
-        docker compose -f docker-compose.prod.yml down --remove-orphans
+        docker compose -f docker-compose.prod.yml down --remove-orphans 2>/dev/null || true
+        cleanup_stale_containers
         docker compose -f docker-compose.prod.yml up -d --force-recreate --remove-orphans
     else
-        docker-compose -f docker-compose.prod.yml down --remove-orphans
+        docker-compose -f docker-compose.prod.yml down --remove-orphans 2>/dev/null || true
+        cleanup_stale_containers
         docker-compose -f docker-compose.prod.yml up -d --force-recreate --remove-orphans
     fi
 
