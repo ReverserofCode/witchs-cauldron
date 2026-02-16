@@ -7,8 +7,8 @@ import {
 } from "../../youTubePlayer/shared";
 
 const CHANNEL_HANDLE = "moing"; // 모잉 공식 채널
-const MAX_RESULTS = 10;
-const MAX_LOOKAHEAD = 50;
+const MAX_RESULTS = 12;
+const MAX_LOOKAHEAD = 100;
 
 interface PlaylistItemSnippet {
   videoId: string;
@@ -49,7 +49,7 @@ async function fetchRecentPlaylistItems(
 
     const res = await fetch(
       `https://www.googleapis.com/youtube/v3/playlistItems?${params.toString()}`,
-      { next: { revalidate: 60 } }
+      { cache: "no-store" }
     );
 
     if (!res.ok) {
@@ -112,7 +112,7 @@ async function fetchVideoDurations(
 
     const res = await fetch(
       `https://www.googleapis.com/youtube/v3/videos?${params.toString()}`,
-      { next: { revalidate: 60 } }
+      { cache: "no-store" }
     );
 
     if (!res.ok) {
@@ -157,7 +157,8 @@ export async function GET() {
   const shortsOnly = playlistItems
     .filter((item) => {
       const duration = durations[item.videoId];
-      return Number.isFinite(duration) && duration <= 65;
+      // YouTube Shorts: 2024년 10월부터 최대 3분(180초)까지 허용
+      return Number.isFinite(duration) && duration <= 185;
     })
     .slice(0, MAX_RESULTS)
     .map((item) => ({
