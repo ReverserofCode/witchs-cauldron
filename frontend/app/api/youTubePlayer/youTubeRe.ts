@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { checkYouTubeApiKey, resolveChannelMetadata } from "./shared";
 
 const MAX_RESULTS = 6;
-const MAX_LOOKAHEAD = 20; // Shorts 필터링 후에도 충분한 수 확보
-const SHORTS_MAX_DURATION = 65; // 65초 이하는 Shorts로 간주
+const MAX_LOOKAHEAD = 50; // Shorts 필터링 후에도 충분한 수 확보
+const SHORTS_MAX_DURATION = 185; // 185초 이하는 Shorts로 간주 (YouTube 2024.10 정책: 최대 3분)
 
 const CHANNEL_HANDLES = {
   moing: "moing",
