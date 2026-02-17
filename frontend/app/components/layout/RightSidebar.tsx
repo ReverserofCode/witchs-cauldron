@@ -1,15 +1,7 @@
-import fs from "node:fs";
-import path from "node:path";
 import { type ReactElement } from "react";
 import { SectionCard } from "@/app/components/cards";
 import { FanArtGallery } from "@/app/components/gallery";
-
-interface FanArtImage {
-  src: string;
-  alt: string;
-  download?: string;
-  credit?: string;
-}
+import { loadFanArtImages, type FanArtImage } from "@/app/lib/fanart";
 
 interface RightSidebarProps {
   className?: string;
@@ -39,35 +31,6 @@ const COMMUNITY_LINKS = [
   },
 ];
 
-const FAN_ART_DIR = path.join(process.cwd(), "public", "rightAside");
-const IMAGE_EXTENSIONS = [/\.png$/i, /\.jpe?g$/i, /\.webp$/i, /\.gif$/i];
-
-function loadFanArtImages(): FanArtImage[] {
-  let files: string[] = [];
-
-  try {
-    files = fs.readdirSync(FAN_ART_DIR, { withFileTypes: true })
-      .filter((entry) => entry.isFile() && IMAGE_EXTENSIONS.some((pattern) => pattern.test(entry.name)))
-      .map((entry) => entry.name)
-      .sort((a, b) => a.localeCompare(b, "ko"));
-  } catch (error) {
-    // 폴더가 없거나 읽기 실패 시 빈 배열을 반환해 팬카페 안내 문구가 보여지도록 합니다.
-    return [];
-  }
-
-  return files.map((filename) => {
-    const base = filename.replace(/\.[^.]+$/, "");
-    const readable = base
-      .replace(/[_-]+/g, " ")
-      .replace(/\s+/g, " ")
-      .trim();
-
-    return {
-      src: `/rightAside/${filename}`,
-      alt: readable.length > 0 ? `모잉 팬아트 ${readable}` : "모잉 팬아트 이미지",
-    } satisfies FanArtImage;
-  });
-}
 
 export default function RightSidebar({ className, images }: RightSidebarProps = {}): ReactElement {
   const defaultGallery = loadFanArtImages();

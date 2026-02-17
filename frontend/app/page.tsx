@@ -16,6 +16,8 @@ import {
 } from '@/app/components/sections'
 import { SectionTracker } from '@/app/components/analytics/SectionTracker'
 import { ScrollReveal } from '@/app/components/animations'
+import { FanArtGallery } from '@/app/components/gallery'
+import { loadFanArtImages } from '@/app/lib/fanart'
 
 const MOBILE_QUICK_LINKS = [
   { label: '치지직', href: 'https://chzzk.naver.com/1d333ff175b4db5bd06f87a88579ec1e' },
@@ -26,6 +28,7 @@ const MOBILE_QUICK_LINKS = [
 
 
 export default async function Page(): Promise<ReactElement> {
+  const fanArtImages = loadFanArtImages()
   const liveStatus = await getChzzkLiveStatus()
   const liveChipClass = `chip inline-flex items-center gap-1.5 border ${liveStatus.isLive ? 'bg-rose-500/90 border-rose-300/60 text-white' : 'bg-slate-700/80 border-slate-600/70 text-slate-100'}`
   const viewerText =
@@ -178,6 +181,19 @@ export default async function Page(): Promise<ReactElement> {
                   <YouTubeHubSection />
                 </SectionTracker>
               </ScrollReveal>
+              {fanArtImages.length > 0 && (
+                <ScrollReveal>
+                  <SectionCard
+                    tone="lavender"
+                    className="lg:hidden"
+                    eyebrow="Fan Art"
+                    title="마녀의 작업실"
+                    description="팬들의 참여로 꾸며지는 갤러리입니다."
+                  >
+                    <FanArtGallery images={fanArtImages} />
+                  </SectionCard>
+                </ScrollReveal>
+              )}
             </div>
           </div>
           {/* Right Aside */}
