@@ -207,12 +207,12 @@ export default function ScheduleSection({
             </button>
           </div>
 
-          <div className="overflow-x-auto">
+          <div>
             <ul className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
               {weekColumns.map((day) => (
                 <li
                   key={day.isoDate}
-                  className={`flex min-h-[160px] flex-col rounded-2xl border p-3 shadow-sm transition md:min-h-[200px] md:p-4 ${
+                  className={`stagger-item flex min-h-[160px] flex-col rounded-2xl border p-3 shadow-sm transition md:min-h-[200px] md:p-4 ${
                     day.isWeekend ? 'border-purple-300/70 bg-purple-50/80' : 'border-white/60 bg-white/80'
                   }`}
                 >
@@ -238,7 +238,7 @@ export default function ScheduleSection({
                       day.events.map((event) => (
                         <article
                           key={event.id}
-                          className="px-3 py-2 text-xs text-purple-900 border shadow-sm rounded-xl border-purple-100/70 bg-white/90"
+                          className="px-3 py-2 text-xs text-purple-900 border shadow-sm rounded-xl border-purple-100/70 bg-white/90 transition-all duration-200 hover:shadow-md hover:border-purple-200 hover:bg-white"
                         >
                           <p className="font-semibold text-purple-900/95 line-clamp-2 typography-body">{event.title}</p>
                           <p className="mt-1 text-[11px] font-medium text-purple-700/80 typography-small">
@@ -571,7 +571,7 @@ function formatMetadataDisplay(metadata: Record<string, unknown>): string {
 
 function ScheduleSkeleton({ daysToShow }: { daysToShow: number }) {
   return (
-    <div className="overflow-x-auto">
+    <div>
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
   {Array.from({ length: daysToShow }).map((_, index) => (
           <div

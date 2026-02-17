@@ -115,7 +115,7 @@ export default function Header({ brand, items = defaultItems }: HeaderProps) {
             {items.map((item) => (
               <li key={item.href}>
                 <a
-                  className="rounded-md px-3 py-2 text-ink hover:bg-[rgba(var(--moing-accent),0.35)] hover:text-[rgb(var(--moing-deep))] md:px-4 md:py-3"
+                  className="nav-indicator rounded-md px-3 py-2 text-ink transition-all duration-200 hover:bg-[rgba(var(--moing-accent),0.35)] hover:text-[rgb(var(--moing-deep))] md:px-4 md:py-3"
                   href={item.href}
                   aria-label={item.label}
                   title={item.label}

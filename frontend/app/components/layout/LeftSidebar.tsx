@@ -111,10 +111,23 @@ export default function LeftSidebar({ className, images }: LeftSidebarProps = {}
           throw new Error(`영상 정보를 불러오지 못했습니다. (${res.status})`);
         }
 
-        const payload = (await res.json()) as { video: TopVideoPayload | null };
+        const payload = (await res.json()) as {
+          moing: TopVideoPayload | null;
+          fullmoing: TopVideoPayload | null;
+        };
         if (cancelled) return;
 
-        setTopVideo(payload.video ?? null);
+        // 두 채널 중 조회수가 더 높은 영상을 선택
+        const candidates = [payload.moing, payload.fullmoing].filter(
+          (v): v is TopVideoPayload => v !== null
+        );
+        const best = candidates.reduce<TopVideoPayload | null>((acc, cur) => {
+          if (!acc) return cur;
+          const accCount = typeof acc.viewCount === "number" ? acc.viewCount : -1;
+          const curCount = typeof cur.viewCount === "number" ? cur.viewCount : -1;
+          return curCount > accCount ? cur : acc;
+        }, null);
+        setTopVideo(best);
         setTopVideoStatus("ready");
       } catch (err) {
         if (cancelled) return;
@@ -134,7 +147,6 @@ export default function LeftSidebar({ className, images }: LeftSidebarProps = {}
   const nextEvent = upcomingEvents[0] ?? null;
   const nextEventLabel = nextEvent ? formatEventDateTime(nextEvent) : undefined;
 
-  const latestVideo = useMemo(() => selectLatestVideo(youtubeData), [youtubeData]);
   const highlightVideos = useMemo(() => buildHighlightVideos(youtubeData), [youtubeData]);
 
   const gallery = useMemo(() => (images && images.length > 0 ? images : defaultImages), [images]);
@@ -176,7 +188,7 @@ export default function LeftSidebar({ className, images }: LeftSidebarProps = {}
         {scheduleStatus === "ready" && upcomingEvents.length > 1 && (
           <ul className="space-y-1 text-xs text-purple-800/80">
             {upcomingEvents.slice(1).map((event) => (
-              <li key={event.id} className="flex flex-col gap-0.5 rounded-lg px-2 py-1 bg-white/70">
+              <li key={event.id} className="flex flex-col gap-0.5 rounded-lg px-2 py-1 bg-white/70 transition-all duration-200 hover:bg-purple-50/80 hover:shadow-sm">
                 <span className="font-semibold text-purple-900/85 line-clamp-1">{event.title}</span>
                 <span>{formatEventDateTime(event)}</span>
               </li>
@@ -211,7 +223,9 @@ export default function LeftSidebar({ className, images }: LeftSidebarProps = {}
             {youtubeError ?? "유튜브 영상을 불러오지 못했습니다."}
           </YouTubeSectionStatus>
         )}
-        {youtubeStatus === "ready" && latestVideo && <QuickVideoItem label="방금 업로드" video={latestVideo} highlight />}
+        {youtubeStatus === "ready" && highlightVideos.map((entry, idx) => (
+          <QuickVideoItem key={entry.video.videoId} label={entry.label} video={entry.video} highlight={idx === 0} />
+        ))}
         {topVideoStatus === "loading" && (
           <YouTubeSectionStatus tone="info">지난달 인기 영상을 불러오는 중...</YouTubeSectionStatus>
         )}
@@ -354,40 +368,6 @@ function formatEventDateTime(event: ScheduleEvent): string {
   return `${formatter.format(startDate)} · ${endFormatter.format(endDate)}`;
 }
 
-function selectLatestVideo(data: ReturnType<typeof useYouTubeVideos>["data"]): TopVideoPayload | null {
-  if (!data) {
-    return null;
-  }
-
-  const candidates = [
-    ...(data.moing ?? []),
-    ...(data.fullmoing ?? []),
-    ...(data.moingFan ?? []),
-  ];
-
-  if (candidates.length === 0) {
-    return null;
-  }
-
-  return candidates.reduce<TopVideoPayload | null>((latest, candidate) => {
-    const candidateTime = Date.parse(candidate.publishedAt);
-    if (Number.isNaN(candidateTime)) {
-      return latest;
-    }
-
-    if (!latest) {
-      return mapVideo(candidate);
-    }
-
-    const latestTime = Date.parse(latest.publishedAt);
-    if (Number.isNaN(latestTime) || candidateTime > latestTime) {
-      return mapVideo(candidate);
-    }
-
-    return latest;
-  }, null);
-}
-
 function buildHighlightVideos(data: ReturnType<typeof useYouTubeVideos>["data"]) {
   if (!data) {
     return [] as Array<{ label: string; video: TopVideoPayload }>;
@@ -396,13 +376,10 @@ function buildHighlightVideos(data: ReturnType<typeof useYouTubeVideos>["data"])
   const entries: Array<{ label: string; video: TopVideoPayload }> = [];
 
   if (data.moing?.[0]) {
-    entries.push({ label: "공식", video: mapVideo(data.moing[0]) });
+    entries.push({ label: "공식 최신", video: mapVideo(data.moing[0]) });
   }
   if (data.fullmoing?.[0]) {
-    entries.push({ label: "다시보기", video: mapVideo(data.fullmoing[0]) });
-  }
-  if (data.moingFan?.[0]) {
-    entries.push({ label: "팬", video: mapVideo(data.moingFan[0]) });
+    entries.push({ label: "다시보기 최신", video: mapVideo(data.fullmoing[0]) });
   }
 
   return entries;
@@ -446,7 +423,7 @@ function QuickVideoItem({
       data-analytics-label={video.title}
       data-analytics-location="left_sidebar_video_pick"
       data-analytics-type="video_link"
-      className={`flex flex-col gap-1 rounded-xl border px-3 py-2 text-xs transition-colors ${
+      className={`flex flex-col gap-1 rounded-xl border px-3 py-2 text-xs transition-all duration-200 hover:scale-[1.02] hover:shadow-md ${
         highlight
           ? "border-purple-300 bg-purple-50/80 hover:bg-purple-100/80"
           : "border-purple-200/60 bg-white/70 hover:bg-purple-100/70"

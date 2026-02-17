@@ -21,7 +21,7 @@ export default function Footer() {
         <div className="grid gap-8 md:grid-cols-3 md:gap-12">
           {/* Brand */}
           <div className="flex flex-col gap-3">
-            <Link href="/" className="text-lg font-extrabold text-ink">
+            <Link href="/" className="text-lg font-extrabold text-ink transition-colors duration-200 hover:text-[rgb(var(--moing-primary))]">
               마녀의 포션 공방
             </Link>
             <p className="text-xs leading-relaxed text-purple-800/60">
@@ -40,7 +40,7 @@ export default function Footer() {
                     href={link.href}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-sm text-purple-900/80 transition-colors hover:text-purple-700"
+                    className="link-underline text-sm text-purple-900/80 transition-colors hover:text-purple-700"
                     data-analytics-menu="true"
                     data-analytics-id={link.href}
                     data-analytics-label={link.label}
@@ -62,7 +62,7 @@ export default function Footer() {
                 <li key={link.href}>
                   <Link
                     href={link.href}
-                    className="text-sm text-purple-900/80 transition-colors hover:text-purple-700"
+                    className="link-underline text-sm text-purple-900/80 transition-colors hover:text-purple-700"
                     data-analytics-menu="true"
                     data-analytics-id={link.href}
                     data-analytics-label={link.label}

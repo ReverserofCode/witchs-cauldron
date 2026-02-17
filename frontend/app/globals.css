@@ -137,6 +137,11 @@ body {
     font-weight: 700;
     text-decoration: none;
     border: 1px solid rgba(255, 255, 255, 0.25);
+    transition: transform 150ms cubic-bezier(0.22, 1, 0.36, 1), filter 200ms ease;
+}
+
+.btn:active {
+    transform: scale(0.97);
 }
 
 .btn-primary {
@@ -318,6 +323,7 @@ body {
     background: linear-gradient(135deg, rgb(var(--moing-primary)), rgb(var(--moing-deep)));
     border: 1px solid rgba(var(--moing-white), 0.2);
     box-shadow: 0 4px 12px rgba(var(--shadow-primary), 0.22);
+    transform: scale(1.02);
 }
 
 .tab-pill-active:hover {
@@ -333,4 +339,104 @@ body {
     -webkit-backdrop-filter: blur(10px);
     backdrop-filter: blur(10px);
     border-bottom: 1px solid rgba(var(--moing-accent), 0.7);
+}
+
+/* ─── Micro-interaction utilities ─── */
+
+/* Scroll reveal: 스크롤 시 섹션 등장 애니메이션 */
+.scroll-reveal {
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity 600ms cubic-bezier(0.22, 1, 0.36, 1),
+                transform 600ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.scroll-reveal.revealed {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Stagger children: 자식 요소 시차 등장 */
+.scroll-reveal.revealed .stagger-item {
+    opacity: 0;
+    animation: fade-in 500ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.scroll-reveal.revealed .stagger-item:nth-child(1) { animation-delay: 0ms; }
+.scroll-reveal.revealed .stagger-item:nth-child(2) { animation-delay: 80ms; }
+.scroll-reveal.revealed .stagger-item:nth-child(3) { animation-delay: 160ms; }
+.scroll-reveal.revealed .stagger-item:nth-child(4) { animation-delay: 240ms; }
+.scroll-reveal.revealed .stagger-item:nth-child(5) { animation-delay: 320ms; }
+.scroll-reveal.revealed .stagger-item:nth-child(6) { animation-delay: 400ms; }
+
+/* Link underline: 좌→우 그리기 효과 */
+.link-underline {
+    position: relative;
+}
+
+.link-underline::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: -2px;
+    width: 100%;
+    height: 1.5px;
+    background: rgb(var(--moing-primary));
+    transform: scaleX(0);
+    transform-origin: left center;
+    transition: transform 250ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.link-underline:hover::after {
+    transform: scaleX(1);
+}
+
+/* Nav indicator: 중앙에서 확장되는 하단 인디케이터 */
+.nav-indicator {
+    position: relative;
+}
+
+.nav-indicator::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    width: 0;
+    height: 2px;
+    background: rgb(var(--moing-primary));
+    border-radius: 1px;
+    transition: width 250ms cubic-bezier(0.22, 1, 0.36, 1),
+                left 250ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.nav-indicator:hover::after {
+    width: 60%;
+    left: 20%;
+}
+
+/* Reduced motion: 접근성 */
+@media (prefers-reduced-motion: reduce) {
+    .scroll-reveal {
+        opacity: 1;
+        transform: none;
+        transition: none;
+    }
+
+    .scroll-reveal.revealed .stagger-item {
+        opacity: 1;
+        animation: none;
+    }
+
+    .link-underline::after,
+    .nav-indicator::after {
+        transition: none;
+    }
+
+    .btn {
+        transition: none;
+    }
+
+    .tab-pill-active {
+        transform: none;
+    }
 }

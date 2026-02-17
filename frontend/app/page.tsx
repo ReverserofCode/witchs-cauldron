@@ -15,6 +15,7 @@ import {
   YouTubeHubSection,
 } from '@/app/components/sections'
 import { SectionTracker } from '@/app/components/analytics/SectionTracker'
+import { ScrollReveal } from '@/app/components/animations'
 
 const MOBILE_QUICK_LINKS = [
   { label: '치지직', href: 'https://chzzk.naver.com/1d333ff175b4db5bd06f87a88579ec1e' },
@@ -61,7 +62,7 @@ export default async function Page(): Promise<ReactElement> {
                           href={liveStatus.channelUrl}
                           target="_blank"
                           rel="noreferrer"
-                          className={liveChipClass}
+                          className={`${liveChipClass} transition-all duration-200 hover:scale-105 hover:brightness-110`}
                         >
                           <span className="inline-block w-1.5 h-1.5 sm:w-2 sm:h-2 bg-current rounded-full" />
                           <span className="text-xs sm:text-sm">{liveChipLabel}</span>
@@ -102,71 +103,81 @@ export default async function Page(): Promise<ReactElement> {
                 </p>
               </SectionCard>
 
-              <SectionCard
-                tone="lavender"
-                className="lg:hidden"
-                eyebrow="Quick Access"
-                title="모바일 빠른 이동"
-                description="사이드바 핵심 정보와 링크를 모바일 화면에서도 바로 확인하세요."
-              >
-                <div className="grid grid-cols-2 gap-2">
-                  {MOBILE_QUICK_LINKS.map((link) => (
+              <ScrollReveal>
+                <SectionCard
+                  tone="lavender"
+                  className="lg:hidden"
+                  eyebrow="Quick Access"
+                  title="모바일 빠른 이동"
+                  description="사이드바 핵심 정보와 링크를 모바일 화면에서도 바로 확인하세요."
+                >
+                  <div className="grid grid-cols-2 gap-2">
+                    {MOBILE_QUICK_LINKS.map((link) => (
+                      <a
+                        key={link.href}
+                        href={link.href}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center justify-center rounded-xl border border-purple-200/70 bg-white/80 px-3 py-2 text-xs font-semibold text-purple-900 transition-all duration-200 hover:bg-purple-100/70 hover:scale-[1.03] hover:shadow-sm"
+                        data-analytics-menu="true"
+                        data-analytics-id={link.href}
+                        data-analytics-label={link.label}
+                        data-analytics-location="mobile_quick_links"
+                        data-analytics-type="mobile_quick_link"
+                      >
+                        {link.label}
+                      </a>
+                    ))}
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
                     <a
-                      key={link.href}
-                      href={link.href}
+                      href="#schedule-section"
+                      className="inline-flex items-center justify-center rounded-xl border border-purple-300/70 bg-purple-100/80 px-3 py-2 text-xs font-semibold text-purple-900 transition-all duration-200 hover:bg-purple-200/70 hover:scale-[1.03] hover:shadow-sm"
+                      data-analytics-menu="true"
+                      data-analytics-id="#schedule-section"
+                      data-analytics-label="방송 일정 보기"
+                      data-analytics-location="mobile_quick_links"
+                      data-analytics-type="schedule_anchor"
+                    >
+                      방송 일정 보기
+                    </a>
+                    <a
+                      href="https://cafe.naver.com/moinge"
                       target="_blank"
                       rel="noreferrer"
-                      className="inline-flex items-center justify-center rounded-xl border border-purple-200/70 bg-white/80 px-3 py-2 text-xs font-semibold text-purple-900 transition-colors hover:bg-purple-100/70"
+                      className="inline-flex items-center justify-center rounded-xl border border-purple-300/70 bg-purple-100/80 px-3 py-2 text-xs font-semibold text-purple-900 transition-all duration-200 hover:bg-purple-200/70 hover:scale-[1.03] hover:shadow-sm"
                       data-analytics-menu="true"
-                      data-analytics-id={link.href}
-                      data-analytics-label={link.label}
+                      data-analytics-id="https://cafe.naver.com/moinge"
+                      data-analytics-label="팬카페 바로가기"
                       data-analytics-location="mobile_quick_links"
-                      data-analytics-type="mobile_quick_link"
+                      data-analytics-type="community_link"
                     >
-                      {link.label}
+                      팬카페 바로가기
                     </a>
-                  ))}
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <a
-                    href="#schedule-section"
-                    className="inline-flex items-center justify-center rounded-xl border border-purple-300/70 bg-purple-100/80 px-3 py-2 text-xs font-semibold text-purple-900 transition-colors hover:bg-purple-200/70"
-                    data-analytics-menu="true"
-                    data-analytics-id="#schedule-section"
-                    data-analytics-label="방송 일정 보기"
-                    data-analytics-location="mobile_quick_links"
-                    data-analytics-type="schedule_anchor"
-                  >
-                    방송 일정 보기
-                  </a>
-                  <a
-                    href="https://cafe.naver.com/moinge"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center justify-center rounded-xl border border-purple-300/70 bg-purple-100/80 px-3 py-2 text-xs font-semibold text-purple-900 transition-colors hover:bg-purple-200/70"
-                    data-analytics-menu="true"
-                    data-analytics-id="https://cafe.naver.com/moinge"
-                    data-analytics-label="팬카페 바로가기"
-                    data-analytics-location="mobile_quick_links"
-                    data-analytics-type="community_link"
-                  >
-                    팬카페 바로가기
-                  </a>
-                </div>
-              </SectionCard>
+                  </div>
+                </SectionCard>
+              </ScrollReveal>
 
-              <SectionTracker sectionId="featured-videos">
-                <FeaturedVideoSection />
-              </SectionTracker>
-              <SectionTracker sectionId="clips-section">
-                <ClipsSection />
-              </SectionTracker>
-              <SectionTracker sectionId="schedule-section">
-                <ScheduleSection />
-              </SectionTracker>
-              <SectionTracker sectionId="youtube-hub">
-                <YouTubeHubSection />
-              </SectionTracker>
+              <ScrollReveal>
+                <SectionTracker sectionId="featured-videos">
+                  <FeaturedVideoSection />
+                </SectionTracker>
+              </ScrollReveal>
+              <ScrollReveal>
+                <SectionTracker sectionId="clips-section">
+                  <ClipsSection />
+                </SectionTracker>
+              </ScrollReveal>
+              <ScrollReveal>
+                <SectionTracker sectionId="schedule-section">
+                  <ScheduleSection />
+                </SectionTracker>
+              </ScrollReveal>
+              <ScrollReveal>
+                <SectionTracker sectionId="youtube-hub">
+                  <YouTubeHubSection />
+                </SectionTracker>
+              </ScrollReveal>
             </div>
           </div>
           {/* Right Aside */}

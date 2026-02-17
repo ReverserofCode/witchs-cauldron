@@ -157,7 +157,7 @@ export default function FeaturedVideoSection() {
       {!isLoading && !isError && (
         <div className="grid gap-5 grid-cols-1 sm:grid-cols-[1.4fr_1fr]">
           {/* Latest (large) */}
-          <div className="relative">
+          <div className="relative stagger-item">
             {latestVideo ? (
               <div className="relative">
                 <span className="absolute top-2 left-2 z-10 rounded-full bg-emerald-500/90 px-2.5 py-0.5 text-[10px] font-bold text-white shadow-sm">
@@ -171,7 +171,7 @@ export default function FeaturedVideoSection() {
           </div>
 
           {/* Top (smaller) */}
-          <div className="relative">
+          <div className="relative stagger-item">
             {topVideo ? (
               <div className="relative">
                 <span className="absolute top-2 left-2 z-10 rounded-full bg-amber-500/90 px-2.5 py-0.5 text-[10px] font-bold text-white shadow-sm">

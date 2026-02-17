@@ -92,7 +92,7 @@ export default function RightSidebar({ className, images }: RightSidebarProps = 
       >
         <ul className="flex flex-col gap-2 text-xs text-purple-900/85">
           {COMMUNITY_LINKS.map((link) => (
-            <li key={link.href} className="px-3 py-2 border shadow-sm rounded-xl border-purple-200/60 bg-white/70">
+            <li key={link.href} className="px-3 py-2 border shadow-sm rounded-xl border-purple-200/60 bg-white/70 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
               <a
                 href={link.href}
                 target="_blank"

@@ -110,14 +110,14 @@ export default function ScheduleModal({
             <button
               type="button"
               onClick={handleToday}
-              className="px-3 py-1.5 text-xs font-semibold text-purple-700 transition-colors rounded-lg hover:bg-purple-100"
+              className="px-3 py-1.5 text-xs font-semibold text-purple-700 transition-all duration-200 rounded-lg hover:bg-purple-100 active:scale-95"
             >
               오늘
             </button>
             <button
               type="button"
               onClick={handlePrevMonth}
-              className="flex items-center justify-center w-8 h-8 transition-colors rounded-full hover:bg-purple-100"
+              className="flex items-center justify-center w-8 h-8 transition-all duration-200 rounded-full hover:bg-purple-100 hover:scale-110 active:scale-95"
               aria-label="이전 달"
             >
               <ChevronLeftIcon />
@@ -125,7 +125,7 @@ export default function ScheduleModal({
             <button
               type="button"
               onClick={handleNextMonth}
-              className="flex items-center justify-center w-8 h-8 transition-colors rounded-full hover:bg-purple-100"
+              className="flex items-center justify-center w-8 h-8 transition-all duration-200 rounded-full hover:bg-purple-100 hover:scale-110 active:scale-95"
               aria-label="다음 달"
             >
               <ChevronRightIcon />
@@ -133,7 +133,7 @@ export default function ScheduleModal({
             <button
               type="button"
               onClick={onClose}
-              className="flex items-center justify-center w-8 h-8 ml-2 transition-colors rounded-full hover:bg-purple-100"
+              className="flex items-center justify-center w-8 h-8 ml-2 transition-all duration-200 rounded-full hover:bg-purple-100 hover:scale-110 active:scale-95"
               aria-label="닫기"
             >
               <CloseIcon />
@@ -141,8 +141,8 @@ export default function ScheduleModal({
           </div>
         </div>
 
-        {/* Calendar Grid */}
-        <div className="flex-1 p-4 overflow-auto">
+        {/* Calendar Content */}
+        <div className="flex-1 p-3 sm:p-4 overflow-y-auto overflow-x-hidden">
           {events.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full py-12 text-center">
               <div className="w-16 h-16 mb-4 text-purple-300">
@@ -155,25 +155,33 @@ export default function ScheduleModal({
             </div>
           ) : (
             <>
-              {/* Weekday Headers */}
-              <div className="grid grid-cols-7 gap-1 mb-2">
-                {["일", "월", "화", "수", "목", "금", "토"].map((day, index) => (
-                  <div
-                    key={day}
-                    className={`py-2 text-xs font-semibold text-center ${
-                      index === 0 ? "text-red-500" : index === 6 ? "text-blue-500" : "text-purple-700"
-                    }`}
-                  >
-                    {day}
-                  </div>
-                ))}
+              {/* Mobile: Agenda List View */}
+              <div className="sm:hidden">
+                <AgendaView days={calendarDays} />
               </div>
 
-              {/* Calendar Days */}
-              <div className="grid grid-cols-7 gap-1">
-                {calendarDays.map((day, index) => (
-                  <CalendarDayCell key={index} day={day} />
-                ))}
+              {/* Desktop: Calendar Grid */}
+              <div className="hidden sm:block">
+                {/* Weekday Headers */}
+                <div className="grid grid-cols-7 gap-1 mb-2">
+                  {["일", "월", "화", "수", "목", "금", "토"].map((day, index) => (
+                    <div
+                      key={day}
+                      className={`py-2 text-xs font-semibold text-center ${
+                        index === 0 ? "text-red-500" : index === 6 ? "text-blue-500" : "text-purple-700"
+                      }`}
+                    >
+                      {day}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Calendar Days */}
+                <div className="grid grid-cols-7 gap-1">
+                  {calendarDays.map((day, index) => (
+                    <CalendarDayCell key={index} day={day} />
+                  ))}
+                </div>
               </div>
             </>
           )}
@@ -193,26 +201,23 @@ export default function ScheduleModal({
 }
 
 function CalendarDayCell({ day }: { day: CalendarDay }) {
-  const [showTooltip, setShowTooltip] = useState(false);
   const dateLabel = day.date.getDate();
 
   return (
     <div
-      className={`relative min-h-[80px] sm:min-h-[100px] p-1 sm:p-2 rounded-lg border transition-colors ${
+      className={`relative min-h-[100px] p-2 rounded-lg border transition-all duration-200 ${
         day.isCurrentMonth
           ? day.isToday
-            ? "border-purple-400 bg-purple-100/80"
+            ? "border-purple-400 bg-purple-100/80 hover:bg-purple-100"
             : day.isWeekend
-            ? "border-purple-200/60 bg-purple-50/50"
-            : "border-purple-100/60 bg-white/80"
+            ? "border-purple-200/60 bg-purple-50/50 hover:bg-purple-50/80 hover:border-purple-200"
+            : "border-purple-100/60 bg-white/80 hover:bg-purple-50/40 hover:border-purple-200/80"
           : "border-transparent bg-gray-50/50"
-      }`}
-      onMouseEnter={() => day.events.length > 0 && setShowTooltip(true)}
-      onMouseLeave={() => setShowTooltip(false)}
+      } ${day.events.length > 0 ? "hover:shadow-md cursor-default" : ""}`}
     >
       {/* Date Number */}
       <div
-        className={`text-xs sm:text-sm font-semibold mb-1 ${
+        className={`text-sm font-semibold mb-1 ${
           !day.isCurrentMonth
             ? "text-gray-300"
             : day.isToday
@@ -237,11 +242,10 @@ function CalendarDayCell({ day }: { day: CalendarDay }) {
         {day.events.slice(0, 3).map((event) => (
           <div
             key={event.id}
-            className="px-1 py-0.5 text-[10px] sm:text-xs font-medium text-purple-900 truncate bg-purple-200/60 rounded"
+            className="px-1 py-0.5 text-xs font-medium text-purple-900 truncate bg-purple-200/60 rounded"
             title={`${event.title} - ${formatEventTime(event.start)}`}
           >
-            <span className="hidden sm:inline">{formatEventTime(event.start)} </span>
-            {event.title}
+            {formatEventTime(event.start)} {event.title}
           </div>
         ))}
         {day.events.length > 3 && (
@@ -250,22 +254,83 @@ function CalendarDayCell({ day }: { day: CalendarDay }) {
           </div>
         )}
       </div>
+    </div>
+  );
+}
 
-      {/* Tooltip for events */}
-      {showTooltip && day.events.length > 0 && (
-        <div className="absolute left-0 z-10 w-48 p-2 mt-1 text-xs bg-white border border-purple-200 shadow-lg top-full rounded-xl">
+function AgendaView({ days }: { days: CalendarDay[] }) {
+  const daysWithEvents = days.filter((day) => day.isCurrentMonth && day.events.length > 0);
+  const daysWithoutEvents = days.filter((day) => day.isCurrentMonth && day.events.length === 0);
+
+  const dateFormatter = new Intl.DateTimeFormat("ko-KR", {
+    month: "numeric",
+    day: "numeric",
+    weekday: "short",
+  });
+
+  if (daysWithEvents.length === 0) {
+    return (
+      <div className="flex flex-col items-center py-8 text-center">
+        <p className="text-sm font-semibold text-purple-800">이번 달에는 예정된 방송이 없습니다.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      {daysWithEvents.map((day) => (
+        <div
+          key={formatDateKey(day.date)}
+          className={`rounded-xl border p-3 ${
+            day.isToday
+              ? "border-purple-400 bg-purple-100/80"
+              : "border-purple-100 bg-white/80"
+          }`}
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <span
+              className={`text-sm font-bold ${
+                day.isToday
+                  ? "text-purple-900"
+                  : day.date.getDay() === 0
+                  ? "text-red-500"
+                  : day.date.getDay() === 6
+                  ? "text-blue-500"
+                  : "text-purple-800"
+              }`}
+            >
+              {dateFormatter.format(day.date)}
+            </span>
+            {day.isToday && (
+              <span className="px-1.5 py-0.5 text-[10px] font-bold text-white bg-purple-600 rounded">
+                오늘
+              </span>
+            )}
+          </div>
           <div className="space-y-1.5">
             {day.events.map((event) => (
-              <div key={event.id} className="p-1.5 rounded-lg bg-purple-50">
-                <p className="font-semibold text-purple-900">{event.title}</p>
-                <p className="text-purple-700">{formatEventTime(event.start)}</p>
-                {event.platform && (
-                  <p className="text-purple-600">{event.platform}</p>
-                )}
+              <div
+                key={event.id}
+                className="flex items-start gap-2 rounded-lg bg-purple-50/80 px-3 py-2"
+              >
+                <span className="shrink-0 text-xs font-semibold text-purple-600 min-w-[4rem]">
+                  {formatEventTime(event.start) || "시간 미정"}
+                </span>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-purple-900">{event.title}</p>
+                  {event.platform && (
+                    <p className="text-xs text-purple-600">{event.platform}</p>
+                  )}
+                </div>
               </div>
             ))}
           </div>
         </div>
+      ))}
+      {daysWithoutEvents.length > 0 && (
+        <p className="pt-2 text-center text-xs text-purple-500/70">
+          나머지 {daysWithoutEvents.length}일은 일정이 없습니다.
+        </p>
       )}
     </div>
   );
