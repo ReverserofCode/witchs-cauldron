@@ -1,0 +1,40 @@
+name: Rebuild (Full Reset)
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: cd-deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Full rebuild with volume reset
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          port: ${{ secrets.SSH_PORT }}
+          timeout: 600s
+          script: |
+            cd ${{ secrets.DEPLOY_PATH }}
+            git fetch origin main
+            git reset --hard origin/main
+            docker compose -f docker-compose.prod.yml down -v
+            docker builder prune -f
+            docker compose -f docker-compose.prod.yml up -d --build --force-recreate
+            echo "Waiting for health check..."
+            for i in $(seq 1 30); do
+              if curl -sf http://localhost:3000/api/health > /dev/null 2>&1; then
+                echo "Frontend healthy!"
+                break
+              fi
+              echo "Attempt $i/30..."
+              sleep 3
+            done
+            docker compose -f docker-compose.prod.yml ps
+            docker image prune -f
