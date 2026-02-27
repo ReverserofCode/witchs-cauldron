@@ -14,5 +14,9 @@ frontend_local
 frontend/public/clips/__trash/
 frontend/public/clips/__tslist_*.txt
 
+# playwright MCP
+.playwright-mcp/
+playwright-screenshots/
+
 # local environment files
 .env
