@@ -677,12 +677,12 @@ export default function AnalyticsPage() {
     <div className="min-h-screen bg-page px-4 py-8 sm:px-6 sm:py-10">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
         {/* Header */}
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div className="min-w-0">
-            <h1 className="text-2xl font-black text-purple-950 sm:text-3xl">Analytics Dashboard</h1>
-            <div className="text-xs text-purple-700/80 sm:text-sm">
+            <h1 className="text-2xl font-black leading-tight tracking-tight text-purple-950 sm:text-3xl">Analytics Dashboard</h1>
+            <p className="mt-2 text-sm font-semibold leading-6 tracking-normal text-purple-900/90 sm:mt-1.5 sm:text-base">
               {fromLabel} ~ {toLabel}
-            </div>
+            </p>
           </div>
           <button
             type="button"
