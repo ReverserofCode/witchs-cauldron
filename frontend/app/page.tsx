@@ -61,9 +61,9 @@ export default async function Page(): Promise<ReactElement> {
   return (
     <main className="py-10 lg:py-16">
       <div className="w-full px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
-        <div className="grid w-full grid-cols-1 gap-4 lg:grid-cols-[minmax(180px,0.7fr)_minmax(0,2.6fr)_minmax(180px,0.7fr)] xl:grid-cols-[minmax(200px,0.8fr)_minmax(0,2.4fr)_minmax(200px,0.8fr)] xl:gap-6">
+        <div className="grid w-full grid-cols-1 gap-4 lg:grid-cols-[minmax(180px,0.7fr)_minmax(0,2.6fr)_minmax(180px,0.7fr)] lg:items-start xl:grid-cols-[minmax(200px,0.8fr)_minmax(0,2.4fr)_minmax(200px,0.8fr)] xl:gap-6">
           {/* Left Aside */}
-          <LeftSidebar className="hidden lg:flex lg:sticky lg:top-24" />
+          <LeftSidebar className="hidden lg:flex lg:self-start lg:sticky lg:top-24" />
           {/* Center Content Wrapper: 중앙 컬럼에 본문을 모아 배치 */}
           <div className="flex min-w-0 flex-col gap-10 text-[15px] leading-relaxed lg:px-3">
             {/* HERO */}
@@ -231,7 +231,7 @@ export default async function Page(): Promise<ReactElement> {
             </div>
           </div>
           {/* Right Aside */}
-          <RightSidebar className="hidden lg:flex lg:sticky lg:top-24" />
+          <RightSidebar className="hidden lg:flex lg:self-start lg:sticky lg:top-24" />
         </div>
       </div>
     </main>

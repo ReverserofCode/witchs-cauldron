@@ -39,7 +39,7 @@ export default function RightSidebar({ className, images }: RightSidebarProps = 
   return (
     <aside
       className={[
-        "flex h-full w-full max-w-[200px] flex-col gap-4 rounded-3xl border border-white/15 bg-white/10 p-4 shadow-lg shadow-purple-950/20 backdrop-blur-lg lg:max-w-[220px] xl:max-w-[240px]",
+        "flex min-h-0 w-full max-w-[200px] flex-col gap-4 rounded-3xl border border-white/15 bg-white/10 p-4 shadow-lg shadow-purple-950/20 backdrop-blur-lg lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto lg:max-w-[220px] xl:max-w-[240px]",
         className,
       ]
         .filter(Boolean)
@@ -77,7 +77,7 @@ export default function RightSidebar({ className, images }: RightSidebarProps = 
 
       <SectionCard
         tone="lavender"
-        className="flex-1 shadow-md rounded-2xl border-white/40 bg-white/60 shadow-purple-900/10"
+        className="min-h-0 shadow-md rounded-2xl border-white/40 bg-white/60 shadow-purple-900/10"
         bodyClassName="gap-5"
         eyebrow="Fan Art"
         title="마녀의 작업실"

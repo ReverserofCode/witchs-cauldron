@@ -219,7 +219,7 @@ export default function LeftSidebar({ className, images }: LeftSidebarProps = {}
   return (
     <aside
       className={[
-        "flex h-full w-full max-w-[200px] flex-col gap-4 rounded-3xl border border-white/15 bg-white/10 p-4 shadow-lg shadow-purple-950/20 backdrop-blur-lg lg:max-w-[220px] xl:max-w-[240px]",
+        "flex min-h-0 w-full max-w-[200px] flex-col gap-4 rounded-3xl border border-white/15 bg-white/10 p-4 shadow-lg shadow-purple-950/20 backdrop-blur-lg lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto lg:max-w-[220px] xl:max-w-[240px]",
         className,
       ]
         .filter(Boolean)
