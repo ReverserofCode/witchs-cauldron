@@ -38,27 +38,8 @@ export async function GET(request: NextRequest) {
   const pool = getPool();
   const rangeResult = await pool.query(
     `
-      WITH range_visitors AS (
-        SELECT
-          COALESCE(session_id::text, ip) AS visitor_key,
-          MIN(created_at) AS first_seen
-        FROM analytics_events
-        WHERE event_type = 'pageview' AND created_at >= $1 AND created_at < $2
-        GROUP BY COALESCE(session_id::text, ip)
-      ),
-      returning_visitors AS (
-        SELECT r.visitor_key
-        FROM range_visitors r
-        JOIN analytics_events e
-          ON COALESCE(e.session_id::text, e.ip) = r.visitor_key
-         AND e.event_type = 'pageview'
-         AND e.created_at < r.first_seen
-         AND e.created_at >= r.first_seen - interval '30 days'
-        GROUP BY r.visitor_key
-      )
       SELECT
-        (SELECT COUNT(*) FROM range_visitors) AS visitors,
-        (SELECT COUNT(*) FROM returning_visitors) AS returning_visitors,
+        (SELECT COUNT(DISTINCT COALESCE(session_id::text, ip)) FROM analytics_events WHERE event_type = 'pageview' AND created_at >= $1 AND created_at < $2) AS visitors,
         (SELECT COUNT(*) FROM analytics_events WHERE event_type = 'pageview' AND created_at >= $1 AND created_at < $2) AS pageviews,
         (SELECT COUNT(*) FROM analytics_events WHERE event_type = 'menu_click' AND created_at >= $1 AND created_at < $2) AS menu_clicks
     `,
@@ -148,7 +129,6 @@ export async function GET(request: NextRequest) {
     },
     totals: {
       visitors: Number(row.visitors ?? 0),
-      returningVisitors: Number(row.returning_visitors ?? 0),
       pageviews: Number(row.pageviews ?? 0),
       menuClicks: Number(row.menu_clicks ?? 0),
     },

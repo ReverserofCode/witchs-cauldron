@@ -240,7 +240,7 @@ RootLayout (app/layout.tsx)
 - **목적**: 통계 집계
 - **메서드**: GET
 - **응답**:
-  - `totals`: 고유 방문자, 재방문자, 페이지뷰, 메뉴 클릭
+  - `totals`: 고유 방문자, 페이지뷰, 메뉴 클릭
   - `daily[]`: 일별 페이지뷰, 고유 방문자, 메뉴 클릭
   - `topMenuClicks[]`: 메뉴 클릭 TOP 10
   - `sectionViews[]`: 섹션별 조회 수
