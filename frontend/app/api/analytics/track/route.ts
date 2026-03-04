@@ -23,6 +23,15 @@ function getUserAgent() {
   return headers().get("user-agent") ?? null;
 }
 
+function detectDeviceType(ua: string | null): "mobile" | "tablet" | "desktop" {
+  if (!ua) return "desktop";
+  const lower = ua.toLowerCase();
+  if (/tablet|ipad|playbook|silk/i.test(lower)) return "tablet";
+  if (/mobile|iphone|ipod|android.*mobile|windows phone|blackberry/i.test(lower)) return "mobile";
+  if (/android/i.test(lower)) return "tablet"; // Android without "mobile" → tablet
+  return "desktop";
+}
+
 function safeText(value: unknown, limit = 500) {
   if (typeof value !== "string") return null;
   const trimmed = value.trim();
@@ -54,7 +63,8 @@ export async function POST(request: NextRequest) {
   const elementType = safeText(payload?.element?.type, 64);
   const elementId = safeText(payload?.element?.id, 512);
   const elementLabel = safeText(payload?.element?.label, 128);
-  const metadata = payload?.metadata && typeof payload.metadata === "object" ? payload.metadata : null;
+  const rawMetadata = payload?.metadata && typeof payload.metadata === "object" ? payload.metadata : {};
+  const metadata = { ...rawMetadata, device_type: detectDeviceType(userAgent) };
 
   const pool = getPool();
   await pool.query(

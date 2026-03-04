@@ -120,6 +120,47 @@ export async function GET(request: NextRequest) {
     [fromIso, toExclusiveIso]
   );
 
+  const scrollDepthResult = await pool.query(
+    `
+      SELECT
+        (metadata->>'threshold')::int AS threshold,
+        COUNT(*) AS hits
+      FROM analytics_events
+      WHERE event_type = 'scroll_depth' AND created_at >= $1 AND created_at < $2
+        AND metadata->>'threshold' IS NOT NULL
+      GROUP BY threshold
+      ORDER BY threshold ASC
+    `,
+    [fromIso, toExclusiveIso]
+  );
+
+  const dwellTimeResult = await pool.query(
+    `
+      SELECT
+        ROUND(AVG((metadata->>'dwell_seconds')::numeric)) AS avg_dwell,
+        ROUND(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY (metadata->>'dwell_seconds')::numeric)) AS median_dwell,
+        COUNT(*) AS exits
+      FROM analytics_events
+      WHERE event_type = 'page_exit' AND created_at >= $1 AND created_at < $2
+        AND metadata->>'dwell_seconds' IS NOT NULL
+    `,
+    [fromIso, toExclusiveIso]
+  );
+
+  const deviceCategoryResult = await pool.query(
+    `
+      SELECT
+        COALESCE(metadata->>'device_type', metadata->>'device_category', 'unknown') AS category,
+        COUNT(*) AS events,
+        COUNT(DISTINCT COALESCE(session_id::text, ip)) AS visitors
+      FROM analytics_events
+      WHERE event_type = 'pageview' AND created_at >= $1 AND created_at < $2
+      GROUP BY category
+      ORDER BY visitors DESC
+    `,
+    [fromIso, toExclusiveIso]
+  );
+
   const row = rangeResult.rows[0] ?? {};
   return NextResponse.json({
     range: {
@@ -157,6 +198,20 @@ export async function GET(request: NextRequest) {
     topReferrers: topReferrersResult.rows.map((entry: { referrer: string; visits: string | number | null }) => ({
       referrer: entry.referrer,
       visits: Number(entry.visits ?? 0),
+    })),
+    scrollDepth: scrollDepthResult.rows.map((entry: { threshold: number; hits: string | number | null }) => ({
+      threshold: Number(entry.threshold),
+      hits: Number(entry.hits ?? 0),
+    })),
+    dwellTime: {
+      avgSeconds: Number(dwellTimeResult.rows[0]?.avg_dwell ?? 0),
+      medianSeconds: Number(dwellTimeResult.rows[0]?.median_dwell ?? 0),
+      totalExits: Number(dwellTimeResult.rows[0]?.exits ?? 0),
+    },
+    deviceCategories: deviceCategoryResult.rows.map((entry: { category: string; events: string | number | null; visitors: string | number | null }) => ({
+      category: entry.category,
+      events: Number(entry.events ?? 0),
+      visitors: Number(entry.visitors ?? 0),
     })),
   });
 }
