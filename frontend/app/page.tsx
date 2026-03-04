@@ -26,6 +26,7 @@ const MOBILE_QUICK_LINKS = [
   { label: '유튜브', href: 'https://www.youtube.com/channel/UCHzre37UF4o64HRhp-7CDzQ' },
   { label: '다시보기', href: 'https://www.youtube.com/@fullmoing' },
   { label: '팬카페', href: 'https://cafe.naver.com/moinge' },
+  { label: '분석 대시보드', href: '/admin/analytics' },
 ]
 
 const SEO_FAQ = [
@@ -131,22 +132,27 @@ export default async function Page(): Promise<ReactElement> {
                   description="사이드바 핵심 정보와 링크를 모바일 화면에서도 바로 확인하세요."
                 >
                   <div className="grid grid-cols-2 gap-2">
-                    {MOBILE_QUICK_LINKS.map((link) => (
-                      <a
-                        key={link.href}
-                        href={link.href}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex min-h-11 items-center justify-center rounded-xl border border-purple-200/70 bg-white/80 px-3.5 py-2.5 text-sm leading-tight font-semibold text-purple-900 transition-all duration-200 hover:bg-purple-100/70 hover:scale-[1.03] hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/70 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
-                        data-analytics-menu="true"
-                        data-analytics-id={link.href}
-                        data-analytics-label={link.label}
-                        data-analytics-location="mobile_quick_links"
-                        data-analytics-type="mobile_quick_link"
-                      >
-                        {link.label}
-                      </a>
-                    ))}
+                    {MOBILE_QUICK_LINKS.map((link) => {
+                      const isExternal = link.href.startsWith('http');
+                      const isAdmin = link.href === '/admin/analytics';
+
+                      return (
+                        <a
+                          key={link.href}
+                          href={link.href}
+                          target={isExternal ? '_blank' : undefined}
+                          rel={isExternal ? 'noreferrer' : undefined}
+                          className={`inline-flex min-h-11 items-center justify-center rounded-xl border border-purple-200/70 bg-white/80 px-3.5 py-2.5 text-sm leading-tight font-semibold text-purple-900 transition-all duration-200 hover:bg-purple-100/70 hover:scale-[1.03] hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/70 focus-visible:ring-offset-2 focus-visible:ring-offset-white ${isAdmin ? 'col-span-2' : ''}`}
+                          data-analytics-menu="true"
+                          data-analytics-id={link.href}
+                          data-analytics-label={link.label}
+                          data-analytics-location="mobile_quick_links"
+                          data-analytics-type={isAdmin ? 'admin_link' : 'mobile_quick_link'}
+                        >
+                          {link.label}
+                        </a>
+                      );
+                    })}
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <a
@@ -173,6 +179,7 @@ export default async function Page(): Promise<ReactElement> {
                     >
                       팬카페 바로가기
                     </a>
+
                   </div>
                 </SectionCard>
               </ScrollReveal>
