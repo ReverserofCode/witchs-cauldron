@@ -16,6 +16,31 @@ function inferLocation(target: HTMLElement) {
   return "unknown";
 }
 
+const PAGEVIEW_TRACK_KEY = "wc_tracked_pageviews";
+
+function hasTrackedInSession(path: string): boolean {
+  try {
+    const raw = sessionStorage.getItem(PAGEVIEW_TRACK_KEY);
+    if (!raw) return false;
+    const list = JSON.parse(raw) as string[];
+    return Array.isArray(list) && list.includes(path);
+  } catch {
+    return false;
+  }
+}
+
+function markTrackedInSession(path: string) {
+  try {
+    const raw = sessionStorage.getItem(PAGEVIEW_TRACK_KEY);
+    const list = raw ? (JSON.parse(raw) as string[]) : [];
+    const next = Array.isArray(list) ? list : [];
+    if (!next.includes(path)) next.push(path);
+    sessionStorage.setItem(PAGEVIEW_TRACK_KEY, JSON.stringify(next.slice(-100)));
+  } catch {
+    // ignore storage failures
+  }
+}
+
 export default function AnalyticsProvider() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -30,10 +55,11 @@ export default function AnalyticsProvider() {
     if (pathname.startsWith("/admin")) return;
 
     const path = currentPath();
-    if (!path || path === lastTrackedPathRef.current) {
+    if (!path || path === lastTrackedPathRef.current || hasTrackedInSession(path)) {
       return;
     }
     lastTrackedPathRef.current = path;
+    markTrackedInSession(path);
 
     trackEvent({
       type: "pageview",
@@ -48,15 +74,15 @@ export default function AnalyticsProvider() {
 
   useEffect(() => {
     const handlePageShow = (event: PageTransitionEvent) => {
-      // bfcache 복귀 시에도 페이지뷰를 재기록해 누락을 줄입니다.
+      // bfcache 복귀는 페이지 재방문이 아니라 상태 복원으로 간주하여
+      // pageview 중복 집계를 방지합니다.
       if (!event.persisted) return;
-      lastTrackedPathRef.current = "";
-      sendPageview();
+      lastTrackedPathRef.current = currentPath();
     };
 
     window.addEventListener("pageshow", handlePageShow);
     return () => window.removeEventListener("pageshow", handlePageShow);
-  }, [sendPageview]);
+  }, [currentPath]);
 
   useEffect(() => {
     const handleDocumentClick = (event: MouseEvent) => {
