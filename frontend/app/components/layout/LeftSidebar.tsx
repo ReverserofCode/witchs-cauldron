@@ -458,31 +458,17 @@ function formatSubscriberCount(count: number): string {
 }
 
 function ChannelStatIcon({ type }: { type: "youtube" | "replay" | "chzzk" }) {
-  const cls = "w-6 h-6";
-  switch (type) {
-    case "youtube":
-      return (
-        <svg viewBox="0 0 24 24" aria-hidden="true" className={cls} fill="none">
-          <rect x="2" y="5" width="20" height="14" rx="4" fill="#FF0000" />
-          <polygon points="10,9 16,12 10,15" fill="#fff" />
-        </svg>
-      );
-    case "replay":
-      return (
-        <svg viewBox="0 0 24 24" aria-hidden="true" className={cls} fill="none">
-          <circle cx="12" cy="12" r="10" fill="#FF0000" />
-          <polygon points="11,9 16,12 11,15" fill="#fff" />
-          <circle cx="12" cy="12" r="7" stroke="#fff" strokeWidth="1.5" fill="none" />
-          <rect x="11.7" y="8" width="1.6" height="5" rx="0.8" fill="#fff" transform="rotate(30 12.5 10.5)" />
-        </svg>
-      );
-    case "chzzk":
-      return (
-        <svg viewBox="0 0 24 24" aria-hidden="true" className={cls} fill="none">
-          <polygon points="13,2 3,14 11,14 9,22 21,8 13,8" fill="#FFD600" stroke="#FFD600" strokeWidth="1.2" />
-        </svg>
-      );
-  }
+  const srcByType: Record<typeof type, string> = {
+    youtube: "/gnbIcon/YouTube.svg",
+    replay: "/gnbIcon/YouTube.svg",
+    chzzk: "/gnbIcon/chzzk Icon.png",
+  };
+
+  return (
+    <span className="relative inline-block w-6 h-6">
+      <Image src={srcByType[type]} alt="" fill className="object-contain" sizes="24px" />
+    </span>
+  );
 }
 
 function ChannelStatCard({ icon, label, value }: { icon: "youtube" | "replay" | "chzzk"; label: string; value: string }) {

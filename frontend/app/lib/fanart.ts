@@ -23,7 +23,13 @@ export function loadFanArtImages(): FanArtImage[] {
           IMAGE_EXTENSIONS.some((pattern) => pattern.test(entry.name))
       )
       .map((entry) => entry.name)
-      .sort((a, b) => a.localeCompare(b, "ko"));
+      .sort((a, b) => {
+        const aPath = path.join(FAN_ART_DIR, a);
+        const bPath = path.join(FAN_ART_DIR, b);
+        const aTime = fs.statSync(aPath).mtimeMs;
+        const bTime = fs.statSync(bPath).mtimeMs;
+        return bTime - aTime;
+      });
   } catch {
     return [];
   }
@@ -36,7 +42,7 @@ export function loadFanArtImages(): FanArtImage[] {
       .trim();
 
     return {
-      src: `/rightAside/${filename}`,
+      src: `/rightAside/${encodeURIComponent(filename)}`,
       alt:
         readable.length > 0
           ? `모잉 팬아트 ${readable}`

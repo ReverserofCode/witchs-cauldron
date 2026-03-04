@@ -19,51 +19,27 @@ const defaultItems: HeaderItem[] = [
 ];
 
 function HeaderIcon({ name, className }: { name: string; className?: string }) {
-  switch (name) {
-    case "유튜브":
-      return (
-        <svg viewBox="0 0 24 24" aria-hidden="true" className={className} fill="none">
-          <rect x="2" y="5" width="20" height="14" rx="4" fill="#FF0000" />
-          <polygon points="10,9 16,12 10,15" fill="#fff" />
-        </svg>
-      );
-    case "유튜브 다시보기":
-      return (
-        <svg viewBox="0 0 24 24" aria-hidden="true" className={className} fill="none">
-          <circle cx="12" cy="12" r="10" fill="#FF0000" />
-          <polygon points="11,9 16,12 11,15" fill="#fff" />
-          <circle cx="12" cy="12" r="7" stroke="#fff" strokeWidth="1.5" fill="none" />
-          <rect
-            x="11.7"
-            y="8"
-            width="1.6"
-            height="5"
-            rx="0.8"
-            fill="#fff"
-            transform="rotate(30 12.5 10.5)"
-          />
-        </svg>
-      );
-    case "팬카페":
-      return (
-        <svg viewBox="0 0 24 24" aria-hidden="true" className={className} fill="none">
-          <ellipse cx="12" cy="12" rx="8" ry="6" fill="#21C531" />
-          <path d="M12 18c-2-2-2-6 0-8 2 2 2 6 0 8z" fill="#fff" />
-        </svg>
-      );
-    case "치지직":
-      return (
-        <svg viewBox="0 0 24 24" aria-hidden="true" className={className} fill="none">
-          <polygon points="13,2 3,14 11,14 9,22 21,8 13,8" fill="#FFD600" stroke="#FFD600" strokeWidth="1.2" />
-        </svg>
-      );
-    default:
-      return (
-        <svg viewBox="0 0 24 24" aria-hidden="true" className={className} fill="currentColor">
-          <circle cx="12" cy="12" r="8" />
-        </svg>
-      );
+  const srcByName: Record<string, string> = {
+    "유튜브": "/gnbIcon/YouTube.svg",
+    "유튜브 다시보기": "/gnbIcon/YouTube.svg",
+    "팬카페": "/gnbIcon/NaverCafe.png",
+    "치지직": "/gnbIcon/chzzk Icon.png",
+  };
+
+  const src = srcByName[name];
+  if (src) {
+    return (
+      <span className={`relative inline-block ${className ?? "w-5 h-5"}`}>
+        <Image src={src} alt="" fill className="object-contain" sizes="24px" />
+      </span>
+    );
   }
+
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className={className} fill="currentColor">
+      <circle cx="12" cy="12" r="8" />
+    </svg>
+  );
 }
 
 export default function Header({ brand, items = defaultItems }: HeaderProps) {
