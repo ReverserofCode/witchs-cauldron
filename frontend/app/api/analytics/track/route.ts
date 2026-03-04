@@ -50,6 +50,7 @@ export async function POST(request: NextRequest) {
   const userAgent = getUserAgent();
   const path = safeText(payload?.path, 512);
   const referrer = safeText(payload?.referrer, 512);
+  const eventId = safeText(payload?.event_id, 36);
   const elementType = safeText(payload?.element?.type, 64);
   const elementId = safeText(payload?.element?.id, 512);
   const elementLabel = safeText(payload?.element?.label, 128);
@@ -69,11 +70,12 @@ export async function POST(request: NextRequest) {
   await pool.query(
     `
       INSERT INTO analytics_events
-        (session_id, ip, event_type, path, referrer, element_type, element_id, element_label, metadata)
+        (event_id, session_id, ip, event_type, path, referrer, element_type, element_id, element_label, metadata)
       VALUES
-        ($1, $2, $3, $4, $5, $6, $7, $8, $9);
+        ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      ON CONFLICT DO NOTHING;
     `,
-    [sessionId, ip, eventType, path, referrer, elementType, elementId, elementLabel, metadata]
+    [eventId, sessionId, ip, eventType, path, referrer, elementType, elementId, elementLabel, metadata]
   );
 
   const response = NextResponse.json({ ok: true });
