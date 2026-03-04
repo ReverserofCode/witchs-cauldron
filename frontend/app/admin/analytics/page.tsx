@@ -37,6 +37,23 @@ type TopReferrer = {
   visits: number;
 };
 
+type ScrollDepthPoint = {
+  threshold: number;
+  hits: number;
+};
+
+type DwellTime = {
+  avgSeconds: number;
+  medianSeconds: number;
+  totalExits: number;
+};
+
+type DeviceCategory = {
+  category: string;
+  events: number;
+  visitors: number;
+};
+
 type AnalyticsResponse = {
   range: { from: string; to: string; toExclusive?: string };
   totals: AnalyticsTotals;
@@ -45,6 +62,9 @@ type AnalyticsResponse = {
   sectionViews: SectionView[];
   topPaths: TopPath[];
   topReferrers: TopReferrer[];
+  scrollDepth: ScrollDepthPoint[];
+  dwellTime: DwellTime;
+  deviceCategories: DeviceCategory[];
 };
 
 function startOfDayUTC(date: Date) {
@@ -585,6 +605,14 @@ export default function AnalyticsPage() {
   const topMenuClicks = data?.topMenuClicks ?? [];
   const topPaths = data?.topPaths ?? [];
   const topReferrers = data?.topReferrers ?? [];
+  const scrollDepth = data?.scrollDepth ?? [];
+  const dwellTime = data?.dwellTime ?? { avgSeconds: 0, medianSeconds: 0, totalExits: 0 };
+  const deviceCategories = data?.deviceCategories ?? [];
+
+  const totalScrollHits = scrollDepth.reduce((sum, item) => sum + item.hits, 0);
+  const maxScrollHits = Math.max(1, ...scrollDepth.map((item) => item.hits));
+  const totalDeviceVisitors = deviceCategories.reduce((sum, item) => sum + item.visitors, 0);
+  const maxDeviceVisitors = Math.max(1, ...deviceCategories.map((item) => item.visitors));
 
   const totalMenuClicksBase = (data?.totals.menuClicks ?? 0) || topMenuClicks.reduce((sum, item) => sum + item.clicks, 0);
   const totalPathViewsBase = (data?.totals.pageviews ?? 0) || topPaths.reduce((sum, item) => sum + item.views, 0);
@@ -897,6 +925,74 @@ export default function AnalyticsPage() {
                 <p className="text-sm text-gray-500">섹션 조회 데이터가 없습니다.</p>
               )}
             </div>
+          </article>
+        </section>
+
+        {/* Behavior metrics */}
+        <section className="grid gap-4 lg:grid-cols-3">
+          <article className="rounded-2xl border border-purple-200/70 bg-white/85 p-6 shadow-md shadow-purple-900/10 backdrop-blur">
+            <h2 className="mb-1 text-lg font-bold text-purple-950">스크롤 깊이</h2>
+            <p className="mb-4 text-xs text-purple-700/70">스크롤 이벤트 합계 대비 비중</p>
+            {scrollDepth.length ? (
+              <div className="space-y-3">
+                {scrollDepth.map((entry) => (
+                  <div key={entry.threshold}>
+                    <div className="mb-1 flex items-center justify-between text-sm">
+                      <span className="font-semibold text-purple-800">{entry.threshold}%</span>
+                      <span className="font-bold text-purple-700">{entry.hits.toLocaleString()}</span>
+                    </div>
+                    <div className="h-2 overflow-hidden rounded-full bg-purple-100/80">
+                      <div className="h-full rounded-full bg-purple-500 transition-all" style={{ width: `${(entry.hits / maxScrollHits) * 100}%` }} />
+                    </div>
+                    <p className="mt-1 text-right text-xs text-purple-700/70">{ratioToPercent(entry.hits, totalScrollHits)}%</p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-purple-700/70">스크롤 깊이 데이터가 없습니다.</p>
+            )}
+          </article>
+
+          <article className="rounded-2xl border border-purple-200/70 bg-white/85 p-6 shadow-md shadow-purple-900/10 backdrop-blur">
+            <h2 className="mb-1 text-lg font-bold text-purple-950">체류 시간</h2>
+            <p className="mb-4 text-xs text-purple-700/70">페이지 이탈 이벤트 기준</p>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { label: "평균", value: `${dwellTime.avgSeconds.toLocaleString()}초` },
+                { label: "중앙값", value: `${dwellTime.medianSeconds.toLocaleString()}초` },
+                { label: "이탈 수", value: dwellTime.totalExits.toLocaleString() },
+              ].map((item) => (
+                <div key={item.label} className="rounded-lg border border-purple-200/60 bg-purple-50/60 px-3 py-2 text-center">
+                  <p className="text-xs font-medium text-purple-700/70">{item.label}</p>
+                  <p className="mt-1 text-sm font-bold text-purple-900">{item.value}</p>
+                </div>
+              ))}
+            </div>
+          </article>
+
+          <article className="rounded-2xl border border-purple-200/70 bg-white/85 p-6 shadow-md shadow-purple-900/10 backdrop-blur">
+            <h2 className="mb-1 text-lg font-bold text-purple-950">디바이스 카테고리</h2>
+            <p className="mb-4 text-xs text-purple-700/70">고유 방문자 기준 비중</p>
+            {deviceCategories.length ? (
+              <div className="space-y-3">
+                {deviceCategories.map((entry) => (
+                  <div key={entry.category}>
+                    <div className="mb-1 flex items-center justify-between text-sm">
+                      <span className="font-semibold text-purple-800">{entry.category || "unknown"}</span>
+                      <span className="font-bold text-purple-700">
+                        {entry.visitors.toLocaleString()}명 · {entry.events.toLocaleString()}건
+                      </span>
+                    </div>
+                    <div className="h-2 overflow-hidden rounded-full bg-purple-100/80">
+                      <div className="h-full rounded-full bg-indigo-500 transition-all" style={{ width: `${(entry.visitors / maxDeviceVisitors) * 100}%` }} />
+                    </div>
+                    <p className="mt-1 text-right text-xs text-purple-700/70">{ratioToPercent(entry.visitors, totalDeviceVisitors)}%</p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-purple-700/70">디바이스 분류 데이터가 없습니다.</p>
+            )}
           </article>
         </section>
 
