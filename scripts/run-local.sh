@@ -14,6 +14,7 @@ WIN_SRC="/mnt/c/Users/patte/OneDrive/Desktop/projects/witchs-cauldron"
 FRONTEND_LOG="$LOG_DIR/frontend.log"
 BACKEND_LOG="$LOG_DIR/backend.log"
 PIP_LOG="$LOG_DIR/backend-pip.log"
+SNAPSHOT_LOG="$LOG_DIR/screenshot.log"
 
 sync_from_windows() {
   if [ -d "$WIN_SRC" ]; then
@@ -55,6 +56,15 @@ sync_frontend_env() {
   fi
 }
 
+snapshot() {
+  echo "[run-local] capturing frontend screenshots..."
+  (
+    cd "$FRONTEND_DIR"
+    SNAP_BASE_URL="http://127.0.0.1:3000" npm run capture:screens >"$SNAPSHOT_LOG" 2>&1
+  )
+  echo "[run-local] screenshots saved under: $FRONTEND_DIR/playwright-snapshots"
+}
+
 start() {
   sync_from_windows
   sync_frontend_env
@@ -88,6 +98,10 @@ start() {
   echo
   echo -n "  backend : " && curl -fsS http://127.0.0.1:8000/api/health || true
   echo
+  if [ "${RUN_SNAPSHOT_ON_START:-0}" = "1" ]; then
+    snapshot || true
+  fi
+
   echo "[run-local] done"
 }
 
@@ -126,8 +140,9 @@ case "${1:-start}" in
   restart) stop; start ;;
   status) status ;;
   logs) logs ;;
+  snapshot) snapshot ;;
   *)
-    echo "Usage: $0 {start|stop|restart|status|logs}"
+    echo "Usage: $0 {start|stop|restart|status|logs|snapshot}"
     exit 1
     ;;
 esac
