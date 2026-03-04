@@ -69,6 +69,12 @@ export default function ScheduleModal({
     }).format(currentMonth);
   }, [currentMonth]);
 
+  const monthLabelMobile = useMemo(() => {
+    return new Intl.DateTimeFormat("ko-KR", {
+      month: "long",
+    }).format(currentMonth);
+  }, [currentMonth]);
+
   const handlePrevMonth = () => {
     setCurrentMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
   };
@@ -104,7 +110,10 @@ export default function ScheduleModal({
             <span className="px-3 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800">
               Schedule
             </span>
-            <h2 className="text-lg font-bold text-purple-900">{monthLabel}</h2>
+            <h2 className="text-lg font-bold text-purple-900" aria-label={monthLabel}>
+              <span className="sm:hidden">{monthLabelMobile}</span>
+              <span className="hidden sm:inline">{monthLabel}</span>
+            </h2>
           </div>
           <div className="flex items-center gap-2">
             <button
