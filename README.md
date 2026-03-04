@@ -881,6 +881,37 @@ curl http://localhost:3000/api/analytics/stats
 
 ## 변경 이력
 
+### 2026-03-04
+- GitHub/WSL 개발환경 정비
+  - `gh` 설치 및 GitHub 인증(SSH 키 등록 포함) 완료
+  - Windows 원본 프로젝트와 WSL 로컬 실행 복제본 분리 운영
+- 로컬 실행 안정화
+  - `scripts/run-local.sh` 고도화 (`start|stop|restart|status|logs|snapshot`)
+  - 자동 동기화/복구 추가:
+    - Windows → WSL `rsync`
+    - 루트 `.env` → `frontend/.env.local` 동기화
+    - `.next` 정리 및 `lightningcss` 의존성 자동 복구
+    - backend `.venv` 무결성 체크 및 재생성
+- 스크린샷 워크플로우 추가 (WSL 지원)
+  - `frontend/scripts/capture-screenshots.mjs`
+  - `npm run capture:screens`
+  - `frontend/scripts/setup-screenshot-deps.sh` (Playwright Chromium 의존성 설치)
+- SEO/콘텐츠 보강
+  - 메인 FAQ 섹션 복구 및 유지
+  - 메타데이터/구조화 데이터(FAQ/사이트 정보) 개선
+- UI/레이아웃 개선 (컨셉/팔레트 유지)
+  - Phase2: 카드 컴포넌트 일관성/접근성 개선
+  - Phase3: 로딩 상태 통일, 모바일 밀도 조정
+  - 사이드바 높이 이슈 대응(가변 RightAside 고려):
+    - sticky-safe 레이아웃, 내부 스크롤 기반 처리
+- 아이콘/팬아트 반영
+  - 커뮤니티/채널 아이콘 공식 자산 기준으로 재정리
+  - `rightAside` 팬아트 누락 동기화 및 최신순 정렬 로직 유지
+- 운영 원칙 문서화
+  - `CODEX_CLAUDE_STRATEGY.md` 추가 (코딩 작업 시 Codex + ClaudeCode 병행 전략)
+- CI/CD 검증
+  - 당일 다수 커밋 배포 성공 확인 (GitHub Actions CD success)
+
 ### 2026-02-26
 - 전체 MD 문서를 README.md로 통합
 
