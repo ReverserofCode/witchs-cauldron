@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { resolveChannelMetadata, YOUTUBE_API_KEY } from "../youTubePlayer/shared";
 
+export const dynamic = "force-dynamic";
 export const revalidate = 3600; // 1시간
 
 const CHZZK_CHANNEL_ID = "1d333ff175b4db5bd06f87a88579ec1e";

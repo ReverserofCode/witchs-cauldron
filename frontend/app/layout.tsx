@@ -2,7 +2,7 @@
 // - 전역 폰트/스타일 적용
 // - 공통 Header / Footer 래핑
 // - 페이지 본문은 {children}으로 주입
-import { Metadata } from 'next'
+import { Metadata, Viewport } from 'next'
 import Script from 'next/script'
 import { ReactNode, Suspense } from 'react'
 import './globals.css'
@@ -66,7 +66,6 @@ export const metadata: Metadata = {
     index: true,
     follow: true,
   },
-  themeColor: '#7B68EE',
   applicationName: 'Moing Fans',
   icons: {
     icon: [
@@ -77,6 +76,10 @@ export const metadata: Metadata = {
     apple: [{ url: '/apple-touch-icon.png', sizes: '180x180' }],
   },
 };
+
+export const viewport: Viewport = {
+  themeColor: '#7B68EE',
+}
 
 interface RootLayoutProps { children: ReactNode }
 

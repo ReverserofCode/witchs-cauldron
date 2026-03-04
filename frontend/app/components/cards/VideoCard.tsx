@@ -37,22 +37,16 @@ export default function VideoCard({ video, aspect = "video" }: VideoCardProps) {
       {/* Thumbnail Container */}
       <div className="relative w-full overflow-hidden">
         {/* Thumbnail Image with Zoom Effect */}
-        {thumbnail ? (
-          <img
-            src={thumbnail}
-            alt={title}
-            loading="lazy"
-            className={`object-cover w-full ${aspectClass} transition-transform duration-500 group-hover:scale-110`}
-          />
-        ) : (
+        <div className={`relative w-full ${aspectClass}`}>
           <Image
-            src={fallbackSrc}
+            src={thumbnail || fallbackSrc}
             alt={title}
-            width={320}
-            height={aspect === "short" ? 568 : 180}
-            className={`object-cover w-full ${aspectClass} transition-transform duration-500 group-hover:scale-110`}
+            fill
+            unoptimized
+            sizes={aspect === "short" ? "(max-width: 768px) 60vw, 320px" : "(max-width: 768px) 100vw, 480px"}
+            className="object-cover transition-transform duration-500 group-hover:scale-110"
           />
-        )}
+        </div>
 
         {/* Play Button Overlay */}
         <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-all duration-300 group-hover:bg-black/20">

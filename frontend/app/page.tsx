@@ -19,6 +19,8 @@ import { ScrollReveal } from '@/app/components/animations'
 import { FanArtGallery } from '@/app/components/gallery'
 import { loadFanArtImages } from '@/app/lib/fanart'
 
+export const dynamic = 'force-dynamic'
+
 const MOBILE_QUICK_LINKS = [
   { label: '치지직', href: 'https://chzzk.naver.com/1d333ff175b4db5bd06f87a88579ec1e' },
   { label: '유튜브', href: 'https://www.youtube.com/channel/UCHzre37UF4o64HRhp-7CDzQ' },
