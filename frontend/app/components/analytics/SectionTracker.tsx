@@ -17,7 +17,7 @@ export function SectionTracker({
   const ref = useSectionView(sectionId);
 
   return (
-    <section ref={ref} id={sectionId} className={className}>
+    <section ref={ref} id={sectionId} className={["scroll-mt-24 sm:scroll-mt-28", className].filter(Boolean).join(" ")}>
       {children}
     </section>
   );

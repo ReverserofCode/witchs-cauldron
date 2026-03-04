@@ -61,13 +61,17 @@ export default function Header({ brand, items = defaultItems }: HeaderProps) {
   // Close on outside click
   useEffect(() => {
     if (!isMenuOpen) return;
-    const handleClick = (e: MouseEvent) => {
+    const handleClick = (e: Event) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         closeMenu();
       }
     };
     document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
+    document.addEventListener("touchstart", handleClick, { passive: true });
+    return () => {
+      document.removeEventListener("mousedown", handleClick);
+      document.removeEventListener("touchstart", handleClick);
+    };
   }, [isMenuOpen, closeMenu]);
 
   return (
@@ -116,9 +120,10 @@ export default function Header({ brand, items = defaultItems }: HeaderProps) {
           <button
             type="button"
             onClick={() => setIsMenuOpen((prev) => !prev)}
-            className="flex items-center justify-center w-10 h-10 rounded-lg text-ink hover:bg-[rgba(var(--moing-accent),0.35)] transition-colors"
+            className="flex min-h-11 min-w-11 items-center justify-center w-11 h-11 rounded-lg text-ink hover:bg-[rgba(var(--moing-accent),0.35)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/70 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
             aria-label={isMenuOpen ? "메뉴 닫기" : "메뉴 열기"}
             aria-expanded={isMenuOpen}
+            aria-controls="mobile-community-menu"
           >
             {isMenuOpen ? (
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -133,7 +138,7 @@ export default function Header({ brand, items = defaultItems }: HeaderProps) {
 
           {/* Mobile dropdown menu */}
           {isMenuOpen && (
-            <div className="absolute right-0 top-full mt-2 w-56 rounded-2xl border border-purple-200/60 bg-white/95 p-3 shadow-xl shadow-purple-900/15 backdrop-blur-lg animate-slide-down">
+            <div id="mobile-community-menu" className="absolute right-0 top-full mt-2 w-[min(92vw,20rem)] rounded-2xl border border-purple-200/60 bg-white/95 p-3 shadow-xl shadow-purple-900/15 backdrop-blur-lg animate-slide-down">
               <p className="mb-2 px-2 text-[10px] font-semibold uppercase tracking-widest text-purple-600/70">
                 커뮤니티 바로가기
               </p>
@@ -144,7 +149,7 @@ export default function Header({ brand, items = defaultItems }: HeaderProps) {
                       href={item.href}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-purple-900 transition-colors hover:bg-purple-100/80"
+                      className="flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-purple-900 transition-colors hover:bg-purple-100/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/70 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
                       data-analytics-menu="true"
                       data-analytics-id={item.href}
                       data-analytics-label={item.label}

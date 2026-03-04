@@ -205,7 +205,7 @@ export default function ClipsViewer({ clips }: ClipsViewerProps) {
       className="relative flex flex-col items-center"
     >
       {/* Shortform Video Player */}
-      <div className="relative w-full max-w-[280px] mx-auto">
+      <div className="relative w-full max-w-[min(88vw,320px)] mx-auto">
         {/* 비디오 컨테이너 - 9:16 비율 */}
         <div
           className="relative aspect-[9/16] w-full rounded-2xl overflow-hidden bg-black shadow-xl shadow-purple-900/30 cursor-pointer"
@@ -270,7 +270,7 @@ export default function ClipsViewer({ clips }: ClipsViewerProps) {
                 e.stopPropagation();
                 setIsMuted((prev) => !prev);
               }}
-              className="flex items-center justify-center w-10 h-10 rounded-full bg-black/50 backdrop-blur-sm hover:bg-black/70 hover:scale-110 active:scale-95 transition-all duration-200"
+              className="flex items-center justify-center w-11 h-11 rounded-full bg-black/50 backdrop-blur-sm hover:bg-black/70 hover:scale-110 active:scale-95 transition-all duration-200"
               aria-label={isMuted ? "음소거 해제" : "음소거"}
             >
               {isMuted ? (
@@ -292,7 +292,7 @@ export default function ClipsViewer({ clips }: ClipsViewerProps) {
           <button
             onClick={goToPrev}
             disabled={isTransitioning}
-            className="flex items-center justify-center w-8 h-8 rounded-full bg-purple-600 hover:bg-purple-700 hover:scale-110 active:scale-95 disabled:opacity-50 transition-all duration-200 shadow-lg"
+            className="flex items-center justify-center w-10 h-10 rounded-full bg-purple-600 hover:bg-purple-700 hover:scale-110 active:scale-95 disabled:opacity-50 transition-all duration-200 shadow-lg"
             aria-label="이전 클립"
           >
             <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24">
@@ -304,7 +304,7 @@ export default function ClipsViewer({ clips }: ClipsViewerProps) {
           <button
             onClick={goToNext}
             disabled={isTransitioning}
-            className="flex items-center justify-center w-8 h-8 rounded-full bg-purple-600 hover:bg-purple-700 hover:scale-110 active:scale-95 disabled:opacity-50 transition-all duration-200 shadow-lg"
+            className="flex items-center justify-center w-10 h-10 rounded-full bg-purple-600 hover:bg-purple-700 hover:scale-110 active:scale-95 disabled:opacity-50 transition-all duration-200 shadow-lg"
             aria-label="다음 클립"
           >
             <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24">

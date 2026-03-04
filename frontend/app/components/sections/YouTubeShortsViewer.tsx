@@ -152,7 +152,7 @@ export default function YouTubeShortsViewer() {
       className="relative flex flex-col items-center"
     >
       {/* Shortform Video Player */}
-      <div className="relative w-full max-w-[280px] mx-auto">
+      <div className="relative w-full max-w-[min(88vw,320px)] mx-auto">
         {/* 비디오 컨테이너 - 9:16 비율 */}
         <div className="relative aspect-[9/16] w-full rounded-2xl overflow-hidden bg-black shadow-xl shadow-red-900/20">
           {/* YouTube iframe */}
@@ -187,7 +187,7 @@ export default function YouTubeShortsViewer() {
             {/* 뮤트 토글 */}
             <button
               onClick={() => setIsMuted((prev) => !prev)}
-              className="flex items-center justify-center w-10 h-10 rounded-full bg-black/50 backdrop-blur-sm hover:bg-black/70 hover:scale-110 active:scale-95 transition-all duration-200"
+              className="flex items-center justify-center w-11 h-11 rounded-full bg-black/50 backdrop-blur-sm hover:bg-black/70 hover:scale-110 active:scale-95 transition-all duration-200"
               aria-label={isMuted ? "음소거 해제" : "음소거"}
             >
               {isMuted ? (
@@ -207,7 +207,7 @@ export default function YouTubeShortsViewer() {
               href={currentShort.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center justify-center w-10 h-10 rounded-full bg-black/50 backdrop-blur-sm hover:bg-black/70 hover:scale-110 active:scale-95 transition-all duration-200"
+              className="flex items-center justify-center w-11 h-11 rounded-full bg-black/50 backdrop-blur-sm hover:bg-black/70 hover:scale-110 active:scale-95 transition-all duration-200"
               aria-label="YouTube에서 보기"
             >
               <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -232,7 +232,7 @@ export default function YouTubeShortsViewer() {
           <button
             onClick={goToPrev}
             disabled={isTransitioning}
-            className="flex items-center justify-center w-8 h-8 rounded-full bg-red-600 hover:bg-red-700 hover:scale-110 active:scale-95 disabled:opacity-50 transition-all duration-200 shadow-lg"
+            className="flex items-center justify-center w-10 h-10 rounded-full bg-red-600 hover:bg-red-700 hover:scale-110 active:scale-95 disabled:opacity-50 transition-all duration-200 shadow-lg"
             aria-label="이전 Shorts"
           >
             <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24">
@@ -244,7 +244,7 @@ export default function YouTubeShortsViewer() {
           <button
             onClick={goToNext}
             disabled={isTransitioning}
-            className="flex items-center justify-center w-8 h-8 rounded-full bg-red-600 hover:bg-red-700 hover:scale-110 active:scale-95 disabled:opacity-50 transition-all duration-200 shadow-lg"
+            className="flex items-center justify-center w-10 h-10 rounded-full bg-red-600 hover:bg-red-700 hover:scale-110 active:scale-95 disabled:opacity-50 transition-all duration-200 shadow-lg"
             aria-label="다음 Shorts"
           >
             <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24">

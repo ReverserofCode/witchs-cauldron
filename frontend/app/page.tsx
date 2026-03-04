@@ -137,7 +137,7 @@ export default async function Page(): Promise<ReactElement> {
                         href={link.href}
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-flex items-center justify-center rounded-xl border border-purple-200/70 bg-white/80 px-3 py-2 text-xs font-semibold text-purple-900 transition-all duration-200 hover:bg-purple-100/70 hover:scale-[1.03] hover:shadow-sm"
+                        className="inline-flex min-h-11 items-center justify-center rounded-xl border border-purple-200/70 bg-white/80 px-3.5 py-2.5 text-sm leading-tight font-semibold text-purple-900 transition-all duration-200 hover:bg-purple-100/70 hover:scale-[1.03] hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/70 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
                         data-analytics-menu="true"
                         data-analytics-id={link.href}
                         data-analytics-label={link.label}
@@ -151,7 +151,7 @@ export default async function Page(): Promise<ReactElement> {
                   <div className="grid grid-cols-2 gap-2">
                     <a
                       href="#schedule-section"
-                      className="inline-flex items-center justify-center rounded-xl border border-purple-300/70 bg-purple-100/80 px-3 py-2 text-xs font-semibold text-purple-900 transition-all duration-200 hover:bg-purple-200/70 hover:scale-[1.03] hover:shadow-sm"
+                      className="inline-flex min-h-11 items-center justify-center rounded-xl border border-purple-300/70 bg-purple-100/80 px-3.5 py-2.5 text-sm leading-tight font-semibold text-purple-900 transition-all duration-200 hover:bg-purple-200/70 hover:scale-[1.03] hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/70 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
                       data-analytics-menu="true"
                       data-analytics-id="#schedule-section"
                       data-analytics-label="방송 일정 보기"
@@ -164,7 +164,7 @@ export default async function Page(): Promise<ReactElement> {
                       href="https://cafe.naver.com/moinge"
                       target="_blank"
                       rel="noreferrer"
-                      className="inline-flex items-center justify-center rounded-xl border border-purple-300/70 bg-purple-100/80 px-3 py-2 text-xs font-semibold text-purple-900 transition-all duration-200 hover:bg-purple-200/70 hover:scale-[1.03] hover:shadow-sm"
+                      className="inline-flex min-h-11 items-center justify-center rounded-xl border border-purple-300/70 bg-purple-100/80 px-3.5 py-2.5 text-sm leading-tight font-semibold text-purple-900 transition-all duration-200 hover:bg-purple-200/70 hover:scale-[1.03] hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/70 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
                       data-analytics-menu="true"
                       data-analytics-id="https://cafe.naver.com/moinge"
                       data-analytics-label="팬카페 바로가기"

@@ -185,7 +185,7 @@ export default function ScheduleSection({
             <button
               type="button"
               onClick={() => setIsModalOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-purple-700 transition-colors bg-white border border-purple-200 rounded-full hover:bg-purple-50 hover:border-purple-300"
+              className="inline-flex w-full sm:w-auto items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold text-purple-700 transition-colors bg-white border border-purple-200 rounded-full hover:bg-purple-50 hover:border-purple-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/70 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -208,7 +208,7 @@ export default function ScheduleSection({
           </div>
 
           <div>
-            <ul className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
+            <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4 md:gap-4">
               {weekColumns.map((day) => (
                 <li
                   key={day.isoDate}
