@@ -281,6 +281,23 @@ function TrendChart({ daily }: { daily: DailyPoint[] }) {
     updatePointer(touch.clientX, touch.clientY, e.currentTarget.getBoundingClientRect(), false);
   }, [updatePointer]);
 
+  const handleChartKeyDown = useCallback((e: React.KeyboardEvent<SVGSVGElement>) => {
+    if (!daily.length) return;
+
+    if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) {
+      e.preventDefault();
+    }
+
+    setActiveIndex((prev) => {
+      const current = prev ?? daily.length - 1;
+      if (e.key === "ArrowLeft") return Math.max(0, current - 1);
+      if (e.key === "ArrowRight") return Math.min(daily.length - 1, current + 1);
+      if (e.key === "Home") return 0;
+      if (e.key === "End") return daily.length - 1;
+      return prev;
+    });
+  }, [daily]);
+
   const ready = dimensions.width > 0 && dimensions.height > 0;
   const hasData = daily.length > 0;
 
@@ -300,7 +317,8 @@ function TrendChart({ daily }: { daily: DailyPoint[] }) {
 
   return (
     <div>
-      <div ref={containerRef} className="relative h-72 w-full overflow-hidden sm:h-80">
+      <p id="trend-chart-help" className="sr-only">좌우 화살표로 날짜를 이동하고 Home/End로 처음/마지막 날짜로 이동할 수 있습니다.</p>
+      <div ref={containerRef} className="relative h-72 w-full overflow-hidden rounded-xl focus-within:ring-2 focus-within:ring-purple-500/70 focus-within:ring-offset-2 focus-within:ring-offset-white sm:h-80">
         {!hasData && (
           <div className="flex h-full items-center justify-center">
             <p className="text-sm text-gray-500">선택한 기간에 데이터가 없습니다.</p>
@@ -309,13 +327,19 @@ function TrendChart({ daily }: { daily: DailyPoint[] }) {
         {ready && hasData && <svg
           width={dimensions.width}
           height={dimensions.height}
+          role="img"
+          tabIndex={0}
+          aria-describedby="trend-chart-help"
+          aria-label={`일별 트렌드 차트. ${daily.length}일간 방문자, 페이지뷰, 메뉴 클릭 추이`}
+          onKeyDown={handleChartKeyDown}
           onPointerMove={handlePointerMove}
           onPointerDown={handlePointerMove}
           onPointerLeave={handlePointerLeave}
           onTouchStart={handleTouchMove}
           onTouchMove={handleTouchMove}
-          className="block max-w-full touch-pan-y cursor-crosshair"
+          className="block max-w-full touch-pan-y cursor-crosshair outline-none"
         >
+          <title>일별 트렌드 차트</title>
           {/* Grid lines */}
           {yTicks.map((tick) => {
             const y = padding.top + chartHeight - (tick / maxValue) * chartHeight;
@@ -417,6 +441,7 @@ function TrendChart({ daily }: { daily: DailyPoint[] }) {
         {ready && hasData && activeIndex !== null && selectedData && (
           <div
             ref={tooltipRef}
+            role="tooltip"
             className="pointer-events-none absolute z-10 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs shadow-lg"
             style={{
               left: tooltipLeft,
@@ -561,6 +586,10 @@ export default function AnalyticsPage() {
   const topMenuClicks = data?.topMenuClicks ?? [];
   const topPaths = data?.topPaths ?? [];
   const topReferrers = data?.topReferrers ?? [];
+
+  const totalMenuClicksBase = (data?.totals.menuClicks ?? 0) || topMenuClicks.reduce((sum, item) => sum + item.clicks, 0);
+  const totalPathViewsBase = (data?.totals.pageviews ?? 0) || topPaths.reduce((sum, item) => sum + item.views, 0);
+  const totalReferrerBase = topReferrers.reduce((sum, item) => sum + item.visits, 0);
 
   const sectionViewTotal = sectionViews.reduce((sum, item) => sum + item.views, 0);
   const compositionSlices = [
@@ -789,17 +818,34 @@ export default function AnalyticsPage() {
               <h2 className="text-lg font-bold text-purple-950">일별 트렌드</h2>
             </div>
             <TrendChart daily={daily} />
+            {daily.length > 0 && (
+              <table className="sr-only" aria-label="일별 트렌드 데이터">
+                <thead>
+                  <tr><th>날짜</th><th>방문자</th><th>페이지뷰</th><th>메뉴 클릭</th></tr>
+                </thead>
+                <tbody>
+                  {daily.map((d) => (
+                    <tr key={d.day}>
+                      <td>{formatDayLabel(d.day)}</td>
+                      <td>{d.uniqueVisitors}</td>
+                      <td>{d.pageviews}</td>
+                      <td>{d.menuClicks}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
             <div className="mt-4 flex flex-wrap items-center justify-center gap-6 text-xs font-medium text-gray-600">
               <span className="flex items-center gap-2">
-                <span className="h-3 w-3 rounded-full bg-blue-500" />
+                <span className="h-3 w-3 rounded-full bg-blue-500" aria-hidden="true" />
                 방문자
               </span>
               <span className="flex items-center gap-2">
-                <span className="h-3 w-3 rounded-full bg-violet-500" />
+                <span className="h-3 w-3 rounded-full bg-violet-500" aria-hidden="true" />
                 페이지뷰
               </span>
               <span className="flex items-center gap-2">
-                <span className="h-3 w-3 rounded-full bg-rose-500" />
+                <span className="h-3 w-3 rounded-full bg-rose-500" aria-hidden="true" />
                 메뉴 클릭
               </span>
             </div>
@@ -870,18 +916,26 @@ export default function AnalyticsPage() {
         <section className="grid gap-4 lg:grid-cols-3">
           {/* Menu Clicks */}
           <article className="rounded-2xl border border-purple-200/70 bg-white/85 p-6 shadow-md shadow-purple-900/10 backdrop-blur">
-            <h2 className="mb-4 text-lg font-bold text-purple-950">메뉴 클릭 TOP 10</h2>
+            <h2 className="mb-1 text-lg font-bold text-purple-950">메뉴 클릭 TOP 10</h2>
+            <p className="mb-4 text-xs text-purple-700/70">전체 메뉴 클릭 대비 비중</p>
             {topMenuClicks.length ? (
               <div className="divide-y divide-gray-100">
-                {topMenuClicks.map((entry, index) => (
-                  <div key={`${entry.elementId}-${index}`} className="flex items-center gap-3 py-3">
-                    <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-rose-100 text-xs font-bold text-rose-600">
+                {(() => { const maxClicks = Math.max(1, ...topMenuClicks.map(e => e.clicks)); return topMenuClicks.map((entry, index) => (
+                  <div key={`${entry.elementId}-${index}`} className="group relative flex items-center gap-3 rounded-lg py-3 transition-colors hover:bg-rose-50/50">
+                    <div
+                      className="absolute inset-y-0 left-0 rounded-lg bg-rose-50 transition-all group-hover:bg-rose-100/60"
+                      style={{ width: `${(entry.clicks / maxClicks) * 100}%` }}
+                      aria-hidden="true"
+                    />
+                    <div className="relative flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-rose-100 text-xs font-bold text-rose-600">
                       {index + 1}
                     </div>
-                    <p className="min-w-0 flex-1 truncate text-sm font-medium text-gray-700">{formatMenuLabel(entry)}</p>
-                    <span className="text-sm font-bold text-rose-500">{entry.clicks.toLocaleString()}</span>
+                    <p className="relative min-w-0 flex-1 truncate text-sm font-medium text-gray-700" title={entry.label?.trim() || entry.elementId}>{formatMenuLabel(entry)}</p>
+                    <span className="relative text-sm font-bold tabular-nums text-rose-500">
+                      {entry.clicks.toLocaleString()} · {ratioToPercent(entry.clicks, totalMenuClicksBase)}%
+                    </span>
                   </div>
-                ))}
+                )); })()}
               </div>
             ) : (
               <p className="text-sm text-gray-500">메뉴 클릭 데이터가 없습니다.</p>
@@ -890,18 +944,26 @@ export default function AnalyticsPage() {
 
           {/* Top Paths */}
           <article className="rounded-2xl border border-purple-200/70 bg-white/85 p-6 shadow-md shadow-purple-900/10 backdrop-blur">
-            <h2 className="mb-4 text-lg font-bold text-purple-950">페이지 경로 TOP 10</h2>
+            <h2 className="mb-1 text-lg font-bold text-purple-950">페이지 경로 TOP 10</h2>
+            <p className="mb-4 text-xs text-purple-700/70">전체 페이지뷰 대비 비중</p>
             {topPaths.length ? (
               <div className="divide-y divide-gray-100">
-                {topPaths.map((entry, index) => (
-                  <div key={entry.path} className="flex items-center gap-3 py-3">
-                    <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-violet-100 text-xs font-bold text-violet-600">
+                {(() => { const maxViews = Math.max(1, ...topPaths.map(e => e.views)); return topPaths.map((entry, index) => (
+                  <div key={entry.path} className="group relative flex items-center gap-3 rounded-lg py-3 transition-colors hover:bg-violet-50/50">
+                    <div
+                      className="absolute inset-y-0 left-0 rounded-lg bg-violet-50 transition-all group-hover:bg-violet-100/60"
+                      style={{ width: `${(entry.views / maxViews) * 100}%` }}
+                      aria-hidden="true"
+                    />
+                    <div className="relative flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-violet-100 text-xs font-bold text-violet-600">
                       {index + 1}
                     </div>
-                    <p className="min-w-0 flex-1 truncate text-sm font-medium text-gray-700">{formatPathLabel(entry.path)}</p>
-                    <span className="text-sm font-bold text-violet-500">{entry.views.toLocaleString()}</span>
+                    <p className="relative min-w-0 flex-1 truncate text-sm font-medium text-gray-700" title={entry.path}>{formatPathLabel(entry.path)}</p>
+                    <span className="relative text-sm font-bold tabular-nums text-violet-500">
+                      {entry.views.toLocaleString()} · {ratioToPercent(entry.views, totalPathViewsBase)}%
+                    </span>
                   </div>
-                ))}
+                )); })()}
               </div>
             ) : (
               <p className="text-sm text-gray-500">페이지 경로 데이터가 없습니다.</p>
@@ -910,18 +972,26 @@ export default function AnalyticsPage() {
 
           {/* Top Referrers */}
           <article className="rounded-2xl border border-purple-200/70 bg-white/85 p-6 shadow-md shadow-purple-900/10 backdrop-blur">
-            <h2 className="mb-4 text-lg font-bold text-purple-950">유입 Referrer TOP 10</h2>
+            <h2 className="mb-1 text-lg font-bold text-purple-950">유입 Referrer TOP 10</h2>
+            <p className="mb-4 text-xs text-purple-700/70">Referrer TOP 합계 대비 비중</p>
             {topReferrers.length ? (
               <div className="divide-y divide-gray-100">
-                {topReferrers.map((entry, index) => (
-                  <div key={entry.referrer} className="flex items-center gap-3 py-3">
-                    <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-600">
+                {(() => { const maxVisits = Math.max(1, ...topReferrers.map(e => e.visits)); return topReferrers.map((entry, index) => (
+                  <div key={entry.referrer} className="group relative flex items-center gap-3 rounded-lg py-3 transition-colors hover:bg-blue-50/50">
+                    <div
+                      className="absolute inset-y-0 left-0 rounded-lg bg-blue-50 transition-all group-hover:bg-blue-100/60"
+                      style={{ width: `${(entry.visits / maxVisits) * 100}%` }}
+                      aria-hidden="true"
+                    />
+                    <div className="relative flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-600">
                       {index + 1}
                     </div>
-                    <p className="min-w-0 flex-1 truncate text-sm font-medium text-gray-700">{formatReferrerLabel(entry.referrer)}</p>
-                    <span className="text-sm font-bold text-blue-500">{entry.visits.toLocaleString()}</span>
+                    <p className="relative min-w-0 flex-1 truncate text-sm font-medium text-gray-700" title={entry.referrer}>{formatReferrerLabel(entry.referrer)}</p>
+                    <span className="relative text-sm font-bold tabular-nums text-blue-500">
+                      {entry.visits.toLocaleString()} · {ratioToPercent(entry.visits, totalReferrerBase)}%
+                    </span>
                   </div>
-                ))}
+                )); })()}
               </div>
             ) : (
               <p className="text-sm text-gray-500">referrer 데이터가 없습니다.</p>
