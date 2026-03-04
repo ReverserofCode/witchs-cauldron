@@ -12,7 +12,25 @@ FRONTEND_LOG="$LOG_DIR/frontend.log"
 BACKEND_LOG="$LOG_DIR/backend.log"
 PIP_LOG="$LOG_DIR/backend-pip.log"
 
+sync_frontend_env() {
+  local root_env="$ROOT_DIR/.env"
+  local fe_env="$FRONTEND_DIR/.env.local"
+
+  if [ -f "$root_env" ]; then
+    if [ ! -f "$fe_env" ] || ! cmp -s "$root_env" "$fe_env"; then
+      cp "$root_env" "$fe_env"
+      echo "[run-local] synced env: .env -> frontend/.env.local"
+    else
+      echo "[run-local] env already in sync"
+    fi
+  else
+    echo "[run-local] root .env not found (skip env sync)"
+  fi
+}
+
 start() {
+  sync_frontend_env
+
   echo "[run-local] starting frontend..."
   if pgrep -f "next dev -p 3000" >/dev/null; then
     echo "[run-local] frontend already running on :3000"
