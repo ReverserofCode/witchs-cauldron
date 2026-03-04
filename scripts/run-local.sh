@@ -8,9 +8,36 @@ SHARED_CLIPS_DIR="$ROOT_DIR/shared/clips"
 LOG_DIR="/tmp/witchs-cauldron"
 mkdir -p "$LOG_DIR" "$SHARED_CLIPS_DIR"
 
+# Optional Windows source sync (WSL workflow)
+WIN_SRC="/mnt/c/Users/patte/OneDrive/Desktop/projects/witchs-cauldron"
+
 FRONTEND_LOG="$LOG_DIR/frontend.log"
 BACKEND_LOG="$LOG_DIR/backend.log"
 PIP_LOG="$LOG_DIR/backend-pip.log"
+
+sync_from_windows() {
+  if [ -d "$WIN_SRC" ]; then
+    echo "[run-local] rsync from Windows source..."
+    rsync -a --delete --exclude '.next' --exclude 'scripts/' --exclude 'backend/.venv/' --exclude 'frontend/node_modules/' "$WIN_SRC/" "$ROOT_DIR/"
+    echo "[run-local] rsync done"
+  else
+    echo "[run-local] Windows source not found, skip rsync"
+  fi
+}
+
+ensure_frontend_deps() {
+  local lc_bin="$FRONTEND_DIR/node_modules/lightningcss/node/lightningcss.linux-x64-gnu.node"
+  if [ ! -f "$lc_bin" ]; then
+    echo "[run-local] repairing frontend deps (lightningcss missing)..."
+    (
+      cd "$FRONTEND_DIR"
+      rm -rf node_modules/.cache .next
+      npm install
+      npm rebuild lightningcss || true
+    )
+    echo "[run-local] frontend deps ready"
+  fi
+}
 
 sync_frontend_env() {
   local root_env="$ROOT_DIR/.env"
@@ -29,12 +56,15 @@ sync_frontend_env() {
 }
 
 start() {
+  sync_from_windows
   sync_frontend_env
+  ensure_frontend_deps
 
   echo "[run-local] starting frontend..."
   if pgrep -f "next dev -p 3000" >/dev/null; then
     echo "[run-local] frontend already running on :3000"
   else
+    rm -rf "$FRONTEND_DIR/.next"
     (cd "$FRONTEND_DIR" && nohup npm run dev >"$FRONTEND_LOG" 2>&1 &)
     sleep 2
   fi
@@ -42,10 +72,10 @@ start() {
   echo "[run-local] starting backend..."
   (
     cd "$BACKEND_DIR"
-    if [ ! -d .venv ]; then
+    if [ ! -f .venv/bin/activate ]; then
+      rm -rf .venv
       python3 -m venv .venv
     fi
-    # shellcheck disable=SC1091
     source .venv/bin/activate
     pip install -r requirements.txt >"$PIP_LOG" 2>&1
     pkill -f "uvicorn app.main:app --host 0.0.0.0 --port 8000" || true

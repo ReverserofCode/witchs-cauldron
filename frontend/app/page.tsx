@@ -28,6 +28,20 @@ const MOBILE_QUICK_LINKS = [
   { label: '팬카페', href: 'https://cafe.naver.com/moinge' },
 ]
 
+const SEO_FAQ = [
+  {
+    q: '모잉 방송 일정은 어디서 확인할 수 있나요?',
+    a: '메인 페이지의 방송 일정 섹션에서 최근 일정과 예정 방송을 확인할 수 있습니다.',
+  },
+  {
+    q: '모잉 유튜브 최신 영상과 다시보기는 어떻게 보나요?',
+    a: 'YouTube 허브 섹션에서 공식 채널과 다시보기 채널 영상을 함께 확인할 수 있습니다.',
+  },
+  {
+    q: '모잉 하이라이트 숏폼과 클립도 볼 수 있나요?',
+    a: '숏폼 하이라이트 섹션에서 YouTube Shorts와 클립을 모아서 볼 수 있습니다.',
+  },
+]
 
 export default async function Page(): Promise<ReactElement> {
   const fanArtImages = loadFanArtImages()
@@ -196,6 +210,24 @@ export default async function Page(): Promise<ReactElement> {
                   </SectionCard>
                 </ScrollReveal>
               )}
+
+              <ScrollReveal>
+                <SectionCard
+                  tone="neutral"
+                  eyebrow="FAQ"
+                  title="모잉 팬페이지 자주 묻는 질문"
+                  description="방송 일정, 유튜브 최신 영상/다시보기, 숏폼 하이라이트 정보를 빠르게 확인하세요."
+                >
+                  <div className="space-y-3">
+                    {SEO_FAQ.map((item) => (
+                      <article key={item.q} className="rounded-xl border border-purple-200/60 bg-white/70 p-4">
+                        <h3 className="text-sm font-semibold text-purple-950">Q. {item.q}</h3>
+                        <p className="mt-1 text-sm text-purple-900/80">A. {item.a}</p>
+                      </article>
+                    ))}
+                  </div>
+                </SectionCard>
+              </ScrollReveal>
             </div>
           </div>
           {/* Right Aside */}
