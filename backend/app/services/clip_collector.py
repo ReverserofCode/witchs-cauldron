@@ -54,6 +54,7 @@ class CollectionResult:
 
     success: bool
     clips_collected: int = 0
+    clips_skipped: int = 0
     total_attempted: int = 0
     collected_clips: list = field(default_factory=list)
     errors: list = field(default_factory=list)
@@ -568,6 +569,7 @@ class ChzzkClipCollector:
                     existing = self._clip_already_downloaded(clip_info.clip_id)
                     if existing:
                         print(f"Already downloaded: {os.path.basename(existing)}")
+                        result.clips_skipped += 1
                         result.collected_clips.append(
                             {
                                 "clip_id": clip_info.clip_id,
@@ -629,14 +631,16 @@ class ChzzkClipCollector:
 
         result.duration_seconds = time.time() - start_time
         print(f"\n=== Collection Complete ===")
-        print(f"Collected: {result.clips_collected}/{result.total_attempted}")
+        print(
+            f"Collected: {result.clips_collected}, Skipped(existing): {result.clips_skipped}, Total attempted: {result.total_attempted}"
+        )
         print(f"Duration: {result.duration_seconds:.1f}s")
 
         if progress_callback:
             progress_callback(
                 result.total_attempted,
                 result.total_attempted,
-                f"Complete: {result.clips_collected} clips collected",
+                f"Complete: {result.clips_collected} collected, {result.clips_skipped} skipped",
             )
 
         return result

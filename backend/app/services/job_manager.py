@@ -51,6 +51,7 @@ class JobManager:
             progress=0,
             message="Job created, waiting to start",
             clips_collected=0,
+            clips_skipped=0,
             total_clips=total_clips,
         )
 
@@ -122,12 +123,16 @@ class JobManager:
                 )
 
                 job.clips_collected = result.clips_collected
+                job.clips_skipped = result.clips_skipped
                 job.completed_at = datetime.now()
 
                 if result.success:
                     job.status = JobStatus.COMPLETED
                     job.progress = 100
-                    job.message = f"Completed: {result.clips_collected} clips collected"
+                    job.message = (
+                        f"Completed: {result.clips_collected} clips collected"
+                        f", {result.clips_skipped} skipped(existing)"
+                    )
                 else:
                     job.status = JobStatus.FAILED
                     job.error = "; ".join(result.errors) if result.errors else "Unknown error"

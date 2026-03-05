@@ -26,6 +26,7 @@ class Job(BaseModel):
     progress: int = Field(default=0, ge=0, le=100, description="Progress percentage")
     message: str = Field(default="", description="Status message")
     clips_collected: int = Field(default=0, description="Number of clips collected so far")
+    clips_skipped: int = Field(default=0, description="Number of clips skipped because they already exist")
     total_clips: int = Field(default=0, description="Total clips to collect")
     started_at: Optional[datetime] = Field(None, description="Job start time")
     completed_at: Optional[datetime] = Field(None, description="Job completion time")
