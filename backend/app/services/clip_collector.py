@@ -11,6 +11,7 @@ to ensure compatibility. See FAILURE_LOG.md for previous failed attempts.
 import json
 import os
 import re
+import shutil
 import time
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -77,10 +78,19 @@ class ChzzkClipCollector:
         settings = get_settings()
         self.channel_id = channel_id or settings.chzzk_channel_id
         self.download_dir = download_dir or settings.clips_dir
+        self.frontend_clips_dir = (settings.frontend_clips_dir or "").strip()
         self.base_url = f"https://chzzk.naver.com/{self.channel_id}/clips"
 
         # Ensure download directory exists
         os.makedirs(self.download_dir, exist_ok=True)
+
+        # Optional frontend mirror directory
+        if self.frontend_clips_dir:
+            try:
+                os.makedirs(self.frontend_clips_dir, exist_ok=True)
+            except Exception as e:
+                print(f"Warning: could not prepare frontend clips dir: {e}")
+                self.frontend_clips_dir = ""
 
     def _sanitize_filename(self, name: str, max_length: int = 80) -> str:
         """Create safe filename for Windows/Linux (same as original)"""
@@ -443,6 +453,30 @@ class ChzzkClipCollector:
             traceback.print_exc()
             return []
 
+    def _sync_to_frontend(self, source_path: str) -> None:
+        """Copy downloaded clip to frontend/public/clips if configured."""
+        if not self.frontend_clips_dir:
+            return
+
+        try:
+            if not os.path.exists(source_path):
+                return
+
+            basename = os.path.basename(source_path)
+            target_path = os.path.join(self.frontend_clips_dir, basename)
+
+            # Skip if same file already exists with same size
+            if os.path.exists(target_path):
+                src_size = os.path.getsize(source_path)
+                dst_size = os.path.getsize(target_path)
+                if src_size == dst_size and src_size > 0:
+                    return
+
+            shutil.copy2(source_path, target_path)
+            print(f"Synced to frontend: {target_path}")
+        except Exception as e:
+            print(f"Frontend sync failed: {e}")
+
     def download_media(
         self, media_url: str, filename: Optional[str] = None, clip_id: str = ""
     ) -> Optional[dict]:
@@ -467,6 +501,7 @@ class ChzzkClipCollector:
             if os.path.exists(filepath):
                 file_size = os.path.getsize(filepath)
                 print(f"File already exists: {filename}")
+                self._sync_to_frontend(filepath)
                 return {
                     "filename": filename,
                     "filepath": filepath,
@@ -491,6 +526,7 @@ class ChzzkClipCollector:
 
             file_size = os.path.getsize(filepath)
             print(f"Download complete: {filename} ({file_size} bytes)")
+            self._sync_to_frontend(filepath)
 
             return {
                 "filename": filename,
@@ -569,6 +605,7 @@ class ChzzkClipCollector:
                     existing = self._clip_already_downloaded(clip_info.clip_id)
                     if existing:
                         print(f"Already downloaded: {os.path.basename(existing)}")
+                        self._sync_to_frontend(existing)
                         result.clips_skipped += 1
                         result.collected_clips.append(
                             {

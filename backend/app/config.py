@@ -18,6 +18,7 @@ class Settings(BaseSettings):
 
     # Paths
     clips_dir: str = "/app/shared/clips"
+    frontend_clips_dir: str = ""  # Optional mirror path (e.g., ../frontend/public/clips)
 
     # Selenium settings
     chrome_binary: str = "/usr/bin/chromium"

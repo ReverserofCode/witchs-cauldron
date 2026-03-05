@@ -31,11 +31,14 @@ services:
       - DEBUG=true
       - HEADLESS=false
       - USE_XVFB=true
+      - FRONTEND_CLIPS_DIR=/app/frontend_clips
     # Shared memory for Chrome/Xvfb (prevents crashes)
     shm_size: '2gb'
     volumes:
       # 클립 공유 볼륨 (읽기/쓰기)
       - shared_clips:/app/shared/clips
+      # 프론트 정적 클립 디렉터리로 동기화
+      - ./frontend/public/clips:/app/frontend_clips
       # 개발 시 소스 코드 마운트 (핫 리로드용)
       - ./backend/app:/app/app
     healthcheck:
