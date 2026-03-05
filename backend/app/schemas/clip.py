@@ -48,7 +48,10 @@ class CollectRequest(BaseModel):
 
     max_clips: int = Field(default=5, ge=1, le=20, description="Maximum clips to collect")
     filter_type: str = Field(default="ALL", description="Filter type: ALL, WEEKLY, MONTHLY")
-    order_type: str = Field(default="POPULAR", description="Order type: POPULAR, RECENT")
+    order_type: str = Field(
+        default="POPULAR",
+        description="Order type: POPULAR(RECENT 포함), RECENT, MIXED",
+    )
 
 
 class CollectResponse(BaseModel):

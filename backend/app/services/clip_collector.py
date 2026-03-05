@@ -418,7 +418,28 @@ class ChzzkClipCollector:
                 if progress_callback:
                     progress_callback(0, max_clips, "Fetching clip list...")
 
-                clip_entries = self.get_clip_links(driver, filter_type, order_type)
+                normalized_order = (order_type or "POPULAR").upper()
+
+                # 기본 POPULAR 요청에도 RECENT를 합쳐 최신 클립이 함께 수집되도록 보강
+                order_plan = [normalized_order]
+                if normalized_order == "POPULAR":
+                    order_plan.append("RECENT")
+                elif normalized_order == "MIXED":
+                    order_plan = ["RECENT", "POPULAR"]
+
+                merged_entries: list[ClipInfo] = []
+                seen_clip_ids: set[str] = set()
+
+                for order in order_plan:
+                    entries = self.get_clip_links(driver, filter_type, order)
+                    for entry in entries:
+                        clip_key = entry.clip_id or entry.url
+                        if not clip_key or clip_key in seen_clip_ids:
+                            continue
+                        seen_clip_ids.add(clip_key)
+                        merged_entries.append(entry)
+
+                clip_entries = merged_entries
 
                 if not clip_entries:
                     result.errors.append("No clip links found")
