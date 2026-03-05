@@ -25,7 +25,7 @@ export default function Footer() {
               마녀의 포션 공방
             </Link>
             <p className="text-xs leading-relaxed text-purple-800/60">
-              버튜버 모잉(Moing)을 응원하는<br />
+              패러블 엔터테인먼트 소속 버튜버 모잉(Moing)을 응원하는<br />
               비공식 팬 커뮤니티 사이트입니다.
             </p>
           </div>
