@@ -83,6 +83,16 @@ export default async function Page(): Promise<ReactElement> {
                       <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                         <span className="chip text-xs sm:text-sm">KR V-tuber • Moing</span>
                         <span className="chip text-[11px] sm:text-xs">패러블 엔터테인먼트 소속</span>
+                        <span className="inline-flex items-center rounded-md bg-white/95 px-2 py-1 shadow-sm ring-1 ring-black/10">
+                          <Image
+                            src="/logos/parable-ent.svg"
+                            alt="패러블 엔터테인먼트 로고"
+                            width={98}
+                            height={16}
+                            className="h-3.5 w-auto sm:h-4"
+                            unoptimized
+                          />
+                        </span>
                         <a
                           href={liveStatus.channelUrl}
                           target="_blank"

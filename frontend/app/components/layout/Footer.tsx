@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 
 const COMMUNITY_LINKS = [
@@ -28,6 +29,17 @@ export default function Footer() {
               패러블 엔터테인먼트 소속 버튜버 모잉(Moing)을 응원하는<br />
               비공식 팬 커뮤니티 사이트입니다.
             </p>
+            <div className="inline-flex items-center rounded-md bg-white/80 px-2 py-1 ring-1 ring-black/10 w-fit">
+              <Image
+                src="/logos/parable-ent.svg"
+                alt="패러블 엔터테인먼트 로고"
+                width={98}
+                height={16}
+                className="w-auto h-4"
+                loading="lazy"
+                unoptimized
+              />
+            </div>
           </div>
 
           {/* Community links */}
