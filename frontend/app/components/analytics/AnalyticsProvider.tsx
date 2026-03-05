@@ -41,10 +41,25 @@ function markTrackedInSession(path: string) {
   }
 }
 
+const SCROLL_THRESHOLDS = [25, 50, 75, 100] as const;
+
+function getScrollDepthPercent() {
+  const doc = document.documentElement;
+  const scrollTop = window.scrollY || doc.scrollTop || 0;
+  const viewport = window.innerHeight || doc.clientHeight || 0;
+  const full = doc.scrollHeight || 0;
+  if (full <= 0 || viewport <= 0) return 0;
+  const maxScrollable = Math.max(1, full - viewport);
+  return Math.min(100, Math.max(0, Math.round((scrollTop / maxScrollable) * 100)));
+}
+
 export default function AnalyticsProvider() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const lastTrackedPathRef = useRef<string>("");
+  const pageStartMsRef = useRef<number>(Date.now());
+  const firedScrollThresholdsRef = useRef<Set<number>>(new Set());
+  const pageExitSentPathRef = useRef<string>("");
 
   const currentPath = useCallback(() => {
     const query = searchParams?.toString();
@@ -69,6 +84,9 @@ export default function AnalyticsProvider() {
   }, [pathname, currentPath]);
 
   useEffect(() => {
+    pageStartMsRef.current = Date.now();
+    firedScrollThresholdsRef.current = new Set();
+    pageExitSentPathRef.current = "";
     sendPageview();
   }, [sendPageview]);
 
@@ -120,6 +138,63 @@ export default function AnalyticsProvider() {
     document.addEventListener("click", handleDocumentClick, true);
     return () => document.removeEventListener("click", handleDocumentClick, true);
   }, [currentPath]);
+
+  useEffect(() => {
+    if (pathname.startsWith("/admin")) return;
+
+    const handleScroll = () => {
+      const depth = getScrollDepthPercent();
+      for (const threshold of SCROLL_THRESHOLDS) {
+        if (depth >= threshold && !firedScrollThresholdsRef.current.has(threshold)) {
+          firedScrollThresholdsRef.current.add(threshold);
+          trackEvent({
+            type: "scroll_depth",
+            path: currentPath(),
+            metadata: {
+              threshold,
+              depth,
+            },
+          });
+        }
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    handleScroll();
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [pathname, currentPath]);
+
+  useEffect(() => {
+    if (pathname.startsWith("/admin")) return;
+
+    const sendPageExit = () => {
+      const path = currentPath();
+      if (!path || pageExitSentPathRef.current === path) return;
+      pageExitSentPathRef.current = path;
+
+      const dwellSeconds = Math.max(0, Math.round((Date.now() - pageStartMsRef.current) / 1000));
+      trackEvent({
+        type: "page_exit",
+        path,
+        metadata: {
+          dwell_seconds: dwellSeconds,
+          max_scroll_depth: getScrollDepthPercent(),
+        },
+      });
+    };
+
+    const handlePageHide = () => sendPageExit();
+    const handleVisibility = () => {
+      if (document.visibilityState === "hidden") sendPageExit();
+    };
+
+    window.addEventListener("pagehide", handlePageHide);
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => {
+      window.removeEventListener("pagehide", handlePageHide);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [pathname, currentPath]);
 
   return null;
 }

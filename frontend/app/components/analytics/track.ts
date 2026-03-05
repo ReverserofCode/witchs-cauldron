@@ -1,5 +1,12 @@
 export type AnalyticsEventPayload = {
-  type: "pageview" | "menu_click" | "content_click" | "section_view";
+  type:
+    | "pageview"
+    | "menu_click"
+    | "content_click"
+    | "section_view"
+    | "scroll_depth"
+    | "page_exit";
+  event_id?: string;
   path?: string;
   referrer?: string;
   element?: {
@@ -12,7 +19,11 @@ export type AnalyticsEventPayload = {
 
 export function trackEvent(payload: AnalyticsEventPayload) {
   if (typeof window === "undefined") return;
-  const body = JSON.stringify(payload);
+  const eventPayload: AnalyticsEventPayload = {
+    ...payload,
+    event_id: payload.event_id ?? crypto.randomUUID(),
+  };
+  const body = JSON.stringify(eventPayload);
 
   try {
     if (navigator.sendBeacon) {

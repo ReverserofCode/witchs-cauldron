@@ -113,6 +113,7 @@ export async function ensureSchema() {
       `);
       await client.query(`CREATE INDEX IF NOT EXISTS analytics_events_created_at_idx ON analytics_events (created_at);`);
       await client.query(`CREATE INDEX IF NOT EXISTS analytics_events_ip_idx ON analytics_events (ip);`);
+      await client.query(`CREATE UNIQUE INDEX IF NOT EXISTS analytics_events_event_id_uq ON analytics_events (event_id) WHERE event_id IS NOT NULL;`);
       schemaReady = true;
     } finally {
       client.release();
