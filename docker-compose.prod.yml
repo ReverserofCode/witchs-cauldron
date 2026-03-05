@@ -39,14 +39,11 @@ services:
       - DEBUG=false
       - HEADLESS=false
       - USE_XVFB=true
-      - FRONTEND_CLIPS_DIR=/app/frontend_clips
     # Shared memory for Chrome/Xvfb (prevents crashes)
     shm_size: '2gb'
     volumes:
       # 클립 공유 볼륨 (읽기/쓰기)
       - shared_clips:/app/shared/clips
-      # 프론트 정적 클립 디렉터리로 동기화
-      - ./frontend/public/clips:/app/frontend_clips
     healthcheck:
       test:
         - CMD-SHELL
@@ -91,8 +88,8 @@ services:
       - CHZZK_CLIENT_ID=${CHZZK_CLIENT_ID:-}
       - CHZZK_CLIENT_SECRET=${CHZZK_CLIENT_SECRET:-}
     volumes:
-      # 로컬 clips 디렉터리를 직접 사용 (CI/CD 연동 시도 중단)
-      - ./frontend/public/clips:/app/public/clips:ro
+      # 백엔드와 동일 shared volume을 읽기 전용으로 마운트
+      - shared_clips:/app/public/clips:ro
     depends_on:
       backend:
         condition: service_healthy
