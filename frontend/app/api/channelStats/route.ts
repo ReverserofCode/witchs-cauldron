@@ -5,6 +5,9 @@ export const dynamic = "force-dynamic";
 export const revalidate = 3600; // 1시간
 
 const CHZZK_CHANNEL_ID = "1d333ff175b4db5bd06f87a88579ec1e";
+const CHZZK_OPENAPI_BASE = "https://openapi.chzzk.naver.com";
+const CHZZK_CLIENT_ID = process.env.CHZZK_CLIENT_ID;
+const CHZZK_CLIENT_SECRET = process.env.CHZZK_CLIENT_SECRET;
 
 interface YouTubeChannelStats {
   subscriberCount: string;
@@ -55,7 +58,35 @@ async function fetchYouTubeStats(
   }
 }
 
-async function fetchChzzkFollowerCount(): Promise<number | null> {
+async function fetchChzzkFollowerCountFromOpenApi(): Promise<number | null> {
+  if (!CHZZK_CLIENT_ID || !CHZZK_CLIENT_SECRET) return null;
+
+  try {
+    const params = new URLSearchParams({ channelIds: CHZZK_CHANNEL_ID });
+    const res = await fetch(`${CHZZK_OPENAPI_BASE}/open/v1/channels?${params.toString()}`, {
+      next: { revalidate: 300 },
+      headers: {
+        "Client-Id": CHZZK_CLIENT_ID,
+        "Client-Secret": CHZZK_CLIENT_SECRET,
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!res.ok) {
+      console.warn("CHZZK open API channel fetch failed", res.status);
+      return null;
+    }
+
+    const data = await res.json();
+    const first = data?.content?.data?.[0];
+    return typeof first?.followerCount === "number" ? first.followerCount : null;
+  } catch (e) {
+    console.error("CHZZK open API follower fetch failed:", e);
+    return null;
+  }
+}
+
+async function fetchChzzkFollowerCountLegacy(): Promise<number | null> {
   try {
     const res = await fetch(
       `https://api.chzzk.naver.com/service/v1/channels/${CHZZK_CHANNEL_ID}`,
@@ -73,9 +104,15 @@ async function fetchChzzkFollowerCount(): Promise<number | null> {
     const data = await res.json();
     return data.content?.followerCount ?? null;
   } catch (e) {
-    console.error("Chzzk follower count fetch failed:", e);
+    console.error("Chzzk legacy follower count fetch failed:", e);
     return null;
   }
+}
+
+async function fetchChzzkFollowerCount(): Promise<number | null> {
+  const official = await fetchChzzkFollowerCountFromOpenApi();
+  if (official !== null) return official;
+  return fetchChzzkFollowerCountLegacy();
 }
 
 export async function GET() {
