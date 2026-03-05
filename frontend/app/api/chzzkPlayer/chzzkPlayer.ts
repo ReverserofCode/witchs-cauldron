@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 const CHANNEL_ID = "1d333ff175b4db5bd06f87a88579ec1e";
 const CHZZK_CHANNEL_URL = `https://chzzk.naver.com/${CHANNEL_ID}`;
 const CHZZK_LIVE_DETAIL_URL = `https://api.chzzk.naver.com/service/v1/channels/${CHANNEL_ID}/live-detail`;
+const CHZZK_POLLING_LIVE_URL = `https://api.chzzk.naver.com/polling/v2/channels/${CHANNEL_ID}/live-status`;
 const CHZZK_OPENAPI_BASE = "https://openapi.chzzk.naver.com";
 const CHZZK_CLIENT_ID = process.env.CHZZK_CLIENT_ID;
 const CHZZK_CLIENT_SECRET = process.env.CHZZK_CLIENT_SECRET;
@@ -34,6 +35,18 @@ interface ChzzkOpenLiveResponse {
   };
 }
 
+interface ChzzkPollingLiveResponse {
+  content?: {
+    status?: string;
+    liveId?: number;
+    liveTitle?: string;
+    liveImageUrl?: string;
+    concurrentUserCount?: number;
+    accumulateCount?: number;
+    openDate?: string;
+  };
+}
+
 export interface ChzzkLiveStatus {
   channelId: string;
   channelUrl: string;
@@ -46,6 +59,37 @@ export interface ChzzkLiveStatus {
   viewers: number | null;
   totalViewers: number | null;
   error?: string;
+}
+
+async function fetchChzzkLiveFromPolling(): Promise<
+  Omit<ChzzkLiveStatus, "channelId" | "channelUrl" | "error">
+> {
+  const res = await fetch(CHZZK_POLLING_LIVE_URL, {
+    cache: "no-store",
+    headers: {
+      "User-Agent":
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    },
+  });
+
+  if (!res.ok) {
+    throw new Error(`CHZZK polling live request failed with status ${res.status}`);
+  }
+
+  const payload = (await res.json()) as ChzzkPollingLiveResponse;
+  const content = payload.content ?? {};
+  const status = content.status ?? null;
+
+  return {
+    isLive: status === "OPEN",
+    status,
+    title: content.liveTitle ?? null,
+    startedAt: content.openDate ?? null,
+    thumbnail: content.liveImageUrl ?? null,
+    liveId: typeof content.liveId === "number" ? String(content.liveId) : null,
+    viewers: content.concurrentUserCount ?? null,
+    totalViewers: content.accumulateCount ?? null,
+  };
 }
 
 async function fetchChzzkLiveFromOpenApi(): Promise<
@@ -130,12 +174,17 @@ async function fetchChzzkLiveDetailLegacy(): Promise<
 
 export async function getChzzkLiveStatus(): Promise<ChzzkLiveStatus> {
   try {
-    const liveDetail =
-      (await fetchChzzkLiveFromOpenApi().catch((error) => {
-        console.warn("Failed to fetch CHZZK live status from open API", error);
+    const liveDetail = await fetchChzzkLiveFromPolling().catch(async (pollingError) => {
+      console.warn("Failed to fetch CHZZK live status from polling API", pollingError);
+
+      const fromOpenApi = await fetchChzzkLiveFromOpenApi().catch((openApiError) => {
+        console.warn("Failed to fetch CHZZK live status from open API", openApiError);
         return null;
-      })) ??
-      (await fetchChzzkLiveDetailLegacy());
+      });
+
+      if (fromOpenApi) return fromOpenApi;
+      return fetchChzzkLiveDetailLegacy();
+    });
 
     return {
       channelId: CHANNEL_ID,
