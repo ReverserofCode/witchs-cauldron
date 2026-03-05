@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { unstable_noStore as noStore } from "next/cache";
 import { SectionCard } from "@/app/components/cards";
 import ClipsViewer from "./ClipsViewer";
 import YouTubeShortsViewer from "./YouTubeShortsViewer";
@@ -14,18 +15,22 @@ const CLIPS_DIR = path.join(process.cwd(), "public", "clips");
 const VIDEO_EXTENSIONS = [/\.mp4$/i, /\.webm$/i, /\.ogg$/i, /\.mov$/i];
 
 function loadClipsFromDirectory(): Clip[] {
-  let files: string[] = [];
+  let files: Array<{ name: string; mtimeMs: number }> = [];
 
   try {
     files = fs.readdirSync(CLIPS_DIR, { withFileTypes: true })
       .filter((entry) => entry.isFile() && VIDEO_EXTENSIONS.some((pattern) => pattern.test(entry.name)))
-      .map((entry) => entry.name)
-      .sort((a, b) => a.localeCompare(b, "ko"));
+      .map((entry) => {
+        const fullPath = path.join(CLIPS_DIR, entry.name);
+        const stat = fs.statSync(fullPath);
+        return { name: entry.name, mtimeMs: stat.mtimeMs };
+      })
+      .sort((a, b) => b.mtimeMs - a.mtimeMs);
   } catch (error) {
     return [];
   }
 
-  return files.map((filename, index) => {
+  return files.map(({ name: filename, mtimeMs }, index) => {
     const base = filename.replace(/\.[^.]+$/, "");
     const encodedFilename = encodeURIComponent(filename);
     const cleanName = base
@@ -35,14 +40,16 @@ function loadClipsFromDirectory(): Clip[] {
       .trim();
 
     return {
-      id: base,
-      src: `/clips/${encodedFilename}`,
+      id: `${base}-${Math.floor(mtimeMs)}`,
+      src: `/clips/${encodedFilename}?v=${Math.floor(mtimeMs)}`,
       title: cleanName.length > 0 ? `${cleanName}` : `하이라이트 클립 #${index + 1}`,
     } satisfies Clip;
   });
 }
 
 export default function ClipsSection() {
+  // Always render fresh clip list after collection (disable RSC caching)
+  noStore();
   const clips = loadClipsFromDirectory();
 
   return (
