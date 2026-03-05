@@ -19,8 +19,8 @@ const notoSansKr = Noto_Sans_KR({
 export const metadata: Metadata = {
   metadataBase: new URL('https://moingfans.com'),
   title: {
-    default: '모잉 팬 페이지 | 마녀의 포션 공방',
-    template: '%s | 모잉 팬 페이지',
+    default: '모잉 팬페이지 | 마녀의 포션 공방',
+    template: '%s | 모잉 팬페이지',
   },
   description:
     '모잉(Moing) 팬들을 위한 비공식 커뮤니티 허브. 방송 일정, 하이라이트, 유튜브 최신 영상과 인기 영상 정보를 한곳에서 확인하세요.',
@@ -35,7 +35,7 @@ export const metadata: Metadata = {
     '방송 일정',
     '유튜브 하이라이트',
     '유튜브 최신 영상',
-    '팬 페이지',
+    '팬페이지',
   ],
   alternates: {
     canonical: '/',
@@ -43,9 +43,9 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     url: 'https://moingfans.com/',
-    title: '모잉 팬 페이지 | 마녀의 포션 공방',
+    title: '모잉 팬페이지 | 마녀의 포션 공방',
     description:
-      '모잉(Moing) 방송 일정과 최신/인기 영상, 하이라이트를 모아보는 팬 페이지',
+      '모잉(Moing) 방송 일정과 최신/인기 영상, 하이라이트를 모아보는 팬페이지',
     siteName: 'Moing Fans',
     images: [
       {
@@ -59,9 +59,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: '모잉 팬 페이지 | 마녀의 포션 공방',
+    title: '모잉 팬페이지 | 마녀의 포션 공방',
     description:
-      '모잉(Moing) 방송 일정과 최신/인기 영상, 하이라이트를 모아보는 팬 페이지',
+      '모잉(Moing) 방송 일정과 최신/인기 영상, 하이라이트를 모아보는 팬페이지',
     images: ['https://moingfans.com/mainPage/Profile.png'],
   },
   robots: {

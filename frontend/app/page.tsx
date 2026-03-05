@@ -58,7 +58,7 @@ export default async function Page(): Promise<ReactElement> {
       : ''
   const liveChipLabel = liveStatus.isLive ? `실시간 방송 중${viewerText}` : '현재 오프라인'
   const liveStatusDescription = liveStatus.error
-    ? '다음 방송을 기다려주세요.'
+    ? '라이브 정보를 불러오지 못했어요. 잠시 후 다시 확인해주세요.'
     : liveStatus.isLive
     ? '모잉이 지금도 마법을 선보이는 중입니다!'
     : '다음 방송을 기다려주세요.'
@@ -109,9 +109,6 @@ export default async function Page(): Promise<ReactElement> {
                       <div className="space-y-2 sm:space-y-2.5">
                         <p className="text-sm font-light typography-lead max-w-prose sm:text-base">
                           포션을 만들면 폭발하거나, 고백하게 만드는 재앙 제조기. &quot;진짜 감기약 맞아요?&quot; 음... 아마도요.
-                        </p>
-                        <p className="text-xs font-medium text-purple-100/90 sm:text-sm">
-                          패러블 엔터테인먼트 소속 버튜버
                         </p>
                         <p className="text-sm font-light opacity-0 typography-lead animate-fade-in animation-delay-200 sm:text-base">
                           {liveStatusDescription}

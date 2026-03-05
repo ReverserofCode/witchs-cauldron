@@ -25,7 +25,7 @@ const COMMUNITY_LINKS = [
   {
     label: "유튜브 다시보기",
     href: "https://www.youtube.com/@fullmoing",
-    description: "LIVE 다시보기를 편하게 감상하세요.",
+    description: "라이브 다시보기를 편하게 감상하세요.",
     isExternal: true,
   },
   {
@@ -62,7 +62,7 @@ export default function RightSidebar({ className, images }: RightSidebarProps = 
         bodyClassName="gap-3"
         eyebrow="Community"
         title="커뮤니티"
-        description="팬들과 함께하는 공식 채널"
+        description="모잉 공식 채널 모음"
       >
         <ul className="flex flex-col gap-2 text-xs text-purple-900/85">
           {COMMUNITY_LINKS.map((link) => (

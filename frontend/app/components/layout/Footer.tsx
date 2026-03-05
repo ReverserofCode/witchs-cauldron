@@ -27,7 +27,7 @@ export default function Footer() {
             </Link>
             <p className="text-xs leading-relaxed text-purple-800/60">
               패러블 엔터테인먼트 소속 버튜버 모잉(Moing)을 응원하는<br />
-              비공식 팬 커뮤니티 사이트입니다.
+              비공식 팬페이지입니다.
             </p>
             <div className="inline-flex items-center rounded-md bg-white/80 px-2 py-1 ring-1 ring-black/10 w-fit">
               <Image
@@ -92,7 +92,7 @@ export default function Footer() {
         {/* Bottom bar */}
         <div className="flex flex-col items-center justify-between gap-2 pt-8 mt-8 text-xs border-t border-purple-200/40 text-purple-700/50 sm:flex-row">
           <p>&copy; {new Date().getFullYear()} Witch&apos;s Cauldron</p>
-          <p>비공식 팬사이트 &middot; Powered by Moing palette</p>
+          <p>비공식 팬페이지 &middot; 모잉 팬 커뮤니티</p>
         </div>
       </div>
     </footer>
