@@ -31,6 +31,10 @@ const MOBILE_QUICK_LINKS = [
 
 const SEO_FAQ = [
   {
+    q: '모잉은 어느 소속인가요?',
+    a: '모잉은 패러블 엔터테인먼트 소속 버튜버입니다.',
+  },
+  {
     q: '모잉 방송 일정은 어디서 확인할 수 있나요?',
     a: '메인 페이지의 방송 일정 섹션에서 최근 일정과 예정 방송을 확인할 수 있습니다.',
   },
@@ -78,6 +82,7 @@ export default async function Page(): Promise<ReactElement> {
                     <div className="flex-1 min-w-0 space-y-3 text-white sm:space-y-4">
                       <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                         <span className="chip text-xs sm:text-sm">KR V-tuber • Moing</span>
+                        <span className="chip text-[11px] sm:text-xs">패러블 엔터테인먼트 소속</span>
                         <a
                           href={liveStatus.channelUrl}
                           target="_blank"
