@@ -15,7 +15,7 @@ import time
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Optional
-from urllib.parse import urljoin, urlparse
+from urllib.parse import parse_qs, urlencode, urljoin, urlparse
 
 import requests
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
@@ -200,6 +200,76 @@ class ChzzkClipCollector:
             print(f"Error extracting clip links: {e}")
             return []
 
+    def _extract_media_urls_from_playcount(self, playcount_url: str) -> list[str]:
+        """
+        Resolve direct media URLs through Naver VOD play API from PlayCount URL.
+
+        Flow:
+        - PlayCount URL contains vid/key query params
+        - Request /vod/play/v2.0/{vid}?key={key}
+        - Extract direct MP4 URLs from videos.list[*].source
+        - Fallback to HLS stream source (+ signed key params if provided)
+        """
+        try:
+            parsed = urlparse(playcount_url)
+            query = parse_qs(parsed.query)
+            vid = (query.get("vid") or [""])[0]
+            key = (query.get("key") or [""])[0]
+            if not vid or not key:
+                return []
+
+            api_url = f"https://apis.naver.com/rmcnmv/rmcnmv/vod/play/v2.0/{vid}?key={key}"
+            response = requests.get(
+                api_url,
+                headers={
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+                },
+                timeout=20,
+            )
+            response.raise_for_status()
+            data = response.json()
+
+            candidates: list[str] = []
+
+            # Prefer direct MP4 sources
+            for item in (data.get("videos", {}) or {}).get("list", []) or []:
+                source = item.get("source")
+                if isinstance(source, str) and source.startswith("http"):
+                    candidates.append(source)
+
+            # Fallback to HLS stream source with key params
+            for stream in data.get("streams", []) or []:
+                source = stream.get("source")
+                if not isinstance(source, str) or not source.startswith("http"):
+                    continue
+
+                keys = stream.get("keys") or []
+                params = {}
+                for k in keys:
+                    if k.get("type") == "param" and k.get("name") and k.get("value"):
+                        params[k["name"]] = k["value"]
+
+                if params:
+                    sep = "&" if "?" in source else "?"
+                    source = f"{source}{sep}{urlencode(params)}"
+
+                candidates.append(source)
+
+            # Deduplicate while preserving order
+            unique = []
+            seen = set()
+            for url in candidates:
+                if url in seen:
+                    continue
+                seen.add(url)
+                unique.append(url)
+
+            return unique
+
+        except Exception as e:
+            print(f"Failed to resolve play API from PlayCount URL: {e}")
+            return []
+
     def extract_media_urls(self, driver, clip_url: str) -> list[str]:
         """
         Extract media URLs from individual clip page using network logs.
@@ -270,6 +340,7 @@ class ChzzkClipCollector:
             # EXACT same logic as original (lines 339-374)
             logs = driver.get_log("performance")
             media_urls = set()
+            playcount_urls = []
 
             for log in logs:
                 try:
@@ -280,30 +351,64 @@ class ChzzkClipCollector:
                         response = message["message"]["params"]["response"]
                         url = response["url"]
                         mime_type = response.get("mimeType", "")
+                        lower_url = url.lower()
+                        lower_mime = mime_type.lower()
 
-                        # Condition 1: Check for video file extensions or mimeType
-                        # (EXACT same as original lines 354-357)
-                        if (
-                            any(ext in url.lower() for ext in [".mp4", ".webm", ".m4v"])
-                            or "video" in mime_type.lower()
-                        ):
-                            # Condition 2: Verify it's a Chzzk/Naver media URL
-                            # (EXACT same as original lines 360-364)
+                        # Keep PlayCount URL for robust VOD play API fallback
+                        if "apis.naver.com/rmcnmv/rmcnmv/playcount.json" in lower_url:
+                            playcount_urls.append(url)
+
+                        # Expanded media detection for current CHZZK delivery
+                        has_media_ext = any(
+                            ext in lower_url
+                            for ext in [".mp4", ".webm", ".m4v", ".m3u8", ".ts"]
+                        )
+                        has_media_mime = (
+                            "video" in lower_mime
+                            or "mpegurl" in lower_mime
+                            or "vnd.trolltech.linguist" in lower_mime
+                        )
+
+                        if has_media_ext or has_media_mime:
                             if (
-                                "naver-vod.pstatic.net" in url
-                                or "chzzk" in url
-                                or "glive-clip" in url
+                                "naver-vod.pstatic.net" in lower_url
+                                or "b01-kr-naver-vod.pstatic.net" in lower_url
+                                or "b02-kr-smp-vod.pstatic.net" in lower_url
+                                or "glive-clip" in lower_url
+                                or "chzzk" in lower_url
                             ):
-                                # Condition 3: URL length and query string check
-                                # (EXACT same as original lines 367-368)
-                                if len(url) < 1000 and "?" in url:
+                                # Allow long signed URLs; keep sanity bound only
+                                if len(url) < 3000:
                                     media_urls.add(url)
-                                    print(f"Found valid media URL: {url[:100]}...")
+                                    print(f"Found valid media URL: {url[:120]}...")
 
                 except (json.JSONDecodeError, KeyError):
                     continue
 
-            unique_urls = list(media_urls)
+            # Fallback: resolve direct media URLs via VOD play API from PlayCount URL
+            if not media_urls and playcount_urls:
+                for pc_url in playcount_urls:
+                    resolved = self._extract_media_urls_from_playcount(pc_url)
+                    for media_url in resolved:
+                        media_urls.add(media_url)
+                    if resolved:
+                        print(f"Resolved {len(resolved)} media URL(s) via play API fallback")
+                        break
+
+            def _media_priority(u: str) -> tuple[int, int]:
+                lu = u.lower()
+                # Prefer direct MP4 > HLS playlist > TS segment > others
+                if ".mp4" in lu:
+                    rank = 0
+                elif ".m3u8" in lu:
+                    rank = 1
+                elif ".ts" in lu:
+                    rank = 2
+                else:
+                    rank = 3
+                return (rank, len(u))
+
+            unique_urls = sorted(list(media_urls), key=_media_priority)
 
             if unique_urls:
                 print(f"Found {len(unique_urls)} unique media URLs")
@@ -482,8 +587,11 @@ class ChzzkClipCollector:
                         )
                         continue
 
-                    # Download first media URL (same as original)
-                    media_url = media_urls[0]
+                    # Prefer direct MP4 URL when multiple candidates exist
+                    media_url = next(
+                        (u for u in media_urls if ".mp4" in u.lower()),
+                        media_urls[0],
+                    )
 
                     safe_title = self._sanitize_filename(clip_info.title)
                     filename = f"clip_{clip_info.clip_id}_{safe_title}.mp4" if safe_title else f"clip_{clip_info.clip_id}.mp4"
