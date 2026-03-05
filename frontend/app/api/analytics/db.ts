@@ -17,7 +17,7 @@ function getDatabaseCandidates() {
     ...DEFAULT_DB_URLS,
   ].filter((value): value is string => typeof value === "string" && value.trim().length > 0);
 
-  return [...new Set(candidates)];
+  return Array.from(new Set(candidates));
 }
 
 async function createPoolWithFallback() {
@@ -77,6 +77,7 @@ export async function ensureSchema() {
       await client.query(`
         CREATE TABLE IF NOT EXISTS analytics_events (
           id bigserial PRIMARY KEY,
+          event_id text,
           session_id uuid REFERENCES analytics_sessions(session_id) ON DELETE CASCADE,
           ip text NOT NULL,
           event_type text NOT NULL,
@@ -98,6 +99,7 @@ export async function ensureSchema() {
       `);
       await client.query(`
         ALTER TABLE analytics_events
+          ADD COLUMN IF NOT EXISTS event_id text,
           ADD COLUMN IF NOT EXISTS session_id uuid,
           ADD COLUMN IF NOT EXISTS ip text NOT NULL DEFAULT 'unknown',
           ADD COLUMN IF NOT EXISTS event_type text,

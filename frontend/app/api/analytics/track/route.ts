@@ -39,6 +39,10 @@ function safeText(value: unknown, limit = 500) {
   return trimmed.slice(0, limit);
 }
 
+function isUuid(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
 export async function POST(request: NextRequest) {
   await ensureSchema();
 
@@ -49,10 +53,13 @@ export async function POST(request: NextRequest) {
   }
 
   const cookieStore = cookies();
-  let sessionId = cookieStore.get(SESSION_COOKIE)?.value ?? "";
-  const isNewSession = !sessionId;
-  if (isNewSession) {
+  const rawSessionId = cookieStore.get(SESSION_COOKIE)?.value ?? "";
+  let isNewSession = !rawSessionId;
+  let sessionId = rawSessionId;
+
+  if (!sessionId || !isUuid(sessionId)) {
     sessionId = crypto.randomUUID();
+    isNewSession = true;
   }
 
   const ip = getClientIp();
