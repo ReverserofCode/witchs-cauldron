@@ -101,6 +101,39 @@ export default function RootLayout({ children }: RootLayoutProps) {
               '모잉(Moing) 팬들을 위한 비공식 커뮤니티 허브. 방송 일정, 하이라이트, 유튜브 최신/인기 영상 정보를 한곳에서 확인하세요.',
           })}
         </Script>
+        {/* Structured Data: Organization */}
+        <Script id="ldjson-organization" type="application/ld+json" strategy="afterInteractive">
+          {JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'Organization',
+            name: '패러블 엔터테인먼트',
+            alternateName: 'Parable Entertainment',
+            url: 'https://moingfans.com/',
+            logo: 'https://moingfans.com/logos/parable-ent.svg',
+          })}
+        </Script>
+        {/* Structured Data: Person */}
+        <Script id="ldjson-person" type="application/ld+json" strategy="afterInteractive">
+          {JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'Person',
+            name: '모잉',
+            alternateName: 'Moing',
+            description: '패러블 엔터테인먼트 소속 버튜버 모잉(Moing)',
+            affiliation: {
+              '@type': 'Organization',
+              name: '패러블 엔터테인먼트',
+              alternateName: 'Parable Entertainment',
+            },
+            image: 'https://moingfans.com/mainPage/Profile.png',
+            url: 'https://moingfans.com/',
+            sameAs: [
+              'https://chzzk.naver.com/1d333ff175b4db5bd06f87a88579ec1e',
+              'https://www.youtube.com/channel/UCHzre37UF4o64HRhp-7CDzQ',
+              'https://www.youtube.com/@fullmoing',
+            ],
+          })}
+        </Script>
         <Suspense fallback={null}>
           <AnalyticsProvider />
         </Suspense>
