@@ -55,7 +55,12 @@ async def health_check():
     chrome_available = os.path.exists(settings.chrome_binary)
     chromedriver_available = os.path.exists(settings.chromedriver_path)
 
-    selenium_status = "available" if (chrome_available and chromedriver_available) else "unavailable"
+    if chrome_available and chromedriver_available:
+        selenium_status = "available"
+    elif chrome_available or chromedriver_available:
+        selenium_status = "partial"
+    else:
+        selenium_status = "fallback"  # Selenium Manager auto-resolution path
 
     return {
         "status": "ok",

@@ -62,15 +62,24 @@ def create_driver() -> webdriver.Chrome:
     options.add_argument("--log-level=0")
     options.set_capability("goog:loggingPrefs", {"performance": "ALL"})
 
-    # Set Chrome binary path
-    options.binary_location = settings.chrome_binary
+    # Prefer configured chrome/chromedriver paths when they actually exist.
+    # If not, fallback to Selenium Manager auto-resolution (downloads browser/driver if needed).
+    chrome_binary = settings.chrome_binary
+    chromedriver_path = settings.chromedriver_path
 
-    # Create service with chromedriver path
-    service = Service(executable_path=settings.chromedriver_path)
+    chrome_exists = bool(chrome_binary) and os.path.exists(chrome_binary)
+    chromedriver_exists = bool(chromedriver_path) and os.path.exists(chromedriver_path)
 
-    driver = webdriver.Chrome(service=service, options=options)
+    if chrome_exists:
+        options.binary_location = chrome_binary
+
+    if chromedriver_exists:
+        service = Service(executable_path=chromedriver_path)
+        driver = webdriver.Chrome(service=service, options=options)
+    else:
+        driver = webdriver.Chrome(options=options)
+
     driver.implicitly_wait(10)
-
     return driver
 
 
