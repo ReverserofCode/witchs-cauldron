@@ -84,6 +84,9 @@ services:
       - ANALYTICS_DATABASE_URL=${ANALYTICS_DATABASE_URL:-}
       - ADMIN_ALLOWED_EMAILS=${ADMIN_ALLOWED_EMAILS:-}
       - ANALYTICS_PUBLIC=${ANALYTICS_PUBLIC:-}
+      # CHZZK Open API credentials
+      - CHZZK_CLIENT_ID=${CHZZK_CLIENT_ID:-}
+      - CHZZK_CLIENT_SECRET=${CHZZK_CLIENT_SECRET:-}
     volumes:
       # 로컬 clips 디렉터리를 직접 사용 (CI/CD 연동 시도 중단)
       - ./frontend/public/clips:/app/public/clips:ro
