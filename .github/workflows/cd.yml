@@ -45,13 +45,43 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Preflight SSH connectivity
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+        run: |
+          set -euo pipefail
+          timeout 8 bash -c "cat < /dev/null > /dev/tcp/${SSH_HOST}/${SSH_PORT}"
+
       - name: Deploy to server
+        id: deploy_primary
+        continue-on-error: true
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USERNAME }}
           password: ${{ secrets.SSH_PASSWORD }}
           port: ${{ secrets.SSH_PORT }}
+          timeout: 60s
+          command_timeout: 20m
+          script_stop: true
+          script: |
+            cd ${{ secrets.DEPLOY_PATH }}
+            git fetch origin main
+            git reset --hard origin/main
+            ./frontend/deploy.sh --clean
+
+      - name: Retry deploy once on SSH failure
+        if: steps.deploy_primary.outcome == 'failure'
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          port: ${{ secrets.SSH_PORT }}
+          timeout: 60s
+          command_timeout: 20m
+          script_stop: true
           script: |
             cd ${{ secrets.DEPLOY_PATH }}
             git fetch origin main
