@@ -3,6 +3,9 @@ import { NextResponse } from "next/server";
 const CHANNEL_ID = "1d333ff175b4db5bd06f87a88579ec1e";
 const CHZZK_CHANNEL_URL = `https://chzzk.naver.com/${CHANNEL_ID}`;
 const CHZZK_LIVE_DETAIL_URL = `https://api.chzzk.naver.com/service/v1/channels/${CHANNEL_ID}/live-detail`;
+const CHZZK_OPENAPI_BASE = "https://openapi.chzzk.naver.com";
+const CHZZK_CLIENT_ID = process.env.CHZZK_CLIENT_ID;
+const CHZZK_CLIENT_SECRET = process.env.CHZZK_CLIENT_SECRET;
 
 interface ChzzkLiveDetailResponse {
   content?: {
@@ -13,6 +16,21 @@ interface ChzzkLiveDetailResponse {
     concurrentUserCount?: number;
     accumulateCount?: number;
     openDate?: string;
+  };
+}
+
+interface ChzzkOpenLiveItem {
+  liveId?: number;
+  liveTitle?: string;
+  liveThumbnailImageUrl?: string;
+  concurrentUserCount?: number;
+  openDate?: string;
+  channelId?: string;
+}
+
+interface ChzzkOpenLiveResponse {
+  content?: {
+    data?: ChzzkOpenLiveItem[];
   };
 }
 
@@ -30,7 +48,54 @@ export interface ChzzkLiveStatus {
   error?: string;
 }
 
-async function fetchChzzkLiveDetail(): Promise<
+async function fetchChzzkLiveFromOpenApi(): Promise<
+  Omit<ChzzkLiveStatus, "channelId" | "channelUrl" | "error"> | null
+> {
+  if (!CHZZK_CLIENT_ID || !CHZZK_CLIENT_SECRET) return null;
+
+  const params = new URLSearchParams({ size: "20" });
+  const res = await fetch(`${CHZZK_OPENAPI_BASE}/open/v1/lives?${params.toString()}`, {
+    next: { revalidate: 30 },
+    headers: {
+      "Client-Id": CHZZK_CLIENT_ID,
+      "Client-Secret": CHZZK_CLIENT_SECRET,
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (!res.ok) {
+    throw new Error(`CHZZK Open API lives request failed with status ${res.status}`);
+  }
+
+  const payload = (await res.json()) as ChzzkOpenLiveResponse;
+  const live = payload?.content?.data?.find((item) => item.channelId === CHANNEL_ID);
+
+  if (!live) {
+    return {
+      isLive: false,
+      status: "CLOSE",
+      title: null,
+      startedAt: null,
+      thumbnail: null,
+      liveId: null,
+      viewers: null,
+      totalViewers: null,
+    };
+  }
+
+  return {
+    isLive: true,
+    status: "OPEN",
+    title: live.liveTitle ?? null,
+    startedAt: live.openDate ?? null,
+    thumbnail: live.liveThumbnailImageUrl ?? null,
+    liveId: typeof live.liveId === "number" ? String(live.liveId) : null,
+    viewers: live.concurrentUserCount ?? null,
+    totalViewers: null,
+  };
+}
+
+async function fetchChzzkLiveDetailLegacy(): Promise<
   Omit<ChzzkLiveStatus, "channelId" | "channelUrl" | "error">
 > {
   const res = await fetch(CHZZK_LIVE_DETAIL_URL, {
@@ -65,7 +130,12 @@ async function fetchChzzkLiveDetail(): Promise<
 
 export async function getChzzkLiveStatus(): Promise<ChzzkLiveStatus> {
   try {
-    const liveDetail = await fetchChzzkLiveDetail();
+    const liveDetail =
+      (await fetchChzzkLiveFromOpenApi().catch((error) => {
+        console.warn("Failed to fetch CHZZK live status from open API", error);
+        return null;
+      })) ??
+      (await fetchChzzkLiveDetailLegacy());
 
     return {
       channelId: CHANNEL_ID,
