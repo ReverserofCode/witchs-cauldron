@@ -1,26 +1,69 @@
 import { Pool } from "pg";
 
-const FALLBACK_DB_URL = "postgres://analytics:analytics@analytics-db:5432/analytics";
+const DEFAULT_DB_URLS = [
+  "postgres://analytics:analytics@analytics-db:5432/analytics",
+  "postgres://analytics:analytics@localhost:5432/analytics",
+] as const;
+
 let pool: Pool | null = null;
+let poolPromise: Promise<Pool> | null = null;
 let schemaReady = false;
 let schemaPromise: Promise<void> | null = null;
 
-function getDatabaseUrl() {
-  return process.env.ANALYTICS_DATABASE_URL || process.env.DATABASE_URL || FALLBACK_DB_URL;
+function getDatabaseCandidates() {
+  const candidates = [
+    process.env.ANALYTICS_DATABASE_URL,
+    process.env.DATABASE_URL,
+    ...DEFAULT_DB_URLS,
+  ].filter((value): value is string => typeof value === "string" && value.trim().length > 0);
+
+  return [...new Set(candidates)];
 }
 
-export function getPool() {
-  if (!pool) {
-    pool = new Pool({ connectionString: getDatabaseUrl() });
+async function createPoolWithFallback() {
+  const candidates = getDatabaseCandidates();
+  let lastError: unknown = null;
+
+  for (const connectionString of candidates) {
+    const candidatePool = new Pool({
+      connectionString,
+      connectionTimeoutMillis: 3000,
+    });
+
+    try {
+      const client = await candidatePool.connect();
+      client.release();
+      return candidatePool;
+    } catch (error) {
+      lastError = error;
+      await candidatePool.end().catch(() => {});
+    }
   }
-  return pool;
+
+  throw new Error(
+    `analytics_db_unreachable: failed candidates=${candidates.length}${
+      lastError instanceof Error ? ` lastError=${lastError.message}` : ""
+    }`
+  );
+}
+
+export async function getPool() {
+  if (pool) return pool;
+  if (!poolPromise) {
+    poolPromise = createPoolWithFallback().then((created) => {
+      pool = created;
+      return created;
+    });
+  }
+  return poolPromise;
 }
 
 export async function ensureSchema() {
   if (schemaReady) return;
   if (schemaPromise) return schemaPromise;
   schemaPromise = (async () => {
-    const client = await getPool().connect();
+    const db = await getPool();
+    const client = await db.connect();
     try {
       await client.query(`
         CREATE TABLE IF NOT EXISTS analytics_sessions (

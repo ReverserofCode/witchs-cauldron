@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
   const rawMetadata = payload?.metadata && typeof payload.metadata === "object" ? payload.metadata : {};
   const metadata = { ...rawMetadata, device_type: detectDeviceType(userAgent) };
 
-  const pool = getPool();
+  const pool = await getPool();
   await pool.query(
     `
       INSERT INTO analytics_sessions (session_id, ip, user_agent, first_seen, last_seen)

@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
   const fromIso = from.toISOString();
   const toExclusiveIso = toExclusive.toISOString();
 
-  const pool = getPool();
+  const pool = await getPool();
   const rangeResult = await pool.query(
     `
       SELECT
