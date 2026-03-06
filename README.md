@@ -509,6 +509,23 @@ server {
 }
 ```
 
+### 멀티 프로젝트 동일 서버 운영 (Desk 프로젝트 공존)
+
+기존 서비스 CI/CD에 영향 없이 같은 서버에서 Desk 프로젝트와 함께 운영하려면:
+
+- Witchs Cauldron: `docker-compose.server.yml` 사용 (신규, 서버 공존용)
+- Desk Support System: 별도 레포의 `docker-compose.server.yml` 사용
+- 공용 Reverse Proxy: `/opt/apps/deploy/reverse-proxy`에서 도메인 라우팅
+
+권장 도메인 분리:
+- Witchs Cauldron: `moingfans.com`
+- Desk: `deskops.example.net` *(완전히 다른 도메인)*
+
+핵심 규칙:
+- 앱 컨테이너는 외부 `ports` 최소화/제거, 프록시만 80/443 오픈
+- 두 프로젝트 모두 Docker external network `web`에 연결
+- 기존 `docker-compose.prod.yml` 및 기존 GitHub Actions 흐름은 유지
+
 ### SSL (Let's Encrypt)
 
 ```bash
