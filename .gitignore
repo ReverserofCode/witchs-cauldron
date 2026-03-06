@@ -14,6 +14,14 @@ frontend_local
 frontend/public/clips/__trash/
 frontend/public/clips/__tslist_*.txt
 
+# runtime-generated clip artifacts (do not track)
+/shared/clips/*.mp4
+/shared/clips/*.webm
+/shared/clips/*.m4v
+/frontend/public/clips/clip_*.mp4
+/frontend/public/clips/clip_*.webm
+/frontend/public/clips/clip_*.m4v
+
 # playwright MCP
 .playwright-mcp/
 playwright-screenshots/

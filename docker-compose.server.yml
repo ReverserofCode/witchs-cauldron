@@ -1,0 +1,84 @@
+services:
+  analytics-db:
+    container_name: witchs-cauldron-analytics-db-prod
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_USER=analytics
+      - POSTGRES_PASSWORD=analytics
+      - POSTGRES_DB=analytics
+    volumes:
+      - analytics_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U analytics -d analytics"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+    networks: [witch_internal]
+
+  backend:
+    container_name: witchs-cauldron-backend-prod
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: witchs-cauldron-backend:latest
+    environment:
+      - DEBUG=false
+      - HEADLESS=false
+      - USE_XVFB=true
+    shm_size: '2gb'
+    volumes:
+      - shared_clips:/app/shared/clips
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
+    networks: [witch_internal]
+
+  frontend:
+    container_name: witchs-cauldron-frontend-prod
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: runner
+    image: witchs-cauldron-frontend:latest
+    environment:
+      - NODE_ENV=production
+      - BACKEND_URL=http://backend:8000
+      - YOUTUBE_API_KEY=${YOUTUBE_API_KEY:-}
+      - ANALYTICS_DATABASE_URL=${ANALYTICS_DATABASE_URL:-}
+      - ADMIN_ALLOWED_EMAILS=${ADMIN_ALLOWED_EMAILS:-}
+      - ANALYTICS_PUBLIC=${ANALYTICS_PUBLIC:-}
+      - CHZZK_CLIENT_ID=${CHZZK_CLIENT_ID:-}
+      - CHZZK_CLIENT_SECRET=${CHZZK_CLIENT_SECRET:-}
+    volumes:
+      - shared_clips:/app/public/clips:ro
+    depends_on:
+      backend:
+        condition: service_healthy
+      analytics-db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "node healthcheck.js"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      witch_internal: {}
+      web:
+        aliases:
+          - witch-frontend
+
+volumes:
+  shared_clips: null
+  analytics_data: null
+
+networks:
+  witch_internal: {}
+  web:
+    external: true
