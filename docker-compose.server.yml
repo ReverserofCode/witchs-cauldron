@@ -45,6 +45,8 @@ services:
       dockerfile: Dockerfile
       target: runner
     image: witchs-cauldron-frontend:latest
+    ports:
+      - "127.0.0.1:13000:3000"
     environment:
       - NODE_ENV=production
       - BACKEND_URL=http://backend:8000
