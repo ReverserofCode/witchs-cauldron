@@ -33,9 +33,9 @@ export default function Footer() {
               <Image
                 src="/logos/parable-ent.svg"
                 alt="패러블 엔터테인먼트 로고"
-                width={98}
-                height={16}
-                className="w-auto h-4"
+                width={122}
+                height={20}
+                className="h-5 w-auto"
                 loading="lazy"
                 unoptimized
               />
