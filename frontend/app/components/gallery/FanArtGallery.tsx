@@ -90,9 +90,6 @@ export default function FanArtGallery({ images }: FanArtGalleryProps): ReactElem
               >
                 ←
               </button>
-              <span>
-                {currentIndex + 1} / {images.length}
-              </span>
               <button
                 type="button"
                 className="btn h-8 min-w-[2.25rem] justify-center text-xs"
@@ -112,18 +109,6 @@ export default function FanArtGallery({ images }: FanArtGalleryProps): ReactElem
                 다운로드
               </a>
             )}
-          </div>
-
-          <div className="flex items-center justify-center gap-1.5">
-            {images.map((item, index) => (
-              <button
-                key={item.src}
-                type="button"
-                onClick={() => setCurrentIndex(index)}
-                aria-label={`${index + 1}번 이미지로 이동`}
-                className={`h-2.5 rounded-full transition-all ${index === currentIndex ? "w-6 bg-purple-600" : "w-2.5 bg-purple-300/80 hover:bg-purple-400"}`}
-              />
-            ))}
           </div>
         </figure>
       </div>

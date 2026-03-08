@@ -103,7 +103,7 @@ export default function RightSidebar({ className, images }: RightSidebarProps = 
 
       <SectionCard
         tone="lavender"
-        className="flex-1 shadow-md rounded-2xl border-white/40 bg-white/60 shadow-purple-900/10"
+        className="shadow-md rounded-2xl border-white/40 bg-white/60 shadow-purple-900/10"
         bodyClassName="gap-5"
         eyebrow="Fan Art"
         title="마녀의 작업실"
