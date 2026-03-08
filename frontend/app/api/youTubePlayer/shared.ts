@@ -1,8 +1,28 @@
-export const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY ?? "";
+const RAW_YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY ?? "";
+export const YOUTUBE_API_KEY = RAW_YOUTUBE_API_KEY;
+
+let missingKeyWarned = false;
+
+function warnMissingApiKeyOnce() {
+  if (missingKeyWarned) return;
+  missingKeyWarned = true;
+  console.warn(
+    "[youTubePlayer] YOUTUBE_API_KEY is missing. Falling back to empty responses."
+  );
+}
+
+export function getYouTubeApiKey(): string | null {
+  const apiKey = process.env.YOUTUBE_API_KEY;
+  if (!apiKey) {
+    warnMissingApiKeyOnce();
+    return null;
+  }
+  return apiKey;
+}
 
 // 런타임에 API 키를 체크하는 함수
 function checkYouTubeApiKey(): string {
-  const apiKey = process.env.YOUTUBE_API_KEY;
+  const apiKey = getYouTubeApiKey();
   if (!apiKey) {
     throw new Error("YOUTUBE_API_KEY 환경변수가 설정되어 있지 않습니다.");
   }
@@ -19,7 +39,10 @@ const channelCache = new Map<string, ChannelMetadata>();
 export async function resolveChannelMetadata(
   handle: string
 ): Promise<ChannelMetadata | null> {
-  const YOUTUBE_API_KEY = checkYouTubeApiKey();
+  const apiKey = getYouTubeApiKey();
+  if (!apiKey) {
+    return null;
+  }
 
   if (channelCache.has(handle)) {
     return channelCache.get(handle)!;
@@ -29,7 +52,7 @@ export async function resolveChannelMetadata(
     part: "id,contentDetails",
     forHandle: handle,
   });
-  params.set("key", YOUTUBE_API_KEY);
+  params.set("key", apiKey);
 
   const res = await fetch(
     `https://www.googleapis.com/youtube/v3/channels?${params.toString()}`,

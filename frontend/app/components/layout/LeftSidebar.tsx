@@ -8,6 +8,7 @@ import { YouTubeSectionStatus } from "@/app/components/status";
 import { useYouTubeVideos } from "@/app/hooks/useYouTubeVideos";
 import { useActiveSection } from "@/app/hooks/useActiveSection";
 import type { ScheduleEvent, ScheduleFeed } from "@/app/api/broadCastSchedule/schedule";
+import { selectUpcomingScheduleEvents } from "@/app/lib/schedule";
 
 type FetchStatus = "idle" | "loading" | "ready" | "error";
 
@@ -96,7 +97,7 @@ export default function LeftSidebar({ className, images }: LeftSidebarProps = {}
         const payload = (await response.json()) as ScheduleFeed;
         if (cancelled) return;
 
-        setEvents(selectUpcomingEvents(payload.events));
+        setEvents(payload.events);
         setScheduleStatus("ready");
       } catch (err) {
         if (cancelled) return;
@@ -187,7 +188,10 @@ export default function LeftSidebar({ className, images }: LeftSidebarProps = {}
     return () => { cancelled = true; };
   }, []);
 
-  const upcomingEvents = useMemo(() => selectUpcomingEvents(events, MAX_VISIBLE_EVENTS), [events]);
+  const upcomingEvents = useMemo(
+    () => selectUpcomingScheduleEvents(events, MAX_VISIBLE_EVENTS),
+    [events]
+  );
   const nextEvent = upcomingEvents[0] ?? null;
   const nextEventLabel = nextEvent ? formatEventDateTime(nextEvent) : undefined;
 
@@ -496,54 +500,6 @@ function ChannelStatsSkeleton(): ReactElement {
 }
 
 /* ─── 기존 유틸리티 함수 ─── */
-
-function selectUpcomingEvents(allEvents: ScheduleEvent[], limit: number = MAX_VISIBLE_EVENTS): ScheduleEvent[] {
-  const anchor = new Date();
-  const now = anchor.getTime();
-
-  const scored = allEvents
-    .map((event) => {
-      const projected = projectEventRange(event, anchor);
-      if (!projected) {
-        return null;
-      }
-      const { startMs, endMs } = projected;
-      const isUpcoming = startMs >= now || endMs >= now;
-      return { event, startMs, endMs, isUpcoming };
-    })
-    .filter((value): value is NonNullable<typeof value> => Boolean(value))
-    .sort((a, b) => a.startMs - b.startMs);
-
-  const upcoming = scored.filter((item) => item.isUpcoming);
-  const source = upcoming.length > 0 ? upcoming : scored;
-
-  return source.slice(0, limit).map((item) => item.event);
-}
-
-function projectEventRange(event: ScheduleEvent, anchor: Date): { startMs: number; endMs: number } | null {
-  const startDate = new Date(event.start);
-  if (Number.isNaN(startDate.getTime())) {
-    return null;
-  }
-
-  const projectedStart = projectDateToAnchor(startDate, anchor);
-  const duration = event.end ? Date.parse(event.end) - startDate.getTime() : 0;
-  const safeDuration = Number.isFinite(duration) ? Math.max(duration, 0) : 0;
-
-  return {
-    startMs: projectedStart.getTime(),
-    endMs: projectedStart.getTime() + safeDuration,
-  };
-}
-
-function projectDateToAnchor(date: Date, anchor: Date): Date {
-  const projected = new Date(date);
-  projected.setFullYear(anchor.getFullYear());
-  if (projected.getTime() < anchor.getTime()) {
-    projected.setFullYear(anchor.getFullYear() + 1);
-  }
-  return projected;
-}
 
 function formatEventDateTime(event: ScheduleEvent): string {
   const start = Date.parse(event.start);

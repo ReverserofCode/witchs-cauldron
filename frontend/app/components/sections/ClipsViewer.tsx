@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, type KeyboardEvent } from "react";
 
 interface Clip {
   id: string;
@@ -84,33 +84,25 @@ export default function ClipsViewer({ clips }: ClipsViewerProps) {
     setTimeout(() => setIsTransitioning(false), 300);
   }, [clips.length, isTransitioning]);
 
-  // 키보드 네비게이션 (뷰어 포커스 상태에서만)
-  useEffect(() => {
-    if (!isViewerFocused) return;
+  const handleViewerKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement | null;
+    if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) {
+      return;
+    }
 
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement | null;
-      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) {
-        return;
-      }
-
-      if (e.key === "ArrowUp" || e.key === "ArrowLeft") {
-        e.preventDefault();
-        goToPrev();
-      } else if (e.key === "ArrowDown" || e.key === "ArrowRight") {
-        e.preventDefault();
-        goToNext();
-      } else if (e.key === " ") {
-        e.preventDefault();
-        setIsPlaying((prev) => !prev);
-      } else if (e.key === "m" || e.key === "M") {
-        setIsMuted((prev) => !prev);
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [goToNext, goToPrev, isViewerFocused]);
+    if (e.key === "ArrowUp" || e.key === "ArrowLeft") {
+      e.preventDefault();
+      goToPrev();
+    } else if (e.key === "ArrowDown" || e.key === "ArrowRight") {
+      e.preventDefault();
+      goToNext();
+    } else if (e.key === " ") {
+      e.preventDefault();
+      setIsPlaying((prev) => !prev);
+    } else if (e.key === "m" || e.key === "M") {
+      setIsMuted((prev) => !prev);
+    }
+  };
 
   // 휠 스크롤로 네비게이션
   useEffect(() => {
@@ -211,8 +203,10 @@ export default function ClipsViewer({ clips }: ClipsViewerProps) {
     <div
       ref={containerRef}
       tabIndex={0}
+      onKeyDown={handleViewerKeyDown}
       onFocus={() => setIsViewerFocused(true)}
       onBlur={() => setIsViewerFocused(false)}
+      aria-label="클립 뷰어"
       className="relative flex flex-col items-center focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/70 focus-visible:ring-offset-2 focus-visible:ring-offset-white rounded-2xl"
     >
       {/* Shortform Video Player */}
@@ -349,7 +343,7 @@ export default function ClipsViewer({ clips }: ClipsViewerProps) {
 
       {/* 조작 힌트 */}
       <p className="mt-4 text-xs text-purple-500/70 text-center">
-        클릭으로 포커스 후 ↑↓ 키 탐색 · Space 재생/일시정지 · M 음소거
+        {isViewerFocused ? "뷰어 포커스됨: ↑↓ 탐색 · Space 재생/일시정지 · M 음소거" : "클릭으로 포커스 후 ↑↓ 키 탐색 · Space 재생/일시정지 · M 음소거"}
       </p>
     </div>
   );

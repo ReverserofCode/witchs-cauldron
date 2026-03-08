@@ -1,10 +1,7 @@
 // 모잉 공식 채널(@moing)에서 최신순으로 Shorts만 반환하는 API
 
 import { NextResponse } from "next/server";
-import {
-  YOUTUBE_API_KEY,
-  resolveChannelMetadata,
-} from "../../youTubePlayer/shared";
+import { getYouTubeApiKey, resolveChannelMetadata } from "../../youTubePlayer/shared";
 
 const CHANNEL_HANDLE = "moing"; // 모잉 공식 채널
 const MAX_RESULTS = 12;
@@ -31,7 +28,8 @@ function parseIsoDurationToSeconds(duration: string): number {
 }
 
 async function fetchRecentPlaylistItems(
-  playlistId: string
+  playlistId: string,
+  apiKey: string
 ): Promise<PlaylistItemSnippet[]> {
   const collected: PlaylistItemSnippet[] = [];
   let pageToken: string | undefined;
@@ -45,7 +43,7 @@ async function fetchRecentPlaylistItems(
     if (pageToken) {
       params.set("pageToken", pageToken);
     }
-    params.set("key", YOUTUBE_API_KEY);
+    params.set("key", apiKey);
 
     const res = await fetch(
       `https://www.googleapis.com/youtube/v3/playlistItems?${params.toString()}`,
@@ -92,7 +90,8 @@ async function fetchRecentPlaylistItems(
 }
 
 async function fetchVideoDurations(
-  videoIds: string[]
+  videoIds: string[],
+  apiKey: string
 ): Promise<Record<string, number>> {
   if (videoIds.length === 0) {
     return {};
@@ -108,7 +107,7 @@ async function fetchVideoDurations(
       id: chunk.join(","),
       part: "contentDetails",
     });
-    params.set("key", YOUTUBE_API_KEY);
+    params.set("key", apiKey);
 
     const res = await fetch(
       `https://www.googleapis.com/youtube/v3/videos?${params.toString()}`,
@@ -134,43 +133,52 @@ async function fetchVideoDurations(
 }
 
 export async function GET() {
-  const metadata = await resolveChannelMetadata(CHANNEL_HANDLE);
-  if (!metadata) {
-    return NextResponse.json(
-      { error: "채널 정보를 찾을 수 없습니다." },
-      { status: 404 }
+  const apiKey = getYouTubeApiKey();
+  if (!apiKey) {
+    return NextResponse.json([], { status: 503 });
+  }
+
+  try {
+    const metadata = await resolveChannelMetadata(CHANNEL_HANDLE);
+    if (!metadata) {
+      return NextResponse.json([]);
+    }
+
+    const playlistItems = await fetchRecentPlaylistItems(
+      metadata.uploadsPlaylistId,
+      apiKey
     );
+
+    if (playlistItems.length === 0) {
+      return NextResponse.json([]);
+    }
+
+    const durations = await fetchVideoDurations(
+      playlistItems.map((item) => item.videoId),
+      apiKey
+    );
+
+    const shortsOnly = playlistItems
+      .filter((item) => {
+        const duration = durations[item.videoId];
+        // YouTube Shorts: 2024년 10월부터 최대 3분(180초)까지 허용
+        return Number.isFinite(duration) && duration <= 185;
+      })
+      .slice(0, MAX_RESULTS)
+      .map((item) => ({
+        videoId: item.videoId,
+        title: item.title,
+        publishedAt: item.publishedAt,
+        thumbnail: item.thumbnail,
+        channelTitle: item.channelTitle,
+        url: `https://www.youtube.com/shorts/${item.videoId}`,
+      }));
+
+    return NextResponse.json(shortsOnly);
+  } catch (error) {
+    console.error("[youtubeShorts/official] route failed", error);
+    return NextResponse.json([], { status: 503 });
   }
-
-  const playlistItems = await fetchRecentPlaylistItems(
-    metadata.uploadsPlaylistId
-  );
-
-  if (playlistItems.length === 0) {
-    return NextResponse.json([]);
-  }
-
-  const durations = await fetchVideoDurations(
-    playlistItems.map((item) => item.videoId)
-  );
-
-  const shortsOnly = playlistItems
-    .filter((item) => {
-      const duration = durations[item.videoId];
-      // YouTube Shorts: 2024년 10월부터 최대 3분(180초)까지 허용
-      return Number.isFinite(duration) && duration <= 185;
-    })
-    .slice(0, MAX_RESULTS)
-    .map((item) => ({
-      videoId: item.videoId,
-      title: item.title,
-      publishedAt: item.publishedAt,
-      thumbnail: item.thumbnail,
-      channelTitle: item.channelTitle,
-      url: `https://www.youtube.com/shorts/${item.videoId}`,
-    }));
-
-  return NextResponse.json(shortsOnly);
 }
 
 export const dynamic = "force-dynamic";

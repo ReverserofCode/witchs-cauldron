@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactElement } from "react";
 import { createPortal } from "react-dom";
 import type { ScheduleEvent } from "@/app/api/broadCastSchedule/schedule";
+import { formatDateKey, normalizeScheduleEvents } from "@/app/lib/schedule";
 
 interface ScheduleModalProps {
   events: ScheduleEvent[];
@@ -28,6 +29,10 @@ export default function ScheduleModal({
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
+  const normalizedEvents = useMemo(
+    () => normalizeScheduleEvents(events).map((item) => item.event),
+    [events]
+  );
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
@@ -59,8 +64,8 @@ export default function ScheduleModal({
   }, [isOpen, handleKeyDown]);
 
   const calendarDays = useMemo(() => {
-    return buildCalendarDays(currentMonth, events);
-  }, [currentMonth, events]);
+    return buildCalendarDays(currentMonth, normalizedEvents);
+  }, [currentMonth, normalizedEvents]);
 
   const monthLabel = useMemo(() => {
     return new Intl.DateTimeFormat("ko-KR", {
@@ -152,7 +157,7 @@ export default function ScheduleModal({
 
         {/* Calendar Content */}
         <div className="flex-1 p-3 sm:p-4 overflow-y-auto overflow-x-hidden">
-          {events.length === 0 ? (
+          {normalizedEvents.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full py-12 text-center">
               <div className="w-16 h-16 mb-4 text-purple-300">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -200,7 +205,7 @@ export default function ScheduleModal({
         <div className="flex items-center justify-between px-4 py-2 text-xs border-t border-purple-100 bg-purple-50/50 text-purple-700">
           <span>방향키로 월 이동, ESC로 닫기</span>
           <span>
-            전체 일정: {events.length}개 | 이번 달: {events.filter((e) => isEventInMonth(e, currentMonth)).length}개
+            전체 일정: {normalizedEvents.length}개 | 이번 달: {normalizedEvents.filter((e) => isEventInMonth(e, currentMonth)).length}개
           </span>
         </div>
       </div>
@@ -389,13 +394,6 @@ function buildCalendarDays(month: Date, events: ScheduleEvent[]): CalendarDay[] 
   }
 
   return days;
-}
-
-function formatDateKey(date: Date): string {
-  const year = date.getFullYear();
-  const month = `${date.getMonth() + 1}`.padStart(2, "0");
-  const day = `${date.getDate()}`.padStart(2, "0");
-  return `${year}-${month}-${day}`;
 }
 
 function formatEventTime(startISO: string): string {

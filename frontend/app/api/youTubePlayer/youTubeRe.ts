@@ -155,19 +155,39 @@ async function fetchLatestVideosExcludingShorts(
 }
 
 export async function GET() {
+  try {
+    checkYouTubeApiKey();
+  } catch (error) {
+    return NextResponse.json(
+      {
+        moing: [],
+        fullmoing: [],
+        moingFan: [],
+        error: "MISSING_API_KEY",
+        message: error instanceof Error ? error.message : "YOUTUBE_API_KEY가 없습니다.",
+      },
+      { status: 503 }
+    );
+  }
+
   const entries = Object.entries(CHANNEL_HANDLES) as [ChannelKey, string][];
 
   const results = await Promise.all(
     entries.map(async ([key, handle]) => {
-      const metadata = await resolveChannelMetadata(handle);
-      if (!metadata) {
+      try {
+        const metadata = await resolveChannelMetadata(handle);
+        if (!metadata) {
+          return [key, [] as VideoItem[]] as const;
+        }
+
+        const videos = await fetchLatestVideosExcludingShorts(
+          metadata.uploadsPlaylistId
+        );
+        return [key, videos] as const;
+      } catch (error) {
+        console.error("[youTubePlayer] channel fetch failed", handle, error);
         return [key, [] as VideoItem[]] as const;
       }
-
-      const videos = await fetchLatestVideosExcludingShorts(
-        metadata.uploadsPlaylistId
-      );
-      return [key, videos] as const;
     })
   );
 

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { resolveChannelMetadata, YOUTUBE_API_KEY } from "../youTubePlayer/shared";
+import { getYouTubeApiKey, resolveChannelMetadata } from "../youTubePlayer/shared";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 3600; // 1시간
@@ -25,7 +25,8 @@ interface ChannelStatsResponse {
 }
 
 async function fetchYouTubeStats(
-  handle: string
+  handle: string,
+  apiKey: string
 ): Promise<YouTubeChannelStats | null> {
   try {
     const meta = await resolveChannelMetadata(handle);
@@ -34,7 +35,7 @@ async function fetchYouTubeStats(
     const params = new URLSearchParams({
       part: "statistics,snippet",
       id: meta.channelId,
-      key: YOUTUBE_API_KEY,
+      key: apiKey,
     });
 
     const res = await fetch(
@@ -116,9 +117,11 @@ async function fetchChzzkFollowerCount(): Promise<number | null> {
 }
 
 export async function GET() {
+  const apiKey = getYouTubeApiKey();
+
   const [moing, fullmoing, chzzkFollowers] = await Promise.all([
-    fetchYouTubeStats("moing"),
-    fetchYouTubeStats("fullmoing"),
+    apiKey ? fetchYouTubeStats("moing", apiKey) : Promise.resolve(null),
+    apiKey ? fetchYouTubeStats("fullmoing", apiKey) : Promise.resolve(null),
     fetchChzzkFollowerCount(),
   ]);
 
@@ -127,5 +130,5 @@ export async function GET() {
     chzzk: { followerCount: chzzkFollowers },
   };
 
-  return NextResponse.json(response);
+  return NextResponse.json(response, { status: apiKey ? 200 : 503 });
 }

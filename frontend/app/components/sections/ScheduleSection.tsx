@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import SectionCard from '../cards/SectionCard';
 import { ScheduleModal } from '../modals';
 import type { ScheduleDiagnostics, ScheduleEvent, ScheduleFeed } from '@/app/api/broadCastSchedule/schedule';
+import { addDays, formatDateKey, normalizeScheduleEvents, selectUpcomingScheduleEvents, startOfDay } from '@/app/lib/schedule';
 
 type ScheduleStatus = 'idle' | 'loading' | 'ready' | 'error';
 
@@ -68,9 +69,11 @@ export default function ScheduleSection({
 
         const data = (await res.json()) as ScheduleFeed;
         if (!cancelled) {
-          const { events: upcomingWeek, range } = selectEventsForWeek(data.events, DAYS_TO_SHOW);
+          const normalizedEvents = normalizeScheduleEvents(data.events).map((item) => item.event);
+          const upcomingEvents = selectUpcomingScheduleEvents(normalizedEvents, undefined, new Date());
+          const { events: upcomingWeek, range } = selectEventsForWeek(upcomingEvents, DAYS_TO_SHOW);
           setEvents(upcomingWeek);
-          setAllEvents(data.events);
+          setAllEvents(upcomingEvents);
           setWeekRange(range);
           setStatus('ready');
         }
@@ -112,9 +115,11 @@ export default function ScheduleSection({
       setDiagnostics(payload.diagnostics);
 
       const feedEvents = payload.feed?.events ?? [];
-      const { events: upcomingWeek, range } = selectEventsForWeek(feedEvents, DAYS_TO_SHOW);
+      const normalizedEvents = normalizeScheduleEvents(feedEvents).map((item) => item.event);
+      const upcomingEvents = selectUpcomingScheduleEvents(normalizedEvents, undefined, new Date());
+      const { events: upcomingWeek, range } = selectEventsForWeek(upcomingEvents, DAYS_TO_SHOW);
       setEvents(upcomingWeek);
-      setAllEvents(feedEvents);
+      setAllEvents(upcomingEvents);
       setWeekRange(range);
       setStatus('ready');
 
@@ -301,9 +306,15 @@ function filterEventsWithinRange(
 
   const projected = events
     .map((event) => {
-      const projection = projectEventRange(event, start);
-      if (!projection) return null;
-      return { event, ...projection };
+      const startMs = Date.parse(event.start);
+      if (!Number.isFinite(startMs)) return null;
+      const duration = event.end ? Date.parse(event.end) - startMs : 0;
+      const safeDuration = Number.isFinite(duration) ? Math.max(duration, 0) : 0;
+      return {
+        event,
+        startMs,
+        endMs: startMs + safeDuration,
+      };
     })
     .filter((value): value is { event: ScheduleEvent; startMs: number; endMs: number } => Boolean(value));
 
@@ -337,13 +348,13 @@ function buildWeekColumns(
   const dateKeyedEvents = new Map<string, Array<{ event: ScheduleEvent; startMs: number }>>();
 
   events.forEach((event) => {
-    const projectedStart = projectEventDate(event, start);
-    if (!projectedStart) {
+    const startMs = Date.parse(event.start);
+    if (!Number.isFinite(startMs)) {
       return;
     }
-    const key = formatDateKey(projectedStart);
+    const key = formatDateKey(new Date(startMs));
     const bucket = dateKeyedEvents.get(key) ?? [];
-    bucket.push({ event, startMs: projectedStart.getTime() });
+    bucket.push({ event, startMs });
     dateKeyedEvents.set(key, bucket);
   });
 
@@ -371,49 +382,6 @@ function buildWeekColumns(
       isWeekend,
     };
   });
-}
-
-function projectEventRange(event: ScheduleEvent, anchor: Date): { startMs: number; endMs: number } | null {
-  const startDate = new Date(event.start);
-  if (Number.isNaN(startDate.getTime())) {
-    return null;
-  }
-
-  // 실제 날짜를 그대로 사용 (연도 조정 없이)
-  const duration = event.end ? Date.parse(event.end) - startDate.getTime() : 0;
-  const safeDuration = Number.isFinite(duration) ? Math.max(duration, 0) : 0;
-
-  return {
-    startMs: startDate.getTime(),
-    endMs: startDate.getTime() + safeDuration,
-  };
-}
-
-function projectEventDate(event: ScheduleEvent, anchor: Date): Date | null {
-  const projection = projectEventRange(event, anchor);
-  if (!projection) {
-    return null;
-  }
-  return new Date(projection.startMs);
-}
-
-function startOfDay(date: Date): Date {
-  const copy = new Date(date);
-  copy.setHours(0, 0, 0, 0);
-  return copy;
-}
-
-function addDays(date: Date, amount: number): Date {
-  const copy = new Date(date);
-  copy.setDate(copy.getDate() + amount);
-  return copy;
-}
-
-function formatDateKey(date: Date): string {
-  const year = date.getFullYear();
-  const month = `${date.getMonth() + 1}`.padStart(2, '0');
-  const day = `${date.getDate()}`.padStart(2, '0');
-  return `${year}-${month}-${day}`;
 }
 
 function formatWeekRangeLabel(range: { start: string; end: string } | null): string {
