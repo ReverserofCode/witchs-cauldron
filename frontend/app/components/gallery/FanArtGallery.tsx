@@ -11,15 +11,17 @@ interface FanArtGalleryProps {
 export default function FanArtGallery({ images }: FanArtGalleryProps): ReactElement {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [isAutoPlay, setIsAutoPlay] = useState(true);
+  const [isInteracting, setIsInteracting] = useState(false);
 
   useEffect(() => {
-    if (images.length <= 1 || isModalOpen) return;
+    if (images.length <= 1 || isModalOpen || !isAutoPlay || isInteracting) return;
     const timer = window.setInterval(() => {
       setCurrentIndex((prev) => (prev + 1) % images.length);
     }, 4000);
 
     return () => window.clearInterval(timer);
-  }, [images.length, isModalOpen]);
+  }, [images.length, isModalOpen, isAutoPlay, isInteracting]);
 
   const handleImageClick = (index: number) => {
     setCurrentIndex(index);
@@ -53,7 +55,13 @@ export default function FanArtGallery({ images }: FanArtGalleryProps): ReactElem
   return (
     <>
       <div className="flex flex-col gap-4">
-        <figure className="flex flex-col gap-3">
+        <figure
+          className="flex flex-col gap-3"
+          onMouseEnter={() => setIsInteracting(true)}
+          onMouseLeave={() => setIsInteracting(false)}
+          onFocusCapture={() => setIsInteracting(true)}
+          onBlurCapture={() => setIsInteracting(false)}
+        >
           <button
             type="button"
             onClick={() => handleImageClick(currentIndex)}
@@ -80,7 +88,16 @@ export default function FanArtGallery({ images }: FanArtGalleryProps): ReactElem
             <figcaption className="text-[11px] text-purple-900/70">{images[currentIndex].credit}</figcaption>
           )}
 
-          <div className="flex items-center justify-end text-[11px] text-purple-900/60">
+          <div className="flex items-center justify-between text-[11px] text-purple-900/60">
+            <button
+              type="button"
+              className="btn h-8 min-w-[5rem] justify-center text-xs"
+              onClick={() => setIsAutoPlay((prev) => !prev)}
+              aria-label={isAutoPlay ? "자동 회전 일시정지" : "자동 회전 재개"}
+            >
+              {isAutoPlay ? "자동회전 ON" : "자동회전 OFF"}
+            </button>
+
             {images[currentIndex].download && (
               <a
                 href={images[currentIndex].download}

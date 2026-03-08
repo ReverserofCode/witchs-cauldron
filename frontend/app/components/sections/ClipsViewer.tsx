@@ -21,6 +21,7 @@ export default function ClipsViewer({ clips }: ClipsViewerProps) {
   const [failedClipIds, setFailedClipIds] = useState<Set<string>>(new Set());
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [isViewerFocused, setIsViewerFocused] = useState(false);
 
   const currentClip = clips[currentIndex];
   const allFailed = clips.length > 0 && failedClipIds.size >= clips.length;
@@ -83,9 +84,16 @@ export default function ClipsViewer({ clips }: ClipsViewerProps) {
     setTimeout(() => setIsTransitioning(false), 300);
   }, [clips.length, isTransitioning]);
 
-  // 키보드 네비게이션
+  // 키보드 네비게이션 (뷰어 포커스 상태에서만)
   useEffect(() => {
+    if (!isViewerFocused) return;
+
     const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) {
+        return;
+      }
+
       if (e.key === "ArrowUp" || e.key === "ArrowLeft") {
         e.preventDefault();
         goToPrev();
@@ -102,7 +110,7 @@ export default function ClipsViewer({ clips }: ClipsViewerProps) {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [goToNext, goToPrev]);
+  }, [goToNext, goToPrev, isViewerFocused]);
 
   // 휠 스크롤로 네비게이션
   useEffect(() => {
@@ -202,7 +210,10 @@ export default function ClipsViewer({ clips }: ClipsViewerProps) {
   return (
     <div
       ref={containerRef}
-      className="relative flex flex-col items-center"
+      tabIndex={0}
+      onFocus={() => setIsViewerFocused(true)}
+      onBlur={() => setIsViewerFocused(false)}
+      className="relative flex flex-col items-center focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/70 focus-visible:ring-offset-2 focus-visible:ring-offset-white rounded-2xl"
     >
       {/* Shortform Video Player */}
       <div className="relative w-full max-w-[min(88vw,320px)] mx-auto">
@@ -338,7 +349,7 @@ export default function ClipsViewer({ clips }: ClipsViewerProps) {
 
       {/* 조작 힌트 */}
       <p className="mt-4 text-xs text-purple-500/70 text-center">
-        스와이프 또는 ↑↓ 키로 탐색 · Space로 재생/일시정지 · M으로 음소거
+        클릭으로 포커스 후 ↑↓ 키 탐색 · Space 재생/일시정지 · M 음소거
       </p>
     </div>
   );

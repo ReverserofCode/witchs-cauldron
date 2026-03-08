@@ -141,7 +141,7 @@ export default function ScheduleSection({
       tone="lavender"
       eyebrow="Broadcast Schedule"
       title="라이브 일정표"
-  description={`오늘부터 4일간의 방송을 보여주며 하루당 최대 ${clampedLimit}일간의 방송일정을 표시합니다.`}
+  description={`오늘부터 4일간의 방송을 보여주며 하루당 최대 ${clampedLimit}개의 일정을 표시합니다.`}
       bodyClassName="relative"
     >
   {status === 'loading' && <ScheduleSkeleton daysToShow={DAYS_TO_SHOW} />}
