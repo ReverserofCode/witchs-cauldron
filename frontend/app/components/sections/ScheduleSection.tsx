@@ -24,6 +24,9 @@ interface WeekColumn {
 const SCHEDULE_ENDPOINT = '/api/broadCastSchedule';
 const MAX_EVENTS_PER_DAY = 4;
 const DAYS_TO_SHOW = 4;
+const SHOW_SCHEDULE_DIAGNOSTICS =
+  process.env.NODE_ENV !== 'production' ||
+  process.env.NEXT_PUBLIC_ENABLE_SCHEDULE_DIAGNOSTICS === 'true';
 
 export default function ScheduleSection({
   className,
@@ -157,25 +160,35 @@ export default function ScheduleSection({
             <br />
             {error}
           </div>
-          <div className="flex flex-wrap gap-2 text-xs">
+          {SHOW_SCHEDULE_DIAGNOSTICS ? (
+            <div className="flex flex-wrap gap-2 text-xs">
+              <button
+                type="button"
+                onClick={handleRunDiagnostics}
+                disabled={diagnoseStatus === 'running'}
+                className="inline-flex items-center gap-2 px-3 py-1 font-semibold text-purple-800 transition rounded-full bg-white/70 hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {diagnoseStatus === 'running' ? '진단 실행 중...' : '자동 진단 실행'}
+              </button>
+              <a
+                href={`${SCHEDULE_ENDPOINT}?debug=1`}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center px-3 py-1 font-semibold text-purple-800 transition border rounded-full border-purple-300/70 hover:bg-purple-100/60"
+              >
+                API 응답 열기
+              </a>
+            </div>
+          ) : (
             <button
               type="button"
-              onClick={handleRunDiagnostics}
-              disabled={diagnoseStatus === 'running'}
-              className="inline-flex items-center gap-2 px-3 py-1 font-semibold text-purple-800 transition rounded-full bg-white/70 hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+              onClick={() => window.location.reload()}
+              className="inline-flex items-center gap-2 px-3 py-1 font-semibold text-purple-800 transition rounded-full bg-white/70 hover:bg-white"
             >
-              {diagnoseStatus === 'running' ? '진단 실행 중...' : '자동 진단 실행'}
+              다시 시도
             </button>
-            <a
-              href={`${SCHEDULE_ENDPOINT}?debug=1`}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center px-3 py-1 font-semibold text-purple-800 transition border rounded-full border-purple-300/70 hover:bg-purple-100/60"
-            >
-              API 응답 열기
-            </a>
-          </div>
-          {diagnoseStatus === 'error' && diagnoseError && (
+          )}
+          {SHOW_SCHEDULE_DIAGNOSTICS && diagnoseStatus === 'error' && diagnoseError && (
             <p className="text-sm text-red-600">{diagnoseError}</p>
           )}
         </div>
@@ -272,7 +285,7 @@ export default function ScheduleSection({
           </div>
         </div>
       )}
-      {diagnostics && <DiagnosticsPanel diagnostics={diagnostics} status={diagnoseStatus} />}
+      {SHOW_SCHEDULE_DIAGNOSTICS && diagnostics && <DiagnosticsPanel diagnostics={diagnostics} status={diagnoseStatus} />}
 
       {/* Schedule Modal */}
       <ScheduleModal

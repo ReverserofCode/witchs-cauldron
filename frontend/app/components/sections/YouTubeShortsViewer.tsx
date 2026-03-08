@@ -18,10 +18,18 @@ export default function YouTubeShortsViewer() {
   const [error, setError] = useState<string | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
+  const [retrySeed, setRetrySeed] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const retryFetch = useCallback(() => {
+    setRetrySeed((prev) => prev + 1);
+  }, []);
 
   useEffect(() => {
     async function fetchShorts() {
+      setIsLoading(true);
+      setError(null);
+
       try {
         const res = await fetch("/api/youtubeShorts/official");
         if (!res.ok) {
@@ -41,7 +49,7 @@ export default function YouTubeShortsViewer() {
     }
 
     fetchShorts();
-  }, []);
+  }, [retrySeed]);
 
   const currentShort = shorts[currentIndex];
 
@@ -134,10 +142,27 @@ export default function YouTubeShortsViewer() {
           </svg>
         </div>
         <div>
-          <h3 className="font-semibold text-red-900">Shorts가 없습니다</h3>
+          <h3 className="font-semibold text-red-900">Shorts를 불러오지 못했습니다</h3>
           <p className="text-sm text-red-700/80">
             {error || "공식 채널에서 Shorts를 불러올 수 없습니다."}
           </p>
+        </div>
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          <button
+            type="button"
+            onClick={retryFetch}
+            className="inline-flex items-center justify-center rounded-lg bg-red-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-red-700"
+          >
+            다시 시도
+          </button>
+          <a
+            href="https://www.youtube.com/@moing/shorts"
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center justify-center rounded-lg border border-red-300 px-3 py-2 text-xs font-semibold text-red-700 transition hover:bg-red-50"
+          >
+            채널에서 열기
+          </a>
         </div>
       </div>
     );

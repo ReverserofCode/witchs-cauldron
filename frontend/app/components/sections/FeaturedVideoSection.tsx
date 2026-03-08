@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { SectionCard } from "@/app/components/cards";
 import VideoCard from "@/app/components/cards/VideoCard";
+import { useYouTubeVideos } from "@/app/hooks/useYouTubeVideos";
+import { useTopOfficialVideos } from "@/app/hooks/useTopOfficialVideos";
 
 type VideoItem = {
   videoId: string;
@@ -15,17 +17,6 @@ type VideoItem = {
 
 type TopVideo = VideoItem & { viewCount: number | null };
 
-type LatestApiResponse = {
-  moing: VideoItem[];
-  fullmoing: VideoItem[];
-};
-
-type TopApiResponse = {
-  moing: TopVideo | null;
-  fullmoing: TopVideo | null;
-};
-
-type LoadState = "idle" | "loading" | "ready" | "error";
 
 type ChannelKey = "moing" | "fullmoing";
 
@@ -56,69 +47,35 @@ function usePreviousMonthLabel(): string {
 
 export default function FeaturedVideoSection() {
   const [activeTab, setActiveTab] = useState<ChannelKey>("moing");
-  const [latestState, setLatestState] = useState<LoadState>("idle");
-  const [topState, setTopState] = useState<LoadState>("idle");
-  const [latestVideos, setLatestVideos] = useState<Record<ChannelKey, VideoItem | null>>({
-    moing: null,
-    fullmoing: null,
-  });
-  const [topVideos, setTopVideos] = useState<Record<ChannelKey, TopVideo | null>>({
-    moing: null,
-    fullmoing: null,
-  });
-  const [error, setError] = useState<string | null>(null);
   const monthLabel = usePreviousMonthLabel();
 
-  useEffect(() => {
-    let cancelled = false;
+  const {
+    data: latestData,
+    status: latestState,
+    error: latestError,
+  } = useYouTubeVideos();
+  const {
+    data: topData,
+    status: topState,
+    error: topError,
+  } = useTopOfficialVideos();
 
-    async function loadLatest() {
-      setLatestState("loading");
-      try {
-        const res = await fetch("/api/youTubePlayer", { headers: { accept: "application/json" } });
-        if (!res.ok) throw new Error(`영상 정보를 불러오지 못했습니다. (${res.status})`);
-        const data = (await res.json()) as LatestApiResponse;
-        if (cancelled) return;
-        setLatestVideos({
-          moing: selectLatestVideo(data.moing ?? []),
-          fullmoing: selectLatestVideo(data.fullmoing ?? []),
-        });
-        setLatestState("ready");
-      } catch (err) {
-        if (!cancelled) {
-          setLatestState("error");
-          setError(err instanceof Error ? err.message : "알 수 없는 오류가 발생했습니다.");
-        }
-      }
-    }
+  const latestVideos: Record<ChannelKey, VideoItem | null> = {
+    moing: selectLatestVideo(latestData?.moing ?? []),
+    fullmoing: selectLatestVideo(latestData?.fullmoing ?? []),
+  };
+  const topVideos: Record<ChannelKey, TopVideo | null> = {
+    moing: topData?.moing ?? null,
+    fullmoing: topData?.fullmoing ?? null,
+  };
 
-    async function loadTop() {
-      setTopState("loading");
-      try {
-        const res = await fetch("/api/youTubePlayer/topOfficial", { headers: { accept: "application/json" } });
-        if (!res.ok) throw new Error(`인기 영상 정보를 불러오지 못했습니다. (${res.status})`);
-        const data = (await res.json()) as TopApiResponse;
-        if (cancelled) return;
-        setTopVideos({ moing: data.moing ?? null, fullmoing: data.fullmoing ?? null });
-        setTopState("ready");
-      } catch (err) {
-        if (!cancelled) {
-          setTopState("error");
-          setError(err instanceof Error ? err.message : "알 수 없는 오류가 발생했습니다.");
-        }
-      }
-    }
-
-    loadLatest();
-    loadTop();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const isLoading = latestState === "loading" || latestState === "idle" || topState === "loading" || topState === "idle";
+  const isLoading =
+    latestState === "loading" ||
+    latestState === "idle" ||
+    topState === "loading" ||
+    topState === "idle";
   const isError = latestState === "error" && topState === "error";
+  const error = latestError ?? topError;
   const latestVideo = latestVideos[activeTab];
   const topVideo = topVideos[activeTab];
 

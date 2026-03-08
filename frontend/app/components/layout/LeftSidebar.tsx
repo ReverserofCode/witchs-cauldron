@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState, type ReactElement } from "react";
 import { SectionCard } from "@/app/components/cards";
 import { YouTubeSectionStatus } from "@/app/components/status";
 import { useYouTubeVideos } from "@/app/hooks/useYouTubeVideos";
+import { useTopOfficialVideos } from "@/app/hooks/useTopOfficialVideos";
 import { useActiveSection } from "@/app/hooks/useActiveSection";
 import type { ScheduleEvent, ScheduleFeed } from "@/app/api/broadCastSchedule/schedule";
 import { selectUpcomingScheduleEvents } from "@/app/lib/schedule";
@@ -13,7 +14,6 @@ import { selectUpcomingScheduleEvents } from "@/app/lib/schedule";
 type FetchStatus = "idle" | "loading" | "ready" | "error";
 
 const SCHEDULE_ENDPOINT = "/api/broadCastSchedule";
-const TOP_VIDEO_ENDPOINT = "/api/youTubePlayer/topOfficial";
 const CHANNEL_STATS_ENDPOINT = "/api/channelStats";
 const MAX_VISIBLE_EVENTS = 3;
 
@@ -65,9 +65,6 @@ export default function LeftSidebar({ className, images }: LeftSidebarProps = {}
   const [events, setEvents] = useState<ScheduleEvent[]>([]);
   const [scheduleError, setScheduleError] = useState<string | null>(null);
 
-  const [topVideoStatus, setTopVideoStatus] = useState<FetchStatus>("idle");
-  const [topVideo, setTopVideo] = useState<TopVideoPayload | null>(null);
-  const [topVideoError, setTopVideoError] = useState<string | null>(null);
 
   const [statsStatus, setStatsStatus] = useState<FetchStatus>("idle");
   const [channelStats, setChannelStats] = useState<ChannelStatsData | null>(null);
@@ -75,6 +72,7 @@ export default function LeftSidebar({ className, images }: LeftSidebarProps = {}
   const [countdown, setCountdown] = useState<string | null>(null);
 
   const { data: youtubeData, status: youtubeStatus, error: youtubeError } = useYouTubeVideos();
+  const { data: topVideoData, status: topVideoStatus, error: topVideoError } = useTopOfficialVideos();
   const activeSection = useActiveSection(TOC_SECTION_IDS);
 
   useEffect(() => {
@@ -113,54 +111,6 @@ export default function LeftSidebar({ className, images }: LeftSidebarProps = {}
     };
   }, []);
 
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadTopVideo() {
-      setTopVideoStatus("loading");
-      setTopVideoError(null);
-
-      try {
-        const res = await fetch(TOP_VIDEO_ENDPOINT, {
-          headers: { accept: "application/json" },
-          cache: "no-store",
-        });
-
-        if (!res.ok) {
-          throw new Error(`영상 정보를 불러오지 못했습니다. (${res.status})`);
-        }
-
-        const payload = (await res.json()) as {
-          moing: TopVideoPayload | null;
-          fullmoing: TopVideoPayload | null;
-        };
-        if (cancelled) return;
-
-        // 두 채널 중 조회수가 더 높은 영상을 선택
-        const candidates = [payload.moing, payload.fullmoing].filter(
-          (v): v is TopVideoPayload => v !== null
-        );
-        const best = candidates.reduce<TopVideoPayload | null>((acc, cur) => {
-          if (!acc) return cur;
-          const accCount = typeof acc.viewCount === "number" ? acc.viewCount : -1;
-          const curCount = typeof cur.viewCount === "number" ? cur.viewCount : -1;
-          return curCount > accCount ? cur : acc;
-        }, null);
-        setTopVideo(best);
-        setTopVideoStatus("ready");
-      } catch (err) {
-        if (cancelled) return;
-        setTopVideoError(err instanceof Error ? err.message : "알 수 없는 오류가 발생했습니다.");
-        setTopVideoStatus("error");
-      }
-    }
-
-    loadTopVideo();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   // 채널 통계 fetch
   useEffect(() => {
@@ -217,6 +167,17 @@ export default function LeftSidebar({ className, images }: LeftSidebarProps = {}
   }, [nextEvent]);
 
   const highlightVideos = useMemo(() => buildHighlightVideos(youtubeData), [youtubeData]);
+  const topVideo = useMemo(() => {
+    const candidates = [topVideoData?.moing, topVideoData?.fullmoing].filter(
+      (v): v is TopVideoPayload => v !== null && v !== undefined
+    );
+    return candidates.reduce<TopVideoPayload | null>((acc, cur) => {
+      if (!acc) return cur;
+      const accCount = typeof acc.viewCount === "number" ? acc.viewCount : -1;
+      const curCount = typeof cur.viewCount === "number" ? cur.viewCount : -1;
+      return curCount > accCount ? cur : acc;
+    }, null);
+  }, [topVideoData]);
 
   const gallery = useMemo(() => (images && images.length > 0 ? images : defaultImages), [images]);
 

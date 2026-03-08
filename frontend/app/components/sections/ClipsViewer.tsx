@@ -195,6 +195,26 @@ export default function ClipsViewer({ clips }: ClipsViewerProps) {
             파일이 없거나 브라우저에서 지원하지 않는 형식일 수 있습니다.
           </p>
         </div>
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              setFailedClipIds(new Set());
+              setCurrentIndex(0);
+            }}
+            className="inline-flex items-center justify-center rounded-lg bg-purple-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-purple-700"
+          >
+            다시 시도
+          </button>
+          <a
+            href="https://chzzk.naver.com/1d333ff175b4db5bd06f87a88579ec1e"
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center justify-center rounded-lg border border-purple-300 px-3 py-2 text-xs font-semibold text-purple-700 transition hover:bg-purple-50"
+          >
+            채널에서 보기
+          </a>
+        </div>
       </div>
     );
   }
