@@ -80,26 +80,7 @@ export default function FanArtGallery({ images }: FanArtGalleryProps): ReactElem
             <figcaption className="text-[11px] text-purple-900/70">{images[currentIndex].credit}</figcaption>
           )}
 
-          <div className="flex items-center justify-between text-[11px] text-purple-900/60">
-            <div className="inline-flex items-center gap-2">
-              <button
-                type="button"
-                className="btn h-8 min-w-[2.25rem] justify-center text-xs"
-                onClick={() => setCurrentIndex((prev) => (prev - 1 + images.length) % images.length)}
-                aria-label="이전 이미지"
-              >
-                ←
-              </button>
-              <button
-                type="button"
-                className="btn h-8 min-w-[2.25rem] justify-center text-xs"
-                onClick={() => setCurrentIndex((prev) => (prev + 1) % images.length)}
-                aria-label="다음 이미지"
-              >
-                →
-              </button>
-            </div>
-
+          <div className="flex items-center justify-end text-[11px] text-purple-900/60">
             {images[currentIndex].download && (
               <a
                 href={images[currentIndex].download}
