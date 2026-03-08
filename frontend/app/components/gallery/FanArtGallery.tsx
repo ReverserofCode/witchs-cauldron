@@ -57,7 +57,7 @@ export default function FanArtGallery({ images }: FanArtGalleryProps): ReactElem
           <button
             type="button"
             onClick={() => handleImageClick(currentIndex)}
-            className="relative overflow-hidden transition-transform border shadow-lg cursor-pointer rounded-2xl border-white/40 shadow-purple-900/20 hover:scale-[1.02] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+            className="relative h-[420px] overflow-hidden transition-transform border shadow-lg cursor-pointer rounded-2xl border-white/40 shadow-purple-900/20 hover:scale-[1.02] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
             aria-label={`${images[currentIndex].alt} 크게 보기`}
           >
             <Image
@@ -65,7 +65,7 @@ export default function FanArtGallery({ images }: FanArtGalleryProps): ReactElem
               alt={images[currentIndex].alt}
               width={320}
               height={420}
-              className="object-cover w-full h-full"
+              className="h-full w-full object-contain bg-white/30"
               sizes="(min-width: 1280px) 240px, (min-width: 1024px) 200px, 100vw"
               priority
             />
