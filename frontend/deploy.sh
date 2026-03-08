@@ -5,7 +5,25 @@
 
 set -e
 
+# 배포 대상 compose 파일/헬스체크 URL (필요 시 환경변수로 오버라이드)
+COMPOSE_FILE="${DEPLOY_COMPOSE_FILE:-docker-compose.server.yml}"
+if [ ! -f "$COMPOSE_FILE" ]; then
+    if [ "$COMPOSE_FILE" = "docker-compose.server.yml" ] && [ -f "docker-compose.prod.yml" ]; then
+        COMPOSE_FILE="docker-compose.prod.yml"
+    else
+        echo "[ERROR] compose 파일을 찾을 수 없습니다: $COMPOSE_FILE"
+        exit 1
+    fi
+fi
+
+HEALTHCHECK_URL="${DEPLOY_HEALTHCHECK_URL:-http://localhost:3000}"
+if [ "$COMPOSE_FILE" = "docker-compose.server.yml" ] && [ -z "${DEPLOY_HEALTHCHECK_URL:-}" ]; then
+    HEALTHCHECK_URL="http://127.0.0.1:13000"
+fi
+
 echo "🚀 Witchs Cauldron 프로젝트 배포를 시작합니다..."
+echo "📦 Compose: $COMPOSE_FILE"
+echo "🩺 Health URL: $HEALTHCHECK_URL"
 
 # 색상 정의
 RED='\033[0;31m'
@@ -87,9 +105,9 @@ build_image() {
     # 이미지 빌드 (기존 컨테이너는 계속 실행 중)
     log_info "빌드 진행 상황을 모니터링합니다..."
     if docker compose version >/dev/null 2>&1; then
-        docker compose -f docker-compose.prod.yml build $BUILD_FLAGS
+        docker compose -f "$COMPOSE_FILE" build $BUILD_FLAGS
     else
-        docker-compose -f docker-compose.prod.yml build $BUILD_FLAGS
+        docker-compose -f "$COMPOSE_FILE" build $BUILD_FLAGS
     fi
     log_success "Docker 이미지 빌드가 완료되었습니다."
 }
@@ -110,13 +128,13 @@ replace_application() {
     log_info "애플리케이션을 교체합니다 (무중단 배포)..."
 
     if docker compose version >/dev/null 2>&1; then
-        docker compose -f docker-compose.prod.yml down --remove-orphans 2>/dev/null || true
+        docker compose -f "$COMPOSE_FILE" down --remove-orphans 2>/dev/null || true
         cleanup_stale_containers
-        docker compose -f docker-compose.prod.yml up -d --force-recreate --remove-orphans
+        docker compose -f "$COMPOSE_FILE" up -d --force-recreate --remove-orphans
     else
-        docker-compose -f docker-compose.prod.yml down --remove-orphans 2>/dev/null || true
+        docker-compose -f "$COMPOSE_FILE" down --remove-orphans 2>/dev/null || true
         cleanup_stale_containers
-        docker-compose -f docker-compose.prod.yml up -d --force-recreate --remove-orphans
+        docker-compose -f "$COMPOSE_FILE" up -d --force-recreate --remove-orphans
     fi
 
     log_success "애플리케이션이 교체되었습니다!"
@@ -130,7 +148,7 @@ health_check() {
     attempt=1
 
     while [ $attempt -le $max_attempts ]; do
-        if curl -f http://localhost:3000 > /dev/null 2>&1; then
+        if curl -f "$HEALTHCHECK_URL" > /dev/null 2>&1; then
             log_success "애플리케이션이 정상적으로 실행 중입니다! 🎉"
             return 0
         fi
@@ -141,7 +159,7 @@ health_check() {
     done
 
     log_error "애플리케이션이 정상적으로 시작되지 않았습니다."
-    log_info "로그를 확인하세요: docker compose -f docker-compose.prod.yml logs"
+    log_info "로그를 확인하세요: docker compose -f $COMPOSE_FILE logs"
     return 1
 }
 
@@ -157,11 +175,11 @@ rollback() {
 
     # 이전 이미지가 있다면 롤백
     if docker compose version >/dev/null 2>&1; then
-        docker compose -f docker-compose.prod.yml down
-        docker compose -f docker-compose.prod.yml up -d
+        docker compose -f "$COMPOSE_FILE" down
+        docker compose -f "$COMPOSE_FILE" up -d
     else
-        docker-compose -f docker-compose.prod.yml down
-        docker-compose -f docker-compose.prod.yml up -d
+        docker-compose -f "$COMPOSE_FILE" down
+        docker-compose -f "$COMPOSE_FILE" up -d
     fi
 
     log_warning "롤백이 완료되었습니다. 수동으로 상태를 확인하세요."
@@ -204,10 +222,10 @@ main() {
     log_success "무중단 배포가 완료되었습니다! 🚀"
     echo ""
     echo "유용한 명령어:"
-    echo "  상태 확인: docker compose -f docker-compose.prod.yml ps"
-    echo "  로그 확인: docker compose -f docker-compose.prod.yml logs -f"
-    echo "  중지: docker compose -f docker-compose.prod.yml down"
-    echo "  재시작: docker compose -f docker-compose.prod.yml restart"
+    echo "  상태 확인: docker compose -f $COMPOSE_FILE ps"
+    echo "  로그 확인: docker compose -f $COMPOSE_FILE logs -f"
+    echo "  중지: docker compose -f $COMPOSE_FILE down"
+    echo "  재시작: docker compose -f $COMPOSE_FILE restart"
 }
 
 # 스크립트 실행
