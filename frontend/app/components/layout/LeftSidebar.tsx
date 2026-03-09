@@ -16,13 +16,6 @@ type FetchStatus = "idle" | "loading" | "ready" | "error";
 const SCHEDULE_ENDPOINT = "/api/broadCastSchedule";
 const CHANNEL_STATS_ENDPOINT = "/api/channelStats";
 const MAX_VISIBLE_EVENTS = 3;
-const DEPLOY_COMMIT_SHA =
-  process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA ??
-  process.env.NEXT_PUBLIC_GIT_COMMIT_SHA ??
-  "";
-const DEPLOY_COMMIT_LABEL = DEPLOY_COMMIT_SHA ? DEPLOY_COMMIT_SHA.slice(0, 7) : "정보 없음";
-const CD_STATUS_LABEL = process.env.NEXT_PUBLIC_CD_STATUS ?? "정상";
-const LAST_HEALTH_CHECK_LABEL = process.env.NEXT_PUBLIC_LAST_HEALTH_CHECK ?? "점검 예정";
 
 const TABLE_OF_CONTENTS = [
   { id: "featured-videos", label: "주요 영상" },
@@ -354,35 +347,7 @@ export default function LeftSidebar({ className, images }: LeftSidebarProps = {}
         )}
       </SectionCard>
 
-      {/* 5. 운영 상태 */}
-      <SectionCard
-        tone="neutral"
-        className="shadow-md rounded-2xl border-white/40 bg-white/82 shadow-purple-900/10"
-        bodyClassName="gap-2"
-        eyebrow="Ops"
-        title="운영 상태"
-      >
-        <ul className="flex flex-col gap-1.5 text-[11px] text-purple-900/85">
-          <li className="flex items-center justify-between rounded-lg border border-purple-200/60 bg-white/70 px-2.5 py-2">
-            <span className="font-medium text-purple-700/90">배포 커밋</span>
-            <code className="rounded-md bg-purple-100/70 px-1.5 py-0.5 text-[10px] font-semibold text-purple-900">
-              {DEPLOY_COMMIT_LABEL}
-            </code>
-          </li>
-          <li className="flex items-center justify-between rounded-lg border border-purple-200/60 bg-white/70 px-2.5 py-2">
-            <span className="font-medium text-purple-700/90">CD 상태</span>
-            <span className="inline-flex items-center rounded-full bg-emerald-100/90 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
-              {CD_STATUS_LABEL}
-            </span>
-          </li>
-          <li className="flex items-center justify-between rounded-lg border border-purple-200/60 bg-white/70 px-2.5 py-2">
-            <span className="font-medium text-purple-700/90">헬스체크</span>
-            <span className="text-[10px] font-semibold text-purple-800/80">{LAST_HEALTH_CHECK_LABEL}</span>
-          </li>
-        </ul>
-      </SectionCard>
-
-      {/* 6. 팬아트 갤러리 */}
+      {/* 5. 팬아트 갤러리 */}
       {gallery.length > 0 && (
         <SectionCard
           tone="lavender"
