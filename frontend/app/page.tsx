@@ -67,17 +67,17 @@ export default async function Page(): Promise<ReactElement> {
     : '다음 방송을 기다려주세요.'
 
   return (
-    <main className="py-10 lg:py-16">
+    <main className="py-8 lg:py-12">
       <div className="w-full px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
-        <div className="grid w-full grid-cols-1 gap-4 lg:grid-cols-[minmax(180px,0.7fr)_minmax(0,2.6fr)_minmax(180px,0.7fr)] xl:grid-cols-[minmax(200px,0.8fr)_minmax(0,2.4fr)_minmax(200px,0.8fr)] xl:gap-6">
+        <div className="grid w-full grid-cols-1 gap-3 lg:grid-cols-[minmax(180px,0.85fr)_minmax(0,2.3fr)_minmax(180px,0.85fr)] xl:grid-cols-[minmax(200px,0.9fr)_minmax(0,2.2fr)_minmax(200px,0.9fr)] xl:gap-5">
           {/* Left Aside */}
           <LeftSidebar className="hidden lg:flex lg:sticky lg:top-24" />
           {/* Center Content Wrapper: 중앙 컬럼에 본문을 모아 배치 */}
-          <div className="flex min-w-0 flex-col gap-10 text-[15px] leading-relaxed lg:px-3">
+          <div className="flex min-w-0 flex-col gap-6 text-[15px] leading-relaxed lg:px-2">
             {/* HERO */}
             {/* 텍스트 2, 이미지 1 비율의 그리드 */}
             {/* 초기 소개용 섹션 */}
-            <div className="flex flex-col w-full gap-10 Intro-section">
+            <div className="flex flex-col w-full gap-6 Intro-section">
               <SectionCard
                 tone="dimmed"
                 header={
@@ -219,26 +219,31 @@ export default async function Page(): Promise<ReactElement> {
                 </SectionCard>
               </ScrollReveal>
 
-              <ScrollReveal>
-                <SectionTracker sectionId="featured-videos">
-                  <FeaturedVideoSection />
-                </SectionTracker>
-              </ScrollReveal>
-              <ScrollReveal>
-                <SectionTracker sectionId="clips-section">
-                  <ClipsSection />
-                </SectionTracker>
-              </ScrollReveal>
-              <ScrollReveal>
-                <SectionTracker sectionId="schedule-section">
-                  <ScheduleSection />
-                </SectionTracker>
-              </ScrollReveal>
-              <ScrollReveal>
-                <SectionTracker sectionId="youtube-hub">
-                  <YouTubeHubSection />
-                </SectionTracker>
-              </ScrollReveal>
+              <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+                <ScrollReveal>
+                  <SectionTracker sectionId="featured-videos">
+                    <FeaturedVideoSection />
+                  </SectionTracker>
+                </ScrollReveal>
+                <ScrollReveal>
+                  <SectionTracker sectionId="schedule-section">
+                    <ScheduleSection />
+                  </SectionTracker>
+                </ScrollReveal>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+                <ScrollReveal>
+                  <SectionTracker sectionId="clips-section">
+                    <ClipsSection />
+                  </SectionTracker>
+                </ScrollReveal>
+                <ScrollReveal>
+                  <SectionTracker sectionId="youtube-hub">
+                    <YouTubeHubSection />
+                  </SectionTracker>
+                </ScrollReveal>
+              </div>
               {fanArtImages.length > 0 && (
                 <ScrollReveal>
                   <SectionCard
