@@ -18,6 +18,7 @@ import { SectionTracker } from '@/app/components/analytics/SectionTracker'
 import { ScrollReveal } from '@/app/components/animations'
 import { FanArtGallery } from '@/app/components/gallery'
 import { loadFanArtImages } from '@/app/lib/fanart'
+import { getBirthdayBannerCopy, isBirthdayToday } from '@/app/lib/birthday'
 
 export const dynamic = 'force-dynamic'
 
@@ -50,6 +51,8 @@ const SEO_FAQ = [
 
 export default async function Page(): Promise<ReactElement> {
   const fanArtImages = loadFanArtImages()
+  const showBirthdayBanner = isBirthdayToday()
+  const birthdayBannerCopy = showBirthdayBanner ? getBirthdayBannerCopy() : null
   const liveStatus = await getChzzkLiveStatus()
   const liveChipClass = `chip inline-flex items-center gap-1.5 border ${liveStatus.isLive ? 'bg-rose-500/90 border-rose-300/60 text-white' : 'bg-slate-700/80 border-slate-600/70 text-slate-100'}`
   const viewerText =
@@ -137,6 +140,23 @@ export default async function Page(): Promise<ReactElement> {
                   팬 여러분이 가장 궁금해하는 정보, 최신 방송 일정, 그리고 하이라이트 영상들을 한 곳에 모았습니다.
                 </p>
               </SectionCard>
+
+              {showBirthdayBanner && birthdayBannerCopy && (
+                <SectionCard
+                  tone="lavender"
+                  className="border-amber-200/70 bg-gradient-to-r from-amber-50/85 via-white/90 to-purple-100/75"
+                  eyebrow="Birthday"
+                  title="오늘은 특별한 날"
+                  description="모잉의 생일을 함께 축하해 주세요."
+                >
+                  <div className="rounded-2xl border border-amber-200/70 bg-white/80 px-4 py-3">
+                    <p className="text-base font-semibold text-amber-800">{birthdayBannerCopy}</p>
+                    <p className="mt-1 text-sm text-purple-900/80">
+                      팬카페와 치지직 채널에서 따뜻한 축하 메시지를 남겨보세요.
+                    </p>
+                  </div>
+                </SectionCard>
+              )}
 
               <ScrollReveal>
                 <SectionCard
