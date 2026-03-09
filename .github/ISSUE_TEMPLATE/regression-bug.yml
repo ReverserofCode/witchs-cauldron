@@ -1,0 +1,59 @@
+name: Regression Bug
+description: 배포 이후 기능 회귀/신뢰성 문제 보고
+title: "[Regression] "
+labels: ["bug", "regression"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        회귀 이슈 템플릿입니다. 재현 정보를 최대한 구체적으로 작성해주세요.
+  - type: textarea
+    id: summary
+    attributes:
+      label: 요약
+      description: 어떤 기능이 어떤 버전 이후 깨졌는지
+      placeholder: 예) 사이드바의 가까운 방송과 메인 일정이 불일치합니다.
+    validations:
+      required: true
+  - type: input
+    id: env
+    attributes:
+      label: 환경
+      placeholder: production / staging / local
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 재현 절차
+      placeholder: |
+        1) ...
+        2) ...
+        3) ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 기대 동작
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: 실제 동작
+    validations:
+      required: true
+  - type: textarea
+    id: impact
+    attributes:
+      label: 영향도
+      description: 사용자 영향, 빈도, 범위
+  - type: input
+    id: commit
+    attributes:
+      label: 의심 커밋/배포 SHA
+  - type: textarea
+    id: evidence
+    attributes:
+      label: 로그/스크린샷/근거
