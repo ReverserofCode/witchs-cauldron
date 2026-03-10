@@ -230,10 +230,10 @@ export default function ClipsViewer({ clips }: ClipsViewerProps) {
       className="relative flex flex-col items-center focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/70 focus-visible:ring-offset-2 focus-visible:ring-offset-white rounded-2xl"
     >
       {/* Shortform Video Player */}
-      <div className="relative w-full max-w-[min(88vw,320px)] mx-auto">
+      <div className="relative mx-auto w-full max-w-[min(84vw,300px)]">
         {/* 비디오 컨테이너 - 9:16 비율 */}
         <div
-          className="relative aspect-[9/16] w-full rounded-2xl overflow-hidden bg-black shadow-xl shadow-purple-900/30 cursor-pointer"
+          className="relative aspect-[9/16] w-full overflow-hidden rounded-[20px] bg-black shadow-lg shadow-purple-900/20 cursor-pointer"
           onClick={handleVideoClick}
         >
           {/* 비디오 */}
@@ -262,15 +262,15 @@ export default function ClipsViewer({ clips }: ClipsViewerProps) {
           </div>
 
           {/* 클립 인덱스 표시 */}
-          <div className="absolute top-3 right-3 px-2 py-1 text-xs font-medium text-white bg-black/50 rounded-full backdrop-blur-sm">
+          <div className="absolute top-3 right-3 rounded-full bg-black/45 px-2 py-1 text-[11px] font-medium text-white backdrop-blur-sm">
             {currentIndex + 1} / {clips.length}
           </div>
 
           {/* 재생/일시정지 오버레이 */}
           {!isPlaying && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-              <div className="flex items-center justify-center w-16 h-16 rounded-full bg-white/90 shadow-lg">
-                <svg className="w-8 h-8 text-black ml-1" fill="currentColor" viewBox="0 0 24 24">
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white/90 shadow-lg">
+                <svg className="ml-1 h-7 w-7 text-black" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M8 5v14l11-7z" />
                 </svg>
               </div>
@@ -278,7 +278,7 @@ export default function ClipsViewer({ clips }: ClipsViewerProps) {
           )}
 
           {/* 하단 정보 영역 */}
-          <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 via-black/40 to-transparent">
+          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-3.5">
             <h3 className="text-sm font-semibold text-white mb-1 line-clamp-2">
               {currentClip.title}
             </h3>
@@ -288,14 +288,14 @@ export default function ClipsViewer({ clips }: ClipsViewerProps) {
           </div>
 
           {/* 사이드 컨트롤 버튼들 */}
-          <div className="absolute right-3 bottom-20 flex flex-col gap-4">
+          <div className="absolute bottom-[4.5rem] right-3 flex flex-col gap-3">
             {/* 뮤트 토글 */}
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 setIsMuted((prev) => !prev);
               }}
-              className="flex items-center justify-center w-11 h-11 rounded-full bg-black/50 backdrop-blur-sm hover:bg-black/70 hover:scale-110 active:scale-95 transition-all duration-200"
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-black/50 backdrop-blur-sm transition-all duration-200 hover:scale-105 hover:bg-black/70 active:scale-95"
               aria-label={isMuted ? "음소거 해제" : "음소거"}
             >
               {isMuted ? (
@@ -312,35 +312,21 @@ export default function ClipsViewer({ clips }: ClipsViewerProps) {
           </div>
         </div>
 
-        {/* 네비게이션 버튼 */}
-        <div className="absolute left-1/2 -translate-x-1/2 -top-3 z-10">
-          <button
-            onClick={goToPrev}
-            disabled={isTransitioning}
-            className="flex items-center justify-center w-10 h-10 rounded-full bg-purple-600 hover:bg-purple-700 hover:scale-110 active:scale-95 disabled:opacity-50 transition-all duration-200 shadow-lg"
-            aria-label="이전 클립"
-          >
-            <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z" />
-            </svg>
-          </button>
-        </div>
-        <div className="absolute left-1/2 -translate-x-1/2 -bottom-3 z-10">
-          <button
-            onClick={goToNext}
-            disabled={isTransitioning}
-            className="flex items-center justify-center w-10 h-10 rounded-full bg-purple-600 hover:bg-purple-700 hover:scale-110 active:scale-95 disabled:opacity-50 transition-all duration-200 shadow-lg"
-            aria-label="다음 클립"
-          >
-            <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z" />
-            </svg>
-          </button>
-        </div>
       </div>
 
-      {/* 클립 인디케이터 (세로) */}
-      <div className="flex justify-center gap-1.5 mt-6">
+      <div className="mt-4 flex items-center justify-center gap-3">
+        <button
+          onClick={goToPrev}
+          disabled={isTransitioning}
+          className="flex h-9 w-9 items-center justify-center rounded-full bg-purple-600 shadow-md transition-all duration-200 hover:scale-105 hover:bg-purple-700 active:scale-95 disabled:opacity-50"
+          aria-label="이전 클립"
+        >
+          <svg className="h-4 w-4 text-white" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z" />
+          </svg>
+        </button>
+
+        <div className="flex justify-center gap-1.5">
         {clips.map((_, index) => (
           <button
             key={index}
@@ -359,10 +345,22 @@ export default function ClipsViewer({ clips }: ClipsViewerProps) {
             aria-label={`클립 ${index + 1}로 이동`}
           />
         ))}
+        </div>
+
+        <button
+          onClick={goToNext}
+          disabled={isTransitioning}
+          className="flex h-9 w-9 items-center justify-center rounded-full bg-purple-600 shadow-md transition-all duration-200 hover:scale-105 hover:bg-purple-700 active:scale-95 disabled:opacity-50"
+          aria-label="다음 클립"
+        >
+          <svg className="h-4 w-4 text-white" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z" />
+          </svg>
+        </button>
       </div>
 
       {/* 조작 힌트 */}
-      <p className="mt-4 text-xs text-purple-500/70 text-center">
+      <p className="mt-3 text-center text-[11px] text-purple-500/70">
         {isViewerFocused ? "뷰어 포커스됨: ↑↓ 탐색 · Space 재생/일시정지 · M 음소거" : "클릭으로 포커스 후 ↑↓ 키 탐색 · Space 재생/일시정지 · M 음소거"}
       </p>
     </div>

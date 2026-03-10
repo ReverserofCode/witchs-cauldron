@@ -147,10 +147,10 @@ export default function ScheduleSection({
       id="schedule-section"
       className={className}
       tone="lavender"
-      eyebrow="Broadcast Schedule"
+      eyebrow="일정"
       title="라이브 일정표"
-  description={`오늘부터 4일간의 방송을 보여주며 하루당 최대 ${clampedLimit}개의 일정을 표시합니다.`}
-      bodyClassName="relative"
+      description={`오늘부터 4일 일정과 예정 방송을 확인할 수 있습니다.`}
+      bodyClassName="relative gap-4"
     >
   {status === 'loading' && <ScheduleSkeleton daysToShow={DAYS_TO_SHOW} />}
       {status === 'error' && (
@@ -195,7 +195,7 @@ export default function ScheduleSection({
       )}
       {status === 'ready' && (
         <div className="space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-purple-800/70">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-purple-200/60 pb-3 text-xs text-purple-800/70">
             <div className="flex items-center gap-3">
               {weekRangeLabel && <span>{weekRangeLabel}</span>}
               {!hasAnyEvents && <span className="font-medium text-purple-700 typography-small">이번 주에는 예정된 방송이 없습니다.</span>}
@@ -203,7 +203,7 @@ export default function ScheduleSection({
             <button
               type="button"
               onClick={() => setIsModalOpen(true)}
-              className="inline-flex w-full sm:w-auto items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold text-purple-700 transition-colors bg-white border border-purple-200 rounded-full hover:bg-purple-50 hover:border-purple-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/70 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+              className="inline-flex w-full sm:w-auto items-center justify-center gap-1.5 rounded-full border border-purple-200 bg-white px-3 py-2 text-xs font-semibold text-purple-700 transition-colors hover:border-purple-300 hover:bg-purple-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/70 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -226,22 +226,15 @@ export default function ScheduleSection({
           </div>
 
           <div>
-            <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4 md:gap-4">
+            <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
               {weekColumns.map((day) => (
                 <li
                   key={day.isoDate}
-                  className={`stagger-item flex min-h-[160px] flex-col rounded-2xl border p-3 shadow-sm transition md:min-h-[200px] md:p-4 ${
-                    day.isWeekend ? 'border-purple-300/70 bg-purple-50/80' : 'border-white/60 bg-white/80'
+                  className={`stagger-item flex min-h-[132px] flex-col rounded-[20px] border p-3 transition ${
+                    day.isWeekend ? 'border-purple-300/65 bg-purple-50/65' : 'border-purple-200/55 bg-white/76'
                   }`}
                 >
-                  <header className="flex flex-col gap-1 mb-3">
-                    <span
-                      className={`text-xs font-semibold uppercase tracking-wide ${
-                        day.isWeekend ? 'text-purple-800' : 'text-purple-700/70'
-                      }`}
-                    >
-                      {day.weekdayLabel}
-                    </span>
+                  <header className="mb-3 flex items-baseline justify-between gap-2 border-b border-purple-200/55 pb-2">
                     <span
                       className={`text-lg font-bold ${
                         day.isWeekend ? 'text-purple-900' : 'text-purple-900/90'
@@ -249,32 +242,36 @@ export default function ScheduleSection({
                     >
                       {day.dateLabel}
                     </span>
+                    <span
+                      className={`text-xs font-semibold uppercase tracking-wide ${
+                        day.isWeekend ? 'text-purple-800' : 'text-purple-700/70'
+                      }`}
+                    >
+                      {day.weekdayLabel}
+                    </span>
                   </header>
 
-                  <div className="flex flex-col flex-1 gap-2">
+                  <div className="flex flex-1 flex-col gap-2">
                     {day.events.length > 0 ? (
                       day.events.map((event) => (
                         <article
                           key={event.id}
-                          className="px-3 py-2 text-xs text-purple-900 border shadow-sm rounded-xl border-purple-100/70 bg-white/90 transition-all duration-200 hover:shadow-md hover:border-purple-200 hover:bg-white"
+                          className="rounded-[16px] border-l-2 border-purple-400/70 bg-white/82 px-3 py-2 text-xs text-purple-900 transition-all duration-200"
                         >
                           <p className="font-semibold text-purple-900/95 line-clamp-2 typography-body">{event.title}</p>
                           <p className="mt-1 text-[11px] font-medium text-purple-700/80 typography-small">
                             {formatTimeRange(event.start, event.end)}
                           </p>
-                          {event.platform && (
-                            <p className="mt-1 inline-flex items-center gap-1 text-[11px] font-medium text-purple-700 typography-small">
-                              <span className="h-1.5 w-1.5 rounded-full bg-purple-600" aria-hidden />
-                              {event.platform}
+                          {(event.platform || event.description) && (
+                            <p className="mt-1 text-[11px] text-purple-700/78 line-clamp-1 typography-small">
+                              {event.platform ? `${event.platform}${event.description ? ' · ' : ''}` : ''}
+                              {event.description ?? ''}
                             </p>
-                          )}
-                          {event.description && (
-                            <p className="mt-1 text-[11px] text-purple-800/80 line-clamp-2 typography-small">{event.description}</p>
                           )}
                         </article>
                       ))
                     ) : (
-                      <p className="flex items-center justify-center flex-1 px-3 py-6 text-xs text-center border border-dashed rounded-xl border-purple-200/60 bg-white/60 text-purple-700/70 typography-small">
+                      <p className="flex flex-1 items-center justify-center rounded-[16px] border border-dashed border-purple-200/60 bg-white/55 px-3 py-5 text-center text-xs text-purple-700/70 typography-small">
                         일정 없음
                       </p>
                     )}
@@ -553,11 +550,11 @@ function formatMetadataDisplay(metadata: Record<string, unknown>): string {
 function ScheduleSkeleton({ daysToShow }: { daysToShow: number }) {
   return (
     <div>
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
+      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
   {Array.from({ length: daysToShow }).map((_, index) => (
           <div
             key={index}
-            className="flex flex-col gap-3 p-4 border rounded-2xl border-purple-100/80 bg-white/70"
+            className="flex flex-col gap-3 rounded-[20px] border border-purple-100/80 bg-white/70 p-3"
           >
             <div className="w-20 h-4 rounded-full animate-pulse bg-purple-200/60" />
             <div className="w-full h-5 rounded-full animate-pulse bg-purple-200/70" />

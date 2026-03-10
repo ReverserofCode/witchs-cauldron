@@ -21,11 +21,12 @@ export interface SectionCardProps {
 }
 
 const toneVariants: Record<SectionCardTone, string> = {
-  neutral: "border-white/25 bg-white/75 text-purple-950/90 shadow-lg shadow-purple-900/10 backdrop-blur",
+  neutral:
+    "border-purple-200/55 bg-white/86 text-purple-950/90 shadow-[0_12px_28px_rgba(91,33,182,0.07)] backdrop-blur",
   lavender:
-    "border-purple-200/60 bg-gradient-to-br from-purple-100/70 via-white/70 to-white/90 text-purple-950/90 shadow-lg shadow-purple-900/20 backdrop-blur",
+    "border-purple-200/60 bg-gradient-to-br from-purple-100/60 via-white/90 to-white/96 text-purple-950/90 shadow-[0_14px_30px_rgba(91,33,182,0.08)] backdrop-blur",
   dimmed:
-    "border-purple-500/40 bg-gradient-to-br from-[#362955]/90 via-[#2e2350]/85 to-[#1f1a3d]/90 text-white shadow-xl shadow-purple-900/30 backdrop-blur",
+    "border-purple-400/35 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.16),transparent_28%),linear-gradient(145deg,rgba(54,41,85,0.96),rgba(31,26,61,0.94))] text-white shadow-[0_18px_44px_rgba(46,35,80,0.28)] backdrop-blur",
 };
 
 function cn(...values: Array<string | false | null | undefined>): string {
@@ -54,33 +55,36 @@ export default function SectionCard({
     <Component
       id={id}
       className={cn(
-        "relative overflow-hidden rounded-3xl border p-6 transition-colors duration-300",
+        "relative overflow-hidden rounded-[24px] border p-4 transition-colors duration-300 sm:p-5",
         toneVariants[tone],
         className
       )}
     >
       <div
         aria-hidden
-        className="absolute top-0 w-56 h-48 -translate-x-1/2 rounded-full pointer-events-none left-1/2 bg-white/20 blur-3xl"
+        className="pointer-events-none absolute left-1/2 top-0 h-28 w-36 -translate-x-1/2 rounded-full bg-white/10 blur-3xl"
       />
-      <div aria-hidden className="absolute right-0 w-40 h-40 rounded-full pointer-events-none -bottom-24 bg-purple-300/25 blur-3xl" />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -bottom-16 right-0 h-28 w-28 rounded-full bg-purple-300/12 blur-3xl"
+      />
 
-      <div className="relative flex flex-col gap-6">
+      <div className="relative flex flex-col gap-4">
         {header ??
           ((title || eyebrow || description || actions) && (
             <header className="flex flex-col gap-2">
               {eyebrow && (
-                <span className="text-xs font-semibold uppercase tracking-[0.3em] text-purple-700/70">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.24em] text-purple-700/70">
                   {eyebrow}
                 </span>
               )}
               {title && (
-                <HeadingTag className="text-2xl font-black text-current typography-heading">
+                <HeadingTag className="text-[1.4rem] font-black text-current typography-heading sm:text-[1.55rem]">
                   {title}
                 </HeadingTag>
               )}
               {description && (
-                <p className="text-xs text-purple-900/70 typography-small">{description}</p>
+                <p className="max-w-2xl text-xs text-purple-900/70 typography-small">{description}</p>
               )}
               {actions && <div className="flex flex-wrap gap-3 pt-2">{actions}</div>}
             </header>

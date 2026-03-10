@@ -135,7 +135,7 @@ async function fetchVideoDurations(
 export async function GET() {
   const apiKey = getYouTubeApiKey();
   if (!apiKey) {
-    return NextResponse.json([], { status: 503 });
+    return NextResponse.json([]);
   }
 
   try {
@@ -177,7 +177,7 @@ export async function GET() {
     return NextResponse.json(shortsOnly);
   } catch (error) {
     console.error("[youtubeShorts/official] route failed", error);
-    return NextResponse.json([], { status: 503 });
+    return NextResponse.json([]);
   }
 }
 

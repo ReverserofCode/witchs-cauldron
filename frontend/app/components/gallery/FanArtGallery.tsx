@@ -6,9 +6,10 @@ import { FanArtModal, type FanArtImage } from "@/app/components/modals";
 
 interface FanArtGalleryProps {
   images: FanArtImage[];
+  compact?: boolean;
 }
 
-export default function FanArtGallery({ images }: FanArtGalleryProps): ReactElement {
+export default function FanArtGallery({ images, compact = false }: FanArtGalleryProps): ReactElement {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isAutoPlay, setIsAutoPlay] = useState(true);
@@ -54,9 +55,9 @@ export default function FanArtGallery({ images }: FanArtGalleryProps): ReactElem
 
   return (
     <>
-      <div className="flex flex-col gap-4">
+      <div className="flex h-full flex-col gap-4">
         <figure
-          className="flex flex-col gap-3"
+          className="flex h-full flex-col gap-3"
           onMouseEnter={() => setIsInteracting(true)}
           onMouseLeave={() => setIsInteracting(false)}
           onFocusCapture={() => setIsInteracting(true)}
@@ -65,7 +66,9 @@ export default function FanArtGallery({ images }: FanArtGalleryProps): ReactElem
           <button
             type="button"
             onClick={() => handleImageClick(currentIndex)}
-            className="relative h-[420px] overflow-hidden transition-transform border shadow-lg cursor-pointer rounded-2xl border-white/40 shadow-purple-900/20 hover:scale-[1.02] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+            className={`relative w-full overflow-hidden transition-transform border shadow-lg cursor-pointer rounded-2xl border-white/40 shadow-purple-900/20 hover:scale-[1.01] active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 ${
+              compact ? "aspect-[4/3]" : "aspect-[4/5] md:aspect-[4/4.8]"
+            }`}
             aria-label={`${images[currentIndex].alt} 크게 보기`}
           >
             <Image
@@ -74,8 +77,8 @@ export default function FanArtGallery({ images }: FanArtGalleryProps): ReactElem
               width={320}
               height={420}
               className="h-full w-full object-contain bg-white/30"
-              sizes="(min-width: 1280px) 240px, (min-width: 1024px) 200px, 100vw"
-              priority
+              sizes={compact ? "(min-width: 1280px) 280px, 100vw" : "(min-width: 1280px) 240px, (min-width: 1024px) 200px, 100vw"}
+              priority={!compact}
             />
             <div className="absolute inset-0 flex items-center justify-center transition-opacity opacity-0 bg-black/30 hover:opacity-100">
               <span className="px-3 py-1.5 text-xs font-medium text-white bg-white/20 rounded-full backdrop-blur-sm">

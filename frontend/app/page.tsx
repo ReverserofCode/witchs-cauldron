@@ -6,7 +6,6 @@ import Image from 'next/image'
 import { ReactElement } from 'react'
 import { getChzzkLiveStatus } from './api/chzzkPlayer/chzzkPlayer'
 import profileImg from '../public/mainPage/Profile.png'
-import { LeftSidebar, RightSidebar } from '@/app/components/layout'
 import { SectionCard } from '@/app/components/cards'
 import {
   ClipsSection,
@@ -22,12 +21,34 @@ import { getBirthdayBannerCopy, isBirthdayToday } from '@/app/lib/birthday'
 
 export const dynamic = 'force-dynamic'
 
-const MOBILE_QUICK_LINKS = [
+const HERO_QUICK_LINKS = [
   { label: '치지직', href: 'https://chzzk.naver.com/1d333ff175b4db5bd06f87a88579ec1e' },
   { label: '유튜브', href: 'https://www.youtube.com/channel/UCHzre37UF4o64HRhp-7CDzQ' },
   { label: '다시보기', href: 'https://www.youtube.com/@fullmoing' },
   { label: '팬카페', href: 'https://cafe.naver.com/moinge' },
   { label: '분석 대시보드', href: '/admin/analytics' },
+]
+
+const HERO_CHANNEL_LINKS = HERO_QUICK_LINKS.filter((link) => link.href !== '/admin/analytics')
+
+const SECTION_JUMPS = [
+  { label: '주요 영상', href: '#featured-videos' },
+  { label: '방송 일정', href: '#schedule-section' },
+  { label: '숏폼 하이라이트', href: '#clips-section' },
+  { label: 'YouTube 허브', href: '#youtube-hub' },
+]
+
+const HERO_FOCUS_ITEMS = [
+  {
+    label: '소속',
+    value: '패러블 엔터테인먼트',
+    description: 'KR V-tuber',
+  },
+  {
+    label: '활동 채널',
+    value: '치지직 · 유튜브',
+    description: '라이브 · 하이라이트 · 다시보기',
+  },
 ]
 
 const SEO_FAQ = [
@@ -60,6 +81,7 @@ export default async function Page(): Promise<ReactElement> {
       ? ` • ${liveStatus.viewers.toLocaleString()}명 시청중`
       : ''
   const liveChipLabel = liveStatus.isLive ? `실시간 방송 중${viewerText}` : '현재 오프라인'
+  const liveStatusValue = liveStatus.isLive ? 'ON AIR' : 'OFF AIR'
   const liveStatusDescription = liveStatus.error
     ? '라이브 정보를 불러오지 못했어요. 잠시 후 다시 확인해주세요.'
     : liveStatus.isLive
@@ -68,217 +90,292 @@ export default async function Page(): Promise<ReactElement> {
 
   return (
     <main className="py-8 lg:py-12">
-      <div className="w-full px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
-        <div className="grid w-full grid-cols-1 gap-3 lg:grid-cols-[minmax(180px,0.85fr)_minmax(0,2.3fr)_minmax(180px,0.85fr)] xl:grid-cols-[minmax(200px,0.9fr)_minmax(0,2.2fr)_minmax(200px,0.9fr)] xl:gap-5">
-          {/* Left Aside */}
-          <LeftSidebar className="hidden lg:flex lg:sticky lg:top-24" />
-          {/* Center Content Wrapper: 중앙 컬럼에 본문을 모아 배치 */}
-          <div className="flex min-w-0 flex-col gap-6 text-[15px] leading-relaxed lg:px-2">
-            {/* HERO */}
-            {/* 텍스트 2, 이미지 1 비율의 그리드 */}
-            {/* 초기 소개용 섹션 */}
-            <div className="flex flex-col w-full gap-6 Intro-section">
-              <SectionCard
-                tone="dimmed"
-                header={
-                  <div className="flex items-center gap-4 sm:gap-6 md:gap-8">
-                    <div className="flex-1 min-w-0 space-y-3 text-white sm:space-y-4">
-                      <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-                        <span className="chip text-xs sm:text-sm">KR V-tuber • Moing</span>
-                        <span className="chip text-[11px] sm:text-xs">패러블 엔터테인먼트 소속</span>
-                        <span className="inline-flex items-center rounded-md bg-white/95 px-2 py-1 shadow-sm ring-1 ring-black/10">
-                          <Image
-                            src="/logos/parable-ent.svg"
-                            alt="패러블 엔터테인먼트 로고"
-                            width={98}
-                            height={16}
-                            className="h-3.5 w-auto sm:h-4"
-                            unoptimized
-                          />
-                        </span>
-                        <a
-                          href={liveStatus.channelUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className={`${liveChipClass} transition-all duration-200 hover:scale-105 hover:brightness-110`}
-                        >
-                          <span className="inline-block w-1.5 h-1.5 sm:w-2 sm:h-2 bg-current rounded-full" />
-                          <span className="text-xs sm:text-sm">{liveChipLabel}</span>
-                        </a>
-                      </div>
-                      <h1 className="text-xl font-extrabold typography-heading sm:text-2xl md:text-4xl">
+      <div className="w-full px-4 mx-auto max-w-6xl sm:px-6 lg:px-8">
+        <div className="flex min-w-0 flex-col gap-5 text-[15px] leading-relaxed">
+          <div className="flex flex-col w-full gap-6 Intro-section">
+            <SectionCard
+              tone="dimmed"
+              bodyClassName="gap-6"
+            >
+              <div className="grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.85fr)] xl:items-start">
+                <div className="space-y-5">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="chip text-xs sm:text-sm">KR V-tuber • Moing</span>
+                    <span className="chip text-[11px] sm:text-xs">패러블 엔터테인먼트 소속</span>
+                    <span className="inline-flex items-center rounded-md bg-white/95 px-2 py-1 shadow-sm ring-1 ring-black/10">
+                      <Image
+                        src="/logos/parable-ent.svg"
+                        alt="패러블 엔터테인먼트 로고"
+                        width={98}
+                        height={16}
+                        className="h-3.5 w-auto sm:h-4"
+                        unoptimized
+                      />
+                    </span>
+                    <a
+                      href={liveStatus.channelUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className={`${liveChipClass} ml-auto transition-all duration-200 hover:scale-105 hover:brightness-110`}
+                    >
+                      <span className="inline-block w-1.5 h-1.5 sm:w-2 sm:h-2 bg-current rounded-full" />
+                      <span className="text-xs sm:text-sm">{liveChipLabel}</span>
+                    </a>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="min-w-0">
+                      <h1 className="mt-2 text-3xl font-black typography-heading sm:text-4xl lg:text-[2.8rem]">
                         마녀의 포션 공방
                       </h1>
-                      <div className="space-y-2 sm:space-y-2.5">
-                        <p className="text-sm font-light typography-lead max-w-prose sm:text-base">
-                          포션을 만들면 폭발하거나, 고백하게 만드는 재앙 제조기. &quot;진짜 감기약 맞아요?&quot; 음... 아마도요.
-                        </p>
-                        <p className="text-sm font-light opacity-0 typography-lead animate-fade-in animation-delay-200 sm:text-base">
-                          {liveStatusDescription}
-                        </p>
-                      </div>
                     </div>
+                    <p className="max-w-2xl text-sm font-light text-purple-100/90 typography-lead sm:text-base">
+                      포션을 만들면 폭발하거나, 고백하게 만드는 재앙 제조기. 모잉의 방송, 영상, 숏폼, 팬 콘텐츠를 한곳에서 모아 봅니다.
+                    </p>
+                    <p className="text-sm font-light text-purple-200/85 typography-lead">
+                      {liveStatusDescription}
+                    </p>
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                    <div className="liquid-glass-panel rounded-[24px] px-4 py-3">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-purple-200/70">
+                        실시간 상태
+                      </p>
+                      <p className="mt-2 text-xl font-black text-white">{liveStatusValue}</p>
+                      <p className="mt-1 text-xs text-purple-100/75">
+                        {liveStatus.isLive && viewerText ? viewerText.replace(' • ', '') : '방송 상태를 바로 반영합니다.'}
+                      </p>
+                    </div>
+                      {HERO_FOCUS_ITEMS.map((item) => (
+                        <div
+                          key={item.label}
+                          className="liquid-glass-panel rounded-[24px] px-4 py-3"
+                        >
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-purple-200/70">
+                          {item.label}
+                        </p>
+                        <p className="mt-2 text-base font-bold text-white">{item.value}</p>
+                        <p className="mt-1 text-xs text-purple-100/75">{item.description}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-xs text-purple-100/72 typography-body">
+                    콘텐츠: 방송 · 숏폼 · 클립 · 팬카페 · 팬아트
+                  </p>
+                </div>
+
+                <div className="grid gap-8">
+                  <div className="liquid-glass-panel flex items-center gap-4 rounded-[24px] p-4">
                     <div className="profile-avatar flex-shrink-0">
-                      <div className="relative w-20 h-20 sm:w-28 sm:h-28 md:h-48 md:w-48" aria-hidden>
-                        <div className="w-full h-full avatar-frame">
+                      <div className="relative h-24 w-24 sm:h-28 sm:w-28" aria-hidden>
+                        <div className="h-full w-full avatar-frame">
                           <div className="glow" />
                           <Image
                             src={profileImg}
                             alt="Moing"
                             fill
-                            sizes="(min-width: 768px) 192px, (min-width: 640px) 112px, 80px"
+                            sizes="(min-width: 768px) 112px, 96px"
                             className="object-cover"
                             priority
                           />
                         </div>
                       </div>
                     </div>
+                    <div className="min-w-0 space-y-2">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-purple-200/70">
+                        프로필
+                      </p>
+                      <p className="text-lg font-bold text-white">모잉</p>
+                      <p className="text-sm text-purple-100/80">
+                        버튜버 · 스트리머 · 패러블 엔터테인먼트 소속
+                      </p>
+                    </div>
                   </div>
-                }
-              >
-                <p className="text-sm typography-body text-purple-100/80">
-                  팬 여러분이 가장 궁금해하는 정보, 최신 방송 일정, 그리고 하이라이트 영상들을 한 곳에 모았습니다.
-                </p>
-              </SectionCard>
 
-              {showBirthdayBanner && birthdayBannerCopy && (
-                <SectionCard
-                  tone="lavender"
-                  className="border-amber-200/70 bg-gradient-to-r from-amber-50/85 via-white/90 to-purple-100/75"
-                  eyebrow="Birthday"
-                  title="오늘은 특별한 날"
-                  description="모잉의 생일을 함께 축하해 주세요."
-                >
-                  <div className="rounded-2xl border border-amber-200/70 bg-white/80 px-4 py-3">
-                    <p className="text-base font-semibold text-amber-800">{birthdayBannerCopy}</p>
-                    <p className="mt-1 text-sm text-purple-900/80">
-                      팬카페와 치지직 채널에서 따뜻한 축하 메시지를 남겨보세요.
+                  <div className="liquid-glass-panel rounded-[24px] p-4">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-purple-200/70">
+                      채널 바로가기
                     </p>
+                    <div className="mt-3 grid grid-cols-2 gap-2">
+                      {HERO_CHANNEL_LINKS.map((link) => {
+                        const isExternal = link.href.startsWith('http')
+                        return (
+                          <a
+                            key={link.href}
+                            href={link.href}
+                            target={isExternal ? '_blank' : undefined}
+                            rel={isExternal ? 'noreferrer' : undefined}
+                            className="liquid-glass-control inline-flex min-h-10 w-full items-center justify-center rounded-[16px] px-3 py-2 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5"
+                            data-analytics-menu="true"
+                            data-analytics-id={link.href}
+                            data-analytics-label={link.label}
+                            data-analytics-location="hero_quick_links"
+                            data-analytics-type="quick_link"
+                          >
+                            {link.label}
+                          </a>
+                        )
+                      })}
+                    </div>
                   </div>
-                </SectionCard>
-              )}
-
-              <ScrollReveal>
-                <SectionCard
-                  tone="lavender"
-                  className="lg:hidden"
-                  eyebrow="Quick Access"
-                  title="모바일 빠른 이동"
-                  description="사이드바 핵심 정보와 링크를 모바일 화면에서도 바로 확인하세요."
-                >
-                  <div className="grid grid-cols-2 gap-2">
-                    {MOBILE_QUICK_LINKS.map((link) => {
-                      const isExternal = link.href.startsWith('http');
-                      const isAdmin = link.href === '/admin/analytics';
-
-                      return (
-                        <a
-                          key={link.href}
-                          href={link.href}
-                          target={isExternal ? '_blank' : undefined}
-                          rel={isExternal ? 'noreferrer' : undefined}
-                          className={`inline-flex min-h-11 items-center justify-center rounded-xl border border-purple-200/70 bg-white/80 px-3.5 py-2.5 text-sm leading-tight font-semibold text-purple-900 transition-all duration-200 hover:bg-purple-100/70 hover:scale-[1.03] hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/70 focus-visible:ring-offset-2 focus-visible:ring-offset-white ${isAdmin ? 'col-span-2' : ''}`}
-                          data-analytics-menu="true"
-                          data-analytics-id={link.href}
-                          data-analytics-label={link.label}
-                          data-analytics-location="mobile_quick_links"
-                          data-analytics-type={isAdmin ? 'admin_link' : 'mobile_quick_link'}
-                        >
-                          {link.label}
-                        </a>
-                      );
-                    })}
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <a
-                      href="#schedule-section"
-                      className="inline-flex min-h-11 items-center justify-center rounded-xl border border-purple-300/70 bg-purple-100/80 px-3.5 py-2.5 text-sm leading-tight font-semibold text-purple-900 transition-all duration-200 hover:bg-purple-200/70 hover:scale-[1.03] hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/70 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
-                      data-analytics-menu="true"
-                      data-analytics-id="#schedule-section"
-                      data-analytics-label="방송 일정 보기"
-                      data-analytics-location="mobile_quick_links"
-                      data-analytics-type="schedule_anchor"
-                    >
-                      방송 일정 보기
-                    </a>
-                    <a
-                      href="https://cafe.naver.com/moinge"
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex min-h-11 items-center justify-center rounded-xl border border-purple-300/70 bg-purple-100/80 px-3.5 py-2.5 text-sm leading-tight font-semibold text-purple-900 transition-all duration-200 hover:bg-purple-200/70 hover:scale-[1.03] hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/70 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
-                      data-analytics-menu="true"
-                      data-analytics-id="https://cafe.naver.com/moinge"
-                      data-analytics-label="팬카페 바로가기"
-                      data-analytics-location="mobile_quick_links"
-                      data-analytics-type="community_link"
-                    >
-                      팬카페 바로가기
-                    </a>
-
-                  </div>
-                </SectionCard>
-              </ScrollReveal>
-
-              <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-                <ScrollReveal>
-                  <SectionTracker sectionId="featured-videos">
-                    <FeaturedVideoSection />
-                  </SectionTracker>
-                </ScrollReveal>
-                <ScrollReveal>
-                  <SectionTracker sectionId="schedule-section">
-                    <ScheduleSection />
-                  </SectionTracker>
-                </ScrollReveal>
+                </div>
               </div>
+            </SectionCard>
 
-              <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-                <ScrollReveal>
-                  <SectionTracker sectionId="clips-section">
-                    <ClipsSection />
-                  </SectionTracker>
-                </ScrollReveal>
-                <ScrollReveal>
-                  <SectionTracker sectionId="youtube-hub">
-                    <YouTubeHubSection />
-                  </SectionTracker>
-                </ScrollReveal>
-              </div>
-              {fanArtImages.length > 0 && (
-                <ScrollReveal>
-                  <SectionCard
-                    tone="lavender"
-                    className="lg:hidden"
-                    eyebrow="Fan Art"
-                    title="마녀의 작업실"
-                    description="팬들의 참여로 꾸며지는 갤러리입니다."
-                  >
-                    <FanArtGallery images={fanArtImages} />
-                  </SectionCard>
-                </ScrollReveal>
-              )}
+            {showBirthdayBanner && birthdayBannerCopy && (
+              <SectionCard
+                tone="lavender"
+                className="border-amber-200/70 bg-gradient-to-r from-amber-50/85 via-white/90 to-purple-100/75"
+                eyebrow="Birthday"
+                title="오늘은 특별한 날"
+                description="모잉의 생일을 함께 축하해 주세요."
+              >
+                <div className="rounded-2xl border border-amber-200/70 bg-white/80 px-4 py-3">
+                  <p className="text-base font-semibold text-amber-800">{birthdayBannerCopy}</p>
+                  <p className="mt-1 text-sm text-purple-900/80">
+                    팬카페와 치지직 채널에서 따뜻한 축하 메시지를 남겨보세요.
+                  </p>
+                </div>
+              </SectionCard>
+            )}
 
+            <div className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
               <ScrollReveal>
                 <SectionCard
                   tone="neutral"
-                  eyebrow="FAQ"
-                  title="모잉 팬페이지 자주 묻는 질문"
-                  description="방송 일정, 유튜브 최신 영상/다시보기, 숏폼 하이라이트 정보를 빠르게 확인하세요."
+                  eyebrow="바로가기"
+                  title="콘텐츠 바로가기"
                 >
-                  <div className="space-y-3">
-                    {SEO_FAQ.map((item) => (
-                      <article key={item.q} className="rounded-xl border border-purple-200/60 bg-white/70 p-4">
-                        <h3 className="text-sm font-semibold text-purple-950">Q. {item.q}</h3>
-                        <p className="mt-1 text-sm text-purple-900/80">A. {item.a}</p>
-                      </article>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {SECTION_JUMPS.map((item, index) => (
+                      <a
+                        key={item.href}
+                        href={item.href}
+                        className="liquid-glass-panel flex items-start gap-3 rounded-[24px] px-4 py-4 transition-all duration-200 hover:-translate-y-0.5"
+                        data-analytics-menu="true"
+                        data-analytics-id={item.href}
+                        data-analytics-label={item.label}
+                        data-analytics-location="overview_board"
+                        data-analytics-type="section_jump"
+                      >
+                        <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-purple-100 text-sm font-bold text-purple-700">
+                          {index + 1}
+                        </span>
+                        <span className="min-w-0">
+                          <span className="block text-sm font-semibold text-purple-950">{item.label}</span>
+                          <span className="mt-1 block text-xs text-purple-700/75">
+                            {index === 0 && '최신 업로드 · 지난달 조회수 1위'}
+                            {index === 1 && '예정 방송 · 주간 일정'}
+                            {index === 2 && '치지직 클립 · YouTube Shorts'}
+                            {index === 3 && '공식 · 다시보기 · 팬 채널'}
+                          </span>
+                        </span>
+                      </a>
                     ))}
                   </div>
                 </SectionCard>
               </ScrollReveal>
+
+              <div className="grid content-start gap-4">
+                <ScrollReveal>
+                  <SectionCard
+                    tone="lavender"
+                    eyebrow="채널"
+                    title="외부 채널"
+                  >
+                    <div className="grid gap-2.5 sm:grid-cols-2">
+                      {HERO_QUICK_LINKS.map((link) => {
+                        const isExternal = link.href.startsWith('http')
+                        const isAnalytics = link.href === '/admin/analytics'
+                        return (
+                          <a
+                            key={link.href}
+                            href={link.href}
+                            target={isExternal ? '_blank' : undefined}
+                            rel={isExternal ? 'noreferrer' : undefined}
+                            className={`rounded-[18px] border border-purple-200/55 bg-white/70 px-3.5 py-3 text-sm font-semibold text-purple-900 transition-all duration-200 hover:-translate-y-0.5 ${isAnalytics ? 'sm:col-span-2' : ''}`}
+                            data-analytics-menu="true"
+                            data-analytics-id={link.href}
+                            data-analytics-label={link.label}
+                            data-analytics-location="overview_links"
+                            data-analytics-type="quick_link"
+                          >
+                            {link.label}
+                          </a>
+                        )
+                      })}
+                    </div>
+                  </SectionCard>
+                </ScrollReveal>
+
+                {fanArtImages.length > 0 && (
+                  <ScrollReveal>
+                    <SectionCard
+                      tone="lavender"
+                      eyebrow="팬아트"
+                      title="팬아트"
+                    >
+                      <FanArtGallery images={fanArtImages} compact />
+                    </SectionCard>
+                  </ScrollReveal>
+                )}
+              </div>
             </div>
+
+            <div className="grid grid-cols-1 gap-4 2xl:grid-cols-[minmax(0,1.28fr)_minmax(360px,0.92fr)]">
+              <ScrollReveal>
+                <SectionTracker sectionId="featured-videos">
+                  <FeaturedVideoSection />
+                </SectionTracker>
+              </ScrollReveal>
+              <ScrollReveal>
+                <SectionTracker sectionId="schedule-section">
+                  <ScheduleSection />
+                </SectionTracker>
+              </ScrollReveal>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 2xl:grid-cols-[minmax(0,1.28fr)_minmax(360px,0.92fr)]">
+              <ScrollReveal>
+                <SectionTracker sectionId="clips-section">
+                  <ClipsSection />
+                </SectionTracker>
+              </ScrollReveal>
+              <ScrollReveal>
+                <SectionTracker sectionId="youtube-hub">
+                  <YouTubeHubSection />
+                </SectionTracker>
+              </ScrollReveal>
+            </div>
+
+            <ScrollReveal>
+              <SectionCard
+                tone="neutral"
+                eyebrow="FAQ"
+                title="모잉 팬페이지 자주 묻는 질문"
+              >
+                <div className="grid gap-3 md:grid-cols-2">
+                  {SEO_FAQ.map((item) => (
+                    <details
+                      key={item.q}
+                      className="group rounded-2xl border border-purple-200/60 bg-white/78 p-4"
+                    >
+                      <summary className="cursor-pointer list-none text-sm font-semibold text-purple-950">
+                        <span className="flex items-start justify-between gap-3">
+                          <span>Q. {item.q}</span>
+                          <span className="mt-0.5 text-purple-500 transition-transform duration-200 group-open:rotate-45">
+                            +
+                          </span>
+                        </span>
+                      </summary>
+                      <p className="mt-3 text-sm text-purple-900/80">A. {item.a}</p>
+                    </details>
+                  ))}
+                </div>
+              </SectionCard>
+            </ScrollReveal>
           </div>
-          {/* Right Aside */}
-          <RightSidebar className="hidden lg:flex lg:sticky lg:top-24" />
         </div>
       </div>
     </main>

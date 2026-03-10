@@ -166,7 +166,7 @@ export async function GET() {
         error: "MISSING_API_KEY",
         message: error instanceof Error ? error.message : "YOUTUBE_API_KEY가 없습니다.",
       },
-      { status: 503 }
+      { status: 200 }
     );
   }
 

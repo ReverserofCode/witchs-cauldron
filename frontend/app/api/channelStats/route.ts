@@ -130,5 +130,5 @@ export async function GET() {
     chzzk: { followerCount: chzzkFollowers },
   };
 
-  return NextResponse.json(response, { status: apiKey ? 200 : 503 });
+  return NextResponse.json(response, { status: 200 });
 }
