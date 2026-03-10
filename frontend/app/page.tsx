@@ -11,7 +11,6 @@ import {
   ClipsSection,
   ScheduleSection,
   FeaturedVideoSection,
-  YouTubeHubSection,
 } from '@/app/components/sections'
 import { SectionTracker } from '@/app/components/analytics/SectionTracker'
 import { ScrollReveal } from '@/app/components/animations'
@@ -30,13 +29,6 @@ const HERO_QUICK_LINKS = [
 ]
 
 const HERO_CHANNEL_LINKS = HERO_QUICK_LINKS.filter((link) => link.href !== '/admin/analytics')
-
-const SECTION_JUMPS = [
-  { label: '주요 영상', href: '#featured-videos' },
-  { label: '방송 일정', href: '#schedule-section' },
-  { label: '숏폼 하이라이트', href: '#clips-section' },
-  { label: 'YouTube 허브', href: '#youtube-hub' },
-]
 
 const HERO_FOCUS_ITEMS = [
   {
@@ -62,7 +54,7 @@ const SEO_FAQ = [
   },
   {
     q: '모잉 유튜브 최신 영상과 다시보기는 어떻게 보나요?',
-    a: 'YouTube 허브 섹션에서 공식 채널과 다시보기 채널 영상을 함께 확인할 수 있습니다.',
+    a: '이번 주 추천 영상 섹션에서 공식 채널과 다시보기 채널의 주요 영상을 확인할 수 있습니다.',
   },
   {
     q: '모잉 하이라이트 숏폼과 클립도 볼 수 있나요?',
@@ -92,13 +84,13 @@ export default async function Page(): Promise<ReactElement> {
     <main className="py-8 lg:py-12">
       <div className="w-full px-4 mx-auto max-w-6xl sm:px-6 lg:px-8">
         <div className="flex min-w-0 flex-col gap-5 text-[15px] leading-relaxed">
-          <div className="flex flex-col w-full gap-6 Intro-section">
+          <div className="flex flex-col w-full gap-5 Intro-section">
             <SectionCard
               tone="dimmed"
-              bodyClassName="gap-6"
+              bodyClassName="gap-5"
             >
-              <div className="grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.85fr)] xl:items-start">
-                <div className="space-y-5">
+              <div className="grid gap-5 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.85fr)] xl:items-start">
+                <div className="space-y-4">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="chip text-xs sm:text-sm">KR V-tuber • Moing</span>
                     <span className="chip text-[11px] sm:text-xs">패러블 엔터테인먼트 소속</span>
@@ -165,7 +157,7 @@ export default async function Page(): Promise<ReactElement> {
                   </p>
                 </div>
 
-                <div className="grid gap-8">
+                <div className="grid gap-6">
                   <div className="liquid-glass-panel flex items-center gap-4 rounded-[24px] p-4">
                     <div className="profile-avatar flex-shrink-0">
                       <div className="relative h-24 w-24 sm:h-28 sm:w-28" aria-hidden>
@@ -182,14 +174,15 @@ export default async function Page(): Promise<ReactElement> {
                         </div>
                       </div>
                     </div>
-                    <div className="min-w-0 space-y-2">
+                    <div className="min-w-0 space-y-1.5">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-purple-200/70">
                         프로필
                       </p>
                       <p className="text-lg font-bold text-white">모잉</p>
-                      <p className="text-sm text-purple-100/80">
-                        버튜버 · 스트리머 · 패러블 엔터테인먼트 소속
-                      </p>
+                      <div className="space-y-0.5 text-purple-100/80">
+                        <p className="text-sm sm:whitespace-nowrap">버튜버 · 스트리머</p>
+                        <p className="text-[13px] text-purple-200/85">패러블 엔터테인먼트 소속</p>
+                      </div>
                     </div>
                   </div>
 
@@ -240,114 +233,53 @@ export default async function Page(): Promise<ReactElement> {
               </SectionCard>
             )}
 
-            <div className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
-              <ScrollReveal>
+            <ScrollReveal>
+              <SectionTracker sectionId="featured-videos">
+                <FeaturedVideoSection />
+              </SectionTracker>
+            </ScrollReveal>
+
+            <ScrollReveal>
+              <SectionTracker sectionId="clips-section">
+                <ClipsSection />
+              </SectionTracker>
+            </ScrollReveal>
+
+            <ScrollReveal>
+              <SectionTracker sectionId="schedule-section">
                 <SectionCard
-                  tone="neutral"
-                  eyebrow="바로가기"
-                  title="콘텐츠 바로가기"
+                  tone="lavender"
+                  eyebrow="Community"
+                  title="라이브 일정 · 팬아트"
+                  description="최근 방송 일정과 팬 커뮤니티 작업을 함께 확인할 수 있습니다."
                 >
-                  <div className="grid gap-3 md:grid-cols-2">
-                    {SECTION_JUMPS.map((item, index) => (
-                      <a
-                        key={item.href}
-                        href={item.href}
-                        className="liquid-glass-panel flex items-start gap-3 rounded-[24px] px-4 py-4 transition-all duration-200 hover:-translate-y-0.5"
-                        data-analytics-menu="true"
-                        data-analytics-id={item.href}
-                        data-analytics-label={item.label}
-                        data-analytics-location="overview_board"
-                        data-analytics-type="section_jump"
+                  <div className={`grid gap-3 ${fanArtImages.length > 0 ? 'xl:grid-cols-[minmax(0,1.08fr)_minmax(320px,0.92fr)]' : ''}`}>
+                    <div className="rounded-[20px] border border-purple-200/55 bg-white/70 p-3">
+                      <ScheduleSection embedded daysToShow={5} limit={1} />
+                    </div>
+
+                    {fanArtImages.length > 0 && (
+                      <div
+                        id="fanart-section"
+                        className="flex flex-col rounded-[20px] border border-purple-200/55 bg-white/70 p-3 xl:h-[34rem]"
                       >
-                        <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-purple-100 text-sm font-bold text-purple-700">
-                          {index + 1}
-                        </span>
-                        <span className="min-w-0">
-                          <span className="block text-sm font-semibold text-purple-950">{item.label}</span>
-                          <span className="mt-1 block text-xs text-purple-700/75">
-                            {index === 0 && '최신 업로드 · 지난달 조회수 1위'}
-                            {index === 1 && '예정 방송 · 주간 일정'}
-                            {index === 2 && '치지직 클립 · YouTube Shorts'}
-                            {index === 3 && '공식 · 다시보기 · 팬 채널'}
-                          </span>
-                        </span>
-                      </a>
-                    ))}
+                        <div className="mb-3 border-b border-purple-200/60 pb-2.5">
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-purple-700/70">
+                            팬아트
+                          </p>
+                          <p className="mt-1 text-sm font-semibold text-purple-950">
+                            팬 커뮤니티 작업실
+                          </p>
+                        </div>
+                        <div className="min-h-0 xl:flex-1">
+                          <FanArtGallery images={fanArtImages} compact />
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </SectionCard>
-              </ScrollReveal>
-
-              <div className="grid content-start gap-4">
-                <ScrollReveal>
-                  <SectionCard
-                    tone="lavender"
-                    eyebrow="채널"
-                    title="외부 채널"
-                  >
-                    <div className="grid gap-2.5 sm:grid-cols-2">
-                      {HERO_QUICK_LINKS.map((link) => {
-                        const isExternal = link.href.startsWith('http')
-                        const isAnalytics = link.href === '/admin/analytics'
-                        return (
-                          <a
-                            key={link.href}
-                            href={link.href}
-                            target={isExternal ? '_blank' : undefined}
-                            rel={isExternal ? 'noreferrer' : undefined}
-                            className={`rounded-[18px] border border-purple-200/55 bg-white/70 px-3.5 py-3 text-sm font-semibold text-purple-900 transition-all duration-200 hover:-translate-y-0.5 ${isAnalytics ? 'sm:col-span-2' : ''}`}
-                            data-analytics-menu="true"
-                            data-analytics-id={link.href}
-                            data-analytics-label={link.label}
-                            data-analytics-location="overview_links"
-                            data-analytics-type="quick_link"
-                          >
-                            {link.label}
-                          </a>
-                        )
-                      })}
-                    </div>
-                  </SectionCard>
-                </ScrollReveal>
-
-                {fanArtImages.length > 0 && (
-                  <ScrollReveal>
-                    <SectionCard
-                      tone="lavender"
-                      eyebrow="팬아트"
-                      title="팬아트"
-                    >
-                      <FanArtGallery images={fanArtImages} compact />
-                    </SectionCard>
-                  </ScrollReveal>
-                )}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 2xl:grid-cols-[minmax(0,1.28fr)_minmax(360px,0.92fr)]">
-              <ScrollReveal>
-                <SectionTracker sectionId="featured-videos">
-                  <FeaturedVideoSection />
-                </SectionTracker>
-              </ScrollReveal>
-              <ScrollReveal>
-                <SectionTracker sectionId="schedule-section">
-                  <ScheduleSection />
-                </SectionTracker>
-              </ScrollReveal>
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 2xl:grid-cols-[minmax(0,1.28fr)_minmax(360px,0.92fr)]">
-              <ScrollReveal>
-                <SectionTracker sectionId="clips-section">
-                  <ClipsSection />
-                </SectionTracker>
-              </ScrollReveal>
-              <ScrollReveal>
-                <SectionTracker sectionId="youtube-hub">
-                  <YouTubeHubSection />
-                </SectionTracker>
-              </ScrollReveal>
-            </div>
+              </SectionTracker>
+            </ScrollReveal>
 
             <ScrollReveal>
               <SectionCard

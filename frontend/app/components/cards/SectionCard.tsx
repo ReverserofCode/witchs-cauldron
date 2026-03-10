@@ -55,7 +55,7 @@ export default function SectionCard({
     <Component
       id={id}
       className={cn(
-        "relative overflow-hidden rounded-[24px] border p-4 transition-colors duration-300 sm:p-5",
+        "relative overflow-hidden rounded-[24px] border p-4 transition-colors duration-300",
         toneVariants[tone],
         className
       )}
@@ -69,10 +69,10 @@ export default function SectionCard({
         className="pointer-events-none absolute -bottom-16 right-0 h-28 w-28 rounded-full bg-purple-300/12 blur-3xl"
       />
 
-      <div className="relative flex flex-col gap-4">
+      <div className="relative flex flex-col gap-3">
         {header ??
           ((title || eyebrow || description || actions) && (
-            <header className="flex flex-col gap-2">
+            <header className="flex flex-col gap-1.5">
               {eyebrow && (
                 <span className="text-[11px] font-semibold uppercase tracking-[0.24em] text-purple-700/70">
                   {eyebrow}
@@ -86,13 +86,13 @@ export default function SectionCard({
               {description && (
                 <p className="max-w-2xl text-xs text-purple-900/70 typography-small">{description}</p>
               )}
-              {actions && <div className="flex flex-wrap gap-3 pt-2">{actions}</div>}
+              {actions && <div className="flex flex-wrap gap-2 pt-1.5">{actions}</div>}
             </header>
           ))}
 
-        <div className={cn("flex flex-col gap-4", bodyClassName)}>{children}</div>
+        <div className={cn("flex flex-col gap-3", bodyClassName)}>{children}</div>
 
-        {footer && <footer className="pt-4 text-xs text-purple-900/60">{footer}</footer>}
+        {footer && <footer className="pt-3 text-xs text-purple-900/60">{footer}</footer>}
       </div>
     </Component>
   );

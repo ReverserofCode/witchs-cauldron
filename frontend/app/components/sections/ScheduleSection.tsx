@@ -11,6 +11,8 @@ type ScheduleStatus = 'idle' | 'loading' | 'ready' | 'error';
 interface ScheduleSectionProps {
   className?: string;
   limit?: number;
+  daysToShow?: number;
+  embedded?: boolean;
 }
 
 interface WeekColumn {
@@ -23,7 +25,7 @@ interface WeekColumn {
 
 const SCHEDULE_ENDPOINT = '/api/broadCastSchedule';
 const MAX_EVENTS_PER_DAY = 4;
-const DAYS_TO_SHOW = 4;
+const DAYS_TO_SHOW = 5;
 const SHOW_SCHEDULE_DIAGNOSTICS =
   process.env.NODE_ENV !== 'production' ||
   process.env.NEXT_PUBLIC_ENABLE_SCHEDULE_DIAGNOSTICS === 'true';
@@ -31,6 +33,8 @@ const SHOW_SCHEDULE_DIAGNOSTICS =
 export default function ScheduleSection({
   className,
   limit = MAX_EVENTS_PER_DAY,
+  daysToShow = DAYS_TO_SHOW,
+  embedded = false,
 }: ScheduleSectionProps) {
   const [status, setStatus] = useState<ScheduleStatus>('idle');
   const [events, setEvents] = useState<ScheduleEvent[]>([]);
@@ -50,6 +54,15 @@ export default function ScheduleSection({
     const integral = Math.trunc(limit);
     return Math.max(1, Math.min(integral, MAX_EVENTS_PER_DAY));
   }, [limit]);
+
+  const clampedDaysToShow = useMemo(() => {
+    if (typeof daysToShow !== 'number' || Number.isNaN(daysToShow)) {
+      return DAYS_TO_SHOW;
+    }
+
+    const integral = Math.trunc(daysToShow);
+    return Math.max(1, Math.min(integral, DAYS_TO_SHOW));
+  }, [daysToShow]);
 
   useEffect(() => {
     let cancelled = false;
@@ -74,7 +87,7 @@ export default function ScheduleSection({
         if (!cancelled) {
           const normalizedEvents = normalizeScheduleEvents(data.events).map((item) => item.event);
           const upcomingEvents = selectUpcomingScheduleEvents(normalizedEvents, undefined, new Date());
-          const { events: upcomingWeek, range } = selectEventsForWeek(upcomingEvents, DAYS_TO_SHOW);
+          const { events: upcomingWeek, range } = selectEventsForWeek(upcomingEvents, clampedDaysToShow);
           setEvents(upcomingWeek);
           setAllEvents(upcomingEvents);
           setWeekRange(range);
@@ -93,7 +106,7 @@ export default function ScheduleSection({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [clampedDaysToShow]);
 
   const handleRunDiagnostics = async () => {
     setDiagnoseStatus('running');
@@ -120,7 +133,7 @@ export default function ScheduleSection({
       const feedEvents = payload.feed?.events ?? [];
       const normalizedEvents = normalizeScheduleEvents(feedEvents).map((item) => item.event);
       const upcomingEvents = selectUpcomingScheduleEvents(normalizedEvents, undefined, new Date());
-      const { events: upcomingWeek, range } = selectEventsForWeek(upcomingEvents, DAYS_TO_SHOW);
+      const { events: upcomingWeek, range } = selectEventsForWeek(upcomingEvents, clampedDaysToShow);
       setEvents(upcomingWeek);
       setAllEvents(upcomingEvents);
       setWeekRange(range);
@@ -134,27 +147,19 @@ export default function ScheduleSection({
   };
 
   const weekColumns = useMemo<WeekColumn[]>(
-    () => buildWeekColumns(events, weekRange?.start, clampedLimit, DAYS_TO_SHOW),
-    [events, weekRange?.start, clampedLimit]
+    () => buildWeekColumns(events, weekRange?.start, clampedLimit, clampedDaysToShow),
+    [events, weekRange?.start, clampedLimit, clampedDaysToShow]
   );
 
   const hasAnyEvents = useMemo(() => weekColumns.some((day) => day.events.length > 0), [weekColumns]);
 
   const weekRangeLabel = useMemo(() => formatWeekRangeLabel(weekRange), [weekRange]);
 
-  return (
-    <SectionCard
-      id="schedule-section"
-      className={className}
-      tone="lavender"
-      eyebrow="일정"
-      title="라이브 일정표"
-      description={`오늘부터 4일 일정과 예정 방송을 확인할 수 있습니다.`}
-      bodyClassName="relative gap-4"
-    >
-  {status === 'loading' && <ScheduleSkeleton daysToShow={DAYS_TO_SHOW} />}
+  const sectionContent = (
+    <>
+      {status === 'loading' && <ScheduleSkeleton daysToShow={clampedDaysToShow} />}
       {status === 'error' && (
-        <div className="p-4 space-y-3 text-xs text-red-700 border border-red-200 rounded-2xl bg-red-50/80 typography-small">
+        <div className="space-y-3 rounded-2xl border border-red-200 bg-red-50/80 p-4 text-xs text-red-700 typography-small">
           <div className="typography-small">
             일정 정보를 불러오지 못했습니다.
             <br />
@@ -166,7 +171,7 @@ export default function ScheduleSection({
                 type="button"
                 onClick={handleRunDiagnostics}
                 disabled={diagnoseStatus === 'running'}
-                className="inline-flex items-center gap-2 px-3 py-1 font-semibold text-purple-800 transition rounded-full bg-white/70 hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex items-center gap-2 rounded-full bg-white/70 px-3 py-1 font-semibold text-purple-800 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {diagnoseStatus === 'running' ? '진단 실행 중...' : '자동 진단 실행'}
               </button>
@@ -174,7 +179,7 @@ export default function ScheduleSection({
                 href={`${SCHEDULE_ENDPOINT}?debug=1`}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center px-3 py-1 font-semibold text-purple-800 transition border rounded-full border-purple-300/70 hover:bg-purple-100/60"
+                className="inline-flex items-center rounded-full border border-purple-300/70 px-3 py-1 font-semibold text-purple-800 transition hover:bg-purple-100/60"
               >
                 API 응답 열기
               </a>
@@ -183,7 +188,7 @@ export default function ScheduleSection({
             <button
               type="button"
               onClick={() => window.location.reload()}
-              className="inline-flex items-center gap-2 px-3 py-1 font-semibold text-purple-800 transition rounded-full bg-white/70 hover:bg-white"
+              className="inline-flex items-center gap-2 rounded-full bg-white/70 px-3 py-1 font-semibold text-purple-800 transition hover:bg-white"
             >
               다시 시도
             </button>
@@ -194,16 +199,21 @@ export default function ScheduleSection({
         </div>
       )}
       {status === 'ready' && (
-        <div className="space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-purple-200/60 pb-3 text-xs text-purple-800/70">
-            <div className="flex items-center gap-3">
-              {weekRangeLabel && <span>{weekRangeLabel}</span>}
-              {!hasAnyEvents && <span className="font-medium text-purple-700 typography-small">이번 주에는 예정된 방송이 없습니다.</span>}
+        <div className={embedded ? 'space-y-2.5' : 'space-y-4'}>
+          <div className={`flex flex-wrap items-center justify-between gap-2 text-xs text-purple-800/70 ${embedded ? 'border-t border-purple-200/55 pt-2.5' : 'border-b border-purple-200/60 pb-3'}`}>
+            <div className="space-y-1">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-purple-700/70">
+                라이브 일정표
+              </p>
+              <div className="flex flex-wrap items-center gap-3">
+                {weekRangeLabel && <span>{weekRangeLabel}</span>}
+                {!hasAnyEvents && <span className="font-medium text-purple-700 typography-small">이번 주에는 예정된 방송이 없습니다.</span>}
+              </div>
             </div>
             <button
               type="button"
               onClick={() => setIsModalOpen(true)}
-              className="inline-flex w-full sm:w-auto items-center justify-center gap-1.5 rounded-full border border-purple-200 bg-white px-3 py-2 text-xs font-semibold text-purple-700 transition-colors hover:border-purple-300 hover:bg-purple-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/70 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+              className={`inline-flex w-full items-center justify-center gap-1.5 rounded-full border border-purple-200 bg-white font-semibold text-purple-700 transition-colors hover:border-purple-300 hover:bg-purple-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/70 focus-visible:ring-offset-2 focus-visible:ring-offset-white sm:w-auto ${embedded ? 'px-2.5 py-1 text-[11px]' : 'px-3 py-2 text-xs'}`}
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -225,8 +235,52 @@ export default function ScheduleSection({
             </button>
           </div>
 
-          <div>
-            <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {embedded ? (
+            <ul className="space-y-1.5">
+              {weekColumns.map((day) => (
+                <li
+                  key={day.isoDate}
+                  className={`stagger-item rounded-[20px] border px-3 py-3 transition ${
+                    day.isWeekend ? 'border-purple-300/65 bg-purple-50/65' : 'border-purple-200/55 bg-white/76'
+                  }`}
+                >
+                  <div className="flex gap-2">
+                    <div className="flex w-12 shrink-0 flex-col items-center justify-center rounded-[12px] bg-purple-100/85 px-1.5 py-1.5 text-center">
+                      <span className="text-[12px] font-bold text-purple-900">{day.dateLabel}</span>
+                      <span className="text-[10px] font-semibold uppercase tracking-wide text-purple-700/75">
+                        {day.weekdayLabel}
+                      </span>
+                    </div>
+
+                    <div className="min-w-0 flex-1 space-y-1">
+                      {day.events.length > 0 ? (
+                        day.events.map((event) => (
+                          <article
+                            key={event.id}
+                            className="rounded-[12px] border border-purple-200/55 bg-white/82 px-2 py-1.5"
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0">
+                                <p className="line-clamp-2 text-[12px] font-semibold leading-[1.1rem] text-purple-950">{event.title}</p>
+                              </div>
+                              <span className="shrink-0 rounded-full bg-purple-100 px-1.5 py-0.5 text-[10px] font-semibold text-purple-700">
+                                {formatTimeRange(event.start, event.end)}
+                              </span>
+                            </div>
+                          </article>
+                        ))
+                      ) : (
+                        <p className="rounded-[12px] border border-dashed border-purple-200/60 bg-white/55 px-3 py-2 text-center text-[11px] text-purple-700/70 typography-small">
+                          일정 없음
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <ul className={`grid grid-cols-1 gap-3 ${clampedDaysToShow >= 4 ? 'sm:grid-cols-2 xl:grid-cols-4' : clampedDaysToShow === 3 ? 'sm:grid-cols-3' : clampedDaysToShow === 2 ? 'sm:grid-cols-2' : ''}`}>
               {weekColumns.map((day) => (
                 <li
                   key={day.isoDate}
@@ -258,12 +312,12 @@ export default function ScheduleSection({
                           key={event.id}
                           className="rounded-[16px] border-l-2 border-purple-400/70 bg-white/82 px-3 py-2 text-xs text-purple-900 transition-all duration-200"
                         >
-                          <p className="font-semibold text-purple-900/95 line-clamp-2 typography-body">{event.title}</p>
+                          <p className="line-clamp-2 font-semibold text-purple-900/95 typography-body">{event.title}</p>
                           <p className="mt-1 text-[11px] font-medium text-purple-700/80 typography-small">
                             {formatTimeRange(event.start, event.end)}
                           </p>
                           {(event.platform || event.description) && (
-                            <p className="mt-1 text-[11px] text-purple-700/78 line-clamp-1 typography-small">
+                            <p className="mt-1 line-clamp-1 text-[11px] text-purple-700/78 typography-small">
                               {event.platform ? `${event.platform}${event.description ? ' · ' : ''}` : ''}
                               {event.description ?? ''}
                             </p>
@@ -279,17 +333,33 @@ export default function ScheduleSection({
                 </li>
               ))}
             </ul>
-          </div>
+          )}
         </div>
       )}
       {SHOW_SCHEDULE_DIAGNOSTICS && diagnostics && <DiagnosticsPanel diagnostics={diagnostics} status={diagnoseStatus} />}
-
-      {/* Schedule Modal */}
       <ScheduleModal
         events={allEvents}
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
       />
+    </>
+  );
+
+  if (embedded) {
+    return sectionContent;
+  }
+
+  return (
+    <SectionCard
+      id="schedule-section"
+      className={className}
+      tone="lavender"
+      eyebrow="일정"
+      title="라이브 일정표"
+      description={`오늘부터 ${clampedDaysToShow}일 일정과 예정 방송을 확인할 수 있습니다.`}
+      bodyClassName="relative gap-4"
+    >
+      {sectionContent}
     </SectionCard>
   );
 }

@@ -58,12 +58,12 @@ export default function ClipsSection() {
       eyebrow="Shorts"
       title="하이라이트 숏폼"
       description="치지직 클립과 YouTube Shorts를 한눈에"
-      bodyClassName="gap-4"
+      bodyClassName="gap-3"
     >
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
         {/* 치지직 클립 */}
-        <div className="rounded-[20px] border border-purple-200/60 bg-white/60 p-3 sm:p-4">
-          <div className="mb-3 flex items-center justify-between gap-3 border-b border-purple-200/60 pb-3">
+        <div className="rounded-[20px] border border-purple-200/60 bg-white/60 p-3">
+          <div className="mb-2.5 flex items-center justify-between gap-3 border-b border-purple-200/60 pb-2.5">
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-purple-700/70">
                 Chzzk
@@ -81,8 +81,8 @@ export default function ClipsSection() {
         </div>
 
         {/* 유튜브 Shorts */}
-        <div className="rounded-[20px] border border-purple-200/60 bg-white/60 p-3 sm:p-4">
-          <div className="mb-3 flex items-center justify-between gap-3 border-b border-purple-200/60 pb-3">
+        <div className="rounded-[20px] border border-purple-200/60 bg-white/60 p-3">
+          <div className="mb-2.5 flex items-center justify-between gap-3 border-b border-purple-200/60 pb-2.5">
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-purple-700/70">
                 YouTube

@@ -55,9 +55,9 @@ export default function FanArtGallery({ images, compact = false }: FanArtGallery
 
   return (
     <>
-      <div className="flex h-full flex-col gap-4">
+      <div className="flex h-full min-h-0 flex-col gap-2.5">
         <figure
-          className="flex h-full flex-col gap-3"
+          className="flex h-full min-h-0 flex-col gap-2 justify-between"
           onMouseEnter={() => setIsInteracting(true)}
           onMouseLeave={() => setIsInteracting(false)}
           onFocusCapture={() => setIsInteracting(true)}
@@ -67,7 +67,7 @@ export default function FanArtGallery({ images, compact = false }: FanArtGallery
             type="button"
             onClick={() => handleImageClick(currentIndex)}
             className={`relative w-full overflow-hidden transition-transform border shadow-lg cursor-pointer rounded-2xl border-white/40 shadow-purple-900/20 hover:scale-[1.01] active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 ${
-              compact ? "aspect-[4/3]" : "aspect-[4/5] md:aspect-[4/4.8]"
+              compact ? "mx-auto h-[20rem] shrink-0 xl:h-[27rem]" : "aspect-[4/5] md:aspect-[4/4.8]"
             }`}
             aria-label={`${images[currentIndex].alt} 크게 보기`}
           >
@@ -94,7 +94,7 @@ export default function FanArtGallery({ images, compact = false }: FanArtGallery
           <div className="flex items-center justify-between text-[11px] text-purple-900/60">
             <button
               type="button"
-              className="btn h-8 min-w-[5rem] justify-center text-xs"
+              className="btn h-7 min-w-[4.5rem] justify-center text-[11px]"
               onClick={() => setIsAutoPlay((prev) => !prev)}
               aria-label={isAutoPlay ? "자동 회전 일시정지" : "자동 회전 재개"}
             >
@@ -105,7 +105,7 @@ export default function FanArtGallery({ images, compact = false }: FanArtGallery
               <a
                 href={images[currentIndex].download}
                 download
-                className="btn btn-primary h-8 min-w-[5rem] justify-center text-xs"
+                className="btn btn-primary h-7 min-w-[4.5rem] justify-center text-[11px]"
               >
                 다운로드
               </a>
