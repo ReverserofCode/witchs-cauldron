@@ -26,7 +26,7 @@ jobs:
 
       - name: Install dependencies
         working-directory: frontend
-        run: npm install
+        run: npm ci
 
       - name: TypeScript type check
         working-directory: frontend
@@ -35,6 +35,18 @@ jobs:
       - name: Lint
         working-directory: frontend
         run: npm run lint
+
+      - name: Test
+        working-directory: frontend
+        run: npm test
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Backend syntax check
+        run: python -m py_compile backend/app/main.py
 
       - name: Build
         working-directory: frontend
@@ -81,7 +93,7 @@ jobs:
             ./frontend/deploy.sh --clean
 
       - name: Retry deploy once on SSH failure
-        if: steps.deploy_primary.outcome == 'failure'
+        if: steps.deploy_primary.outcome == 'failure' && contains(steps.deploy_primary.outputs.stdout || '', 'dial tcp')
         uses: appleboy/ssh-action@v1.0.3
         env:
           CHZZK_CLIENT_ID: ${{ secrets.CHZZK_CLIENT_ID }}

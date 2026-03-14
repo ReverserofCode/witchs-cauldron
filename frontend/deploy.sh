@@ -1,6 +1,7 @@
 #!/bin/bash
 
-# witchs-cauldron 프로젝트 배포 스크립트 (무중단 배포)
+# witchs-cauldron 프로젝트 배포 스크립트
+# 현재 전략은 완전한 무중단이 아니라 재기동 기반 교체 배포에 가깝습니다.
 # 우분투 환경에서 실행
 
 set -e
@@ -47,6 +48,29 @@ log_warning() {
 
 log_error() {
     echo -e "${RED}[ERROR]${NC} $1"
+}
+
+require_command() {
+    if ! command -v "$1" >/dev/null 2>&1; then
+        log_error "필수 명령을 찾을 수 없습니다: $1"
+        exit 1
+    fi
+}
+
+preflight_checks() {
+    log_info "배포 전 사전 점검을 수행합니다..."
+    require_command curl
+    require_command docker
+
+    if [ ! -f "$COMPOSE_FILE" ]; then
+        log_error "compose 파일이 없습니다: $COMPOSE_FILE"
+        exit 1
+    fi
+
+    if [ "$COMPOSE_FILE" = "docker-compose.server.yml" ] && ! docker network inspect web >/dev/null 2>&1; then
+        log_error "외부 Docker 네트워크 'web' 이 없습니다. 먼저 생성해야 합니다."
+        exit 1
+    fi
 }
 
 # Docker 설치 확인
@@ -146,14 +170,26 @@ health_check() {
 
     max_attempts=30
     attempt=1
+    backend_health_url="${DEPLOY_BACKEND_HEALTHCHECK_URL:-http://127.0.0.1:13000/api/health}"
 
     while [ $attempt -le $max_attempts ]; do
-        if curl -f "$HEALTHCHECK_URL" > /dev/null 2>&1; then
-            log_success "애플리케이션이 정상적으로 실행 중입니다! 🎉"
+        frontend_ok=false
+        backend_ok=false
+
+        if curl -fsS "$HEALTHCHECK_URL" > /dev/null 2>&1; then
+            frontend_ok=true
+        fi
+
+        if curl -fsS "$backend_health_url" > /dev/null 2>&1; then
+            backend_ok=true
+        fi
+
+        if [ "$frontend_ok" = true ] && [ "$backend_ok" = true ]; then
+            log_success "프론트엔드/백엔드가 정상적으로 실행 중입니다! 🎉"
             return 0
         fi
 
-        log_info "대기 중... ($attempt/$max_attempts)"
+        log_info "대기 중... ($attempt/$max_attempts) frontend=$frontend_ok backend=$backend_ok"
         sleep 2
         ((attempt++))
     done
