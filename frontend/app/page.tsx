@@ -11,6 +11,9 @@ import {
   ClipsSection,
   ScheduleSection,
   FeaturedVideoSection,
+  LiveStatusCard,
+  LiveStatusChip,
+  LiveStatusDescription,
 } from '@/app/components/sections'
 import { SectionTracker } from '@/app/components/analytics/SectionTracker'
 import { ScrollReveal } from '@/app/components/animations'
@@ -67,18 +70,6 @@ export default async function Page(): Promise<ReactElement> {
   const showBirthdayBanner = isBirthdayToday()
   const birthdayBannerCopy = showBirthdayBanner ? getBirthdayBannerCopy() : null
   const liveStatus = await getChzzkLiveStatus()
-  const liveChipClass = `chip inline-flex items-center gap-1.5 border ${liveStatus.isLive ? 'bg-rose-500/90 border-rose-300/60 text-white' : 'bg-slate-700/80 border-slate-600/70 text-slate-100'}`
-  const viewerText =
-    liveStatus.isLive && typeof liveStatus.viewers === 'number' && Number.isFinite(liveStatus.viewers)
-      ? ` • ${liveStatus.viewers.toLocaleString()}명 시청중`
-      : ''
-  const liveChipLabel = liveStatus.isLive ? `실시간 방송 중${viewerText}` : '현재 오프라인'
-  const liveStatusValue = liveStatus.isLive ? 'ON AIR' : 'OFF AIR'
-  const liveStatusDescription = liveStatus.error
-    ? '라이브 정보를 불러오지 못했어요. 잠시 후 다시 확인해주세요.'
-    : liveStatus.isLive
-    ? '모잉이 지금도 마법을 선보이는 중입니다!'
-    : '다음 방송을 기다려주세요.'
 
   return (
     <main className="py-8 lg:py-12">
@@ -104,15 +95,7 @@ export default async function Page(): Promise<ReactElement> {
                         unoptimized
                       />
                     </span>
-                    <a
-                      href={liveStatus.channelUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className={`${liveChipClass} ml-auto transition-all duration-200 hover:scale-105 hover:brightness-110`}
-                    >
-                      <span className="inline-block w-1.5 h-1.5 sm:w-2 sm:h-2 bg-current rounded-full" />
-                      <span className="text-xs sm:text-sm">{liveChipLabel}</span>
-                    </a>
+                    <LiveStatusChip initialStatus={liveStatus} />
                   </div>
 
                   <div className="space-y-3">
@@ -124,21 +107,11 @@ export default async function Page(): Promise<ReactElement> {
                     <p className="max-w-2xl text-sm font-light text-purple-100/90 typography-lead sm:text-base">
                       포션을 만들면 폭발하거나, 고백하게 만드는 재앙 제조기. 모잉의 방송, 영상, 숏폼, 팬 콘텐츠를 한곳에서 모아 봅니다.
                     </p>
-                    <p className="text-sm font-light text-purple-200/85 typography-lead">
-                      {liveStatusDescription}
-                    </p>
+                    <LiveStatusDescription initialStatus={liveStatus} />
                   </div>
 
                   <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                    <div className="liquid-glass-panel rounded-[24px] px-4 py-3">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-purple-200/70">
-                        실시간 상태
-                      </p>
-                      <p className="mt-2 text-xl font-black text-white">{liveStatusValue}</p>
-                      <p className="mt-1 text-xs text-purple-100/75">
-                        {liveStatus.isLive && viewerText ? viewerText.replace(' • ', '') : '방송 상태를 바로 반영합니다.'}
-                      </p>
-                    </div>
+                    <LiveStatusCard initialStatus={liveStatus} />
                       {HERO_FOCUS_ITEMS.map((item) => (
                         <div
                           key={item.label}
