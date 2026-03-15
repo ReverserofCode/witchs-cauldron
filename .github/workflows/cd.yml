@@ -96,7 +96,7 @@ jobs:
             ./frontend/deploy.sh --clean
 
       - name: Retry deploy once on SSH failure
-        if: steps.deploy_primary.outcome == 'failure' && contains(steps.deploy_primary.outputs.stdout || '', 'dial tcp')
+        if: steps.deploy_primary.outcome == 'failure'
         uses: appleboy/ssh-action@v1.0.3
         env:
           CHZZK_CLIENT_ID: ${{ secrets.CHZZK_CLIENT_ID }}
