@@ -115,6 +115,7 @@ export default function VideoCard({
       : null;
   const embedUrl = `https://www.youtube-nocookie.com/embed/${videoId}?rel=0&modestbranding=1&playsinline=1`;
   const [useIframeFallback, setUseIframeFallback] = useState(false);
+  const [isEmbedActivated, setIsEmbedActivated] = useState(!embed);
   const playerHostRef = useRef<HTMLDivElement | null>(null);
   const playerRef = useRef<YTPlayerInstance | null>(null);
   const playbackStartRef = useRef(onPlaybackStart);
@@ -127,7 +128,11 @@ export default function VideoCard({
   }, [onPlaybackStart, onPlaybackStop]);
 
   useEffect(() => {
-    if (!embed || !playerHostRef.current) {
+    setIsEmbedActivated(!embed);
+  }, [embed, videoId]);
+
+  useEffect(() => {
+    if (!embed || !isEmbedActivated || !playerHostRef.current) {
       return;
     }
 
@@ -198,7 +203,12 @@ export default function VideoCard({
       playerRef.current = null;
       lastPlayerStateRef.current = null;
     };
-  }, [embed, videoId]);
+  }, [embed, isEmbedActivated, videoId]);
+
+  const activateEmbed = () => {
+    onInteractionStart?.();
+    setIsEmbedActivated(true);
+  };
 
   if (embed) {
     return (
@@ -208,9 +218,40 @@ export default function VideoCard({
       >
         <div
           className={`relative w-full overflow-hidden bg-black ${aspectClass}`}
-          onPointerDown={onInteractionStart}
         >
-          {useIframeFallback ? (
+          {!isEmbedActivated ? (
+            <button
+              type="button"
+              onClick={activateEmbed}
+              className="group absolute inset-0 h-full w-full text-left"
+              aria-label={`${title} 재생`}
+            >
+              <Image
+                src={thumbnail || fallbackSrc}
+                alt={title}
+                fill
+                unoptimized
+                sizes="(max-width: 768px) 100vw, 480px"
+                className="object-cover transition-transform duration-500 group-hover:scale-105"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-black/10" />
+              <div className="absolute inset-x-4 bottom-4 flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/70">
+                    빠른 미리보기
+                  </p>
+                  <p className="mt-1 line-clamp-2 text-sm font-semibold text-white">
+                    클릭해서 바로 재생
+                  </p>
+                </div>
+                <span className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white/90 text-purple-700 shadow-lg transition-transform duration-200 group-hover:scale-105">
+                  <svg className="ml-0.5 h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M8 5v14l11-7z" />
+                  </svg>
+                </span>
+              </div>
+            </button>
+          ) : useIframeFallback ? (
             <iframe
               src={embedUrl}
               title={title}
