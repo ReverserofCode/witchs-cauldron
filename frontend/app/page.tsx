@@ -28,10 +28,9 @@ const HERO_QUICK_LINKS = [
   { label: '유튜브', href: 'https://www.youtube.com/channel/UCHzre37UF4o64HRhp-7CDzQ' },
   { label: '다시보기', href: 'https://www.youtube.com/@fullmoing' },
   { label: '팬카페', href: 'https://cafe.naver.com/moinge' },
-  { label: '분석 대시보드', href: '/admin/analytics' },
 ]
 
-const HERO_CHANNEL_LINKS = HERO_QUICK_LINKS.filter((link) => link.href !== '/admin/analytics')
+const HERO_CHANNEL_LINKS = HERO_QUICK_LINKS
 
 const HERO_FOCUS_ITEMS = [
   {

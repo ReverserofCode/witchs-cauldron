@@ -1,5 +1,4 @@
 import { type ReactElement } from "react";
-import Link from "next/link";
 import { SectionCard } from "@/app/components/cards";
 import { FanArtGallery } from "@/app/components/gallery";
 import { loadFanArtImages, type FanArtImage } from "@/app/lib/fanart";
@@ -33,12 +32,6 @@ const COMMUNITY_LINKS = [
     href: "https://cafe.naver.com/moinge",
     description: "팬아트와 공지 확인",
     isExternal: true,
-  },
-  {
-    label: "분석 대시보드",
-    href: "/admin/analytics",
-    description: "사이트 통계 페이지",
-    isExternal: false,
   },
 ];
 
@@ -87,20 +80,7 @@ export default function RightSidebar({ className, images }: RightSidebarProps = 
             );
           }
 
-          return (
-            <Link
-              key={link.href}
-              href={link.href}
-              className="rounded-2xl border border-purple-200/60 bg-white/76 px-3 py-3 transition-all duration-200 hover:bg-purple-50/80 hover:-translate-y-0.5"
-              data-analytics-menu="true"
-              data-analytics-id={link.href}
-              data-analytics-label={link.label}
-              data-analytics-location="right_sidebar"
-              data-analytics-type="admin_link"
-            >
-              {content}
-            </Link>
-          );
+          return null;
         })}
       </SectionCard>
 

@@ -23,7 +23,13 @@ async function main() {
     args: ['--no-sandbox', '--disable-dev-shm-usage'],
   });
 
-  const context = await browser.newContext();
+  const adminUsername = process.env.SNAP_ADMIN_USERNAME || process.env.ADMIN_BASIC_AUTH_USERNAME;
+  const adminPassword = process.env.SNAP_ADMIN_PASSWORD || process.env.ADMIN_BASIC_AUTH_PASSWORD;
+  const context = await browser.newContext(
+    adminUsername && adminPassword
+      ? { httpCredentials: { username: adminUsername, password: adminPassword } }
+      : undefined
+  );
 
   for (const t of targets) {
     const page = await context.newPage({ viewport: { width: t.width, height: t.height } });

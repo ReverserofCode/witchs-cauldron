@@ -179,8 +179,12 @@ uvicorn app.main:app --reload
 # 필수
 YOUTUBE_API_KEY=your_youtube_api_key
 
-# 분석 기능 (선택)
+# 분석 기능 (DB 연결)
 ANALYTICS_DATABASE_URL=postgres://analytics:analytics@analytics-db:5432/analytics
+
+# 운영자 보호 (프로덕션 필수, development 미설정 시 우회)
+ADMIN_BASIC_AUTH_USERNAME=admin
+ADMIN_BASIC_AUTH_PASSWORD=change-this-before-deploy
 
 # 기타 선택
 BROADCAST_SCHEDULE_CSV_URL=custom_google_sheets_url
@@ -223,8 +227,8 @@ COLLECTION_TIMEOUT=300
 | `/api/youtubeShorts` | YouTube Shorts (팬채널) | no-store |
 | `/api/youtubeShorts/official` | YouTube Shorts (공식채널) | no-store |
 | `/api/analytics/track` | 페이지뷰/클릭 이벤트 수집 | no-store |
-| `/api/analytics/stats` | 통계 조회 | no-store |
-| `/admin/analytics` | 분석 대시보드 | - |
+| `/api/analytics/stats` | 통계 조회 (프로덕션 Basic Auth) | no-store |
+| `/admin/analytics` | 분석 대시보드 (프로덕션 Basic Auth) | - |
 
 ### Backend (FastAPI)
 
@@ -468,12 +472,15 @@ cd ~/projects/witchs-cauldron
 
 # 환경 설정
 cp .env.example .env
-nano .env  # YOUTUBE_API_KEY 등 설정
+nano .env  # YOUTUBE_API_KEY, ADMIN_BASIC_AUTH_USERNAME, ADMIN_BASIC_AUTH_PASSWORD 등 설정
 
 # 배포 실행
 chmod +x frontend/deploy.sh frontend/manage.sh
 ./frontend/deploy.sh --clean
 ```
+
+- GitHub Actions CD를 쓰는 경우 `ADMIN_BASIC_AUTH_USERNAME`, `ADMIN_BASIC_AUTH_PASSWORD` 를 repo secrets로도 등록하면 서버 `.env` 에 자동 반영됩니다.
+- 프로덕션에서 두 값이 비어 있으면 `/admin/*` 와 `/api/analytics/stats` 는 503으로 차단됩니다.
 
 ### 관리 스크립트 (manage.sh)
 
@@ -589,7 +596,8 @@ WantedBy=multi-user.target
 
 ### 개요
 
-- **경로**: `/admin/analytics` (인증 없이 접근 가능)
+- **경로**: `/admin/analytics` (프로덕션 Basic Auth 필수 / development는 env 미설정 시 우회)
+- **보호 범위**: `/admin/:path*`, `/api/analytics/stats`
 - **DB**: PostgreSQL 기반 자체 분석 (외부 서비스 없음)
 - **이벤트 타입**: `pageview`, `menu_click`, `content_click`, `section_view`
 - **세션**: UUID 쿠키(`wc_session`, 30일 만료) 기반, IP/User-Agent 저장
@@ -667,6 +675,8 @@ WantedBy=multi-user.target
 ### 통계 집계 API (`api/analytics/stats/route.ts`)
 
 `GET /api/analytics/stats?from=YYYY-MM-DD&to=YYYY-MM-DD`로 집계 결과를 반환합니다.
+
+이 엔드포인트는 프로덕션에서 Basic Auth로 보호됩니다 (`ADMIN_BASIC_AUTH_USERNAME`, `ADMIN_BASIC_AUTH_PASSWORD`).
 
 기본 범위: 최근 7일 (`today - 6일` ~ `today`). `to` 날짜는 **포함** (내부적으로 다음날 00:00 UTC 미만으로 처리).
 
@@ -824,8 +834,9 @@ curl -i -X POST http://localhost:3000/api/analytics/track \
   -H "Content-Type: application/json" \
   -d '{"type":"pageview","path":"/admin/analytics","referrer":"cli-test"}'
 
-# 통계 조회
-curl -i http://localhost:3000/api/analytics/stats
+# 통계 조회 (프로덕션과 동일하게 Basic Auth 포함)
+curl -i -u '<admin-username>:<admin-password>' \
+  'http://localhost:3000/api/analytics/stats'
 # totals.visitors >= 0, daily[], topMenuClicks[] 구조 확인
 ```
 
@@ -862,7 +873,7 @@ curl http://localhost:3000/api/health
 curl http://localhost:3000/api/youTubePlayer
 curl http://localhost:3000/api/youTubePlayer/topOfficial
 curl http://localhost:3000/api/youtubeShorts
-curl http://localhost:3000/api/analytics/stats
+curl -u '<admin-username>:<admin-password>' 'http://localhost:3000/api/analytics/stats'
 ```
 
 ### 4) 사이트 방문 테스트
@@ -870,7 +881,7 @@ curl http://localhost:3000/api/analytics/stats
 | URL | 확인 사항 |
 |-----|----------|
 | http://localhost:3000 | 메인 페이지 렌더링, YouTube 영상 표시 |
-| http://localhost:3000/admin/analytics | 대시보드, 차트 표시 |
+| http://localhost:3000/admin/analytics | 브라우저 Basic Auth 로그인 후 대시보드/차트 표시 |
 
 ### 알려진 경고 (사전 존재, 비차단)
 
@@ -885,6 +896,8 @@ curl http://localhost:3000/api/analytics/stats
 | 증상 | 원인 | 해결 |
 |------|------|------|
 | Tailwind CSS 빌드 오류 | `postcss.config.js` 설정 문제 | `@tailwindcss/postcss`만 남기고 autoprefixer 제거 |
+| `/admin/analytics` 또는 `/api/analytics/stats` 가 401 | Basic Auth 미입력/오입력 | 브라우저 또는 `curl -u '<admin-username>:<admin-password>' ...` 로 확인 |
+| `/admin/analytics` 또는 `/api/analytics/stats` 가 503 | `ADMIN_BASIC_AUTH_USERNAME` / `ADMIN_BASIC_AUTH_PASSWORD` 미설정 | `.env` 또는 GitHub Actions secrets 설정 후 재배포 |
 | 모듈 찾을 수 없음 | 빌드 캐시 | `docker builder prune -f && ./deploy.sh --clean` |
 | Docker Compose 버전 경고 | 최신 Compose에서 불필요 | 무시 가능 |
 | YouTube API 키 오류 | `YOUTUBE_API_KEY` 미설정 | `.env`에 키 추가 후 컨테이너 재시작 |
@@ -897,6 +910,10 @@ curl http://localhost:3000/api/analytics/stats
 ---
 
 ## 변경 이력
+
+### 2026-04-06
+- `/admin/*`, `/api/analytics/stats` 에 Basic Auth 보호 추가
+- 배포용 `.env.example`, docker compose, GitHub Actions CD 문서/환경 반영
 
 ### 2026-02-26
 - 전체 MD 문서를 README.md로 통합

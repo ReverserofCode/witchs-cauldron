@@ -239,6 +239,9 @@ RootLayout (app/layout.tsx)
 ### 9. `/api/analytics/stats`
 - **목적**: 통계 집계
 - **메서드**: GET
+- **보호**: 프로덕션에서는 Basic Auth 필요 (`ADMIN_BASIC_AUTH_USERNAME`, `ADMIN_BASIC_AUTH_PASSWORD`)
+  - 무인증 요청: `401 Authentication required`
+  - auth env 미설정 배포: `503 Admin access is disabled ...`
 - **응답**:
   - `totals`: 고유 방문자, 페이지뷰, 메뉴 클릭
   - `daily[]`: 일별 페이지뷰, 고유 방문자, 메뉴 클릭
@@ -249,6 +252,7 @@ RootLayout (app/layout.tsx)
 
 ### 10. `/admin/analytics`
 - **목적**: 분석 대시보드
+- **보호**: 프로덕션에서는 Basic Auth 필요
 
 ## 캐싱 전략
 
@@ -291,6 +295,10 @@ YOUTUBE_API_KEY=your_youtube_api_key
 
 # 분석 기능 (선택)
 ANALYTICS_DATABASE_URL=postgres://analytics:analytics@analytics-db:5432/analytics
+
+# 운영자 보호 (프로덕션 필수)
+ADMIN_BASIC_AUTH_USERNAME=admin
+ADMIN_BASIC_AUTH_PASSWORD=change-this-before-deploy
 
 # 기타 선택
 BROADCAST_SCHEDULE_CSV_URL=custom_google_sheets_url

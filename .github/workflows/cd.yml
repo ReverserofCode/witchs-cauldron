@@ -75,6 +75,8 @@ jobs:
         env:
           CHZZK_CLIENT_ID: ${{ secrets.CHZZK_CLIENT_ID }}
           CHZZK_CLIENT_SECRET: ${{ secrets.CHZZK_CLIENT_SECRET }}
+          ADMIN_BASIC_AUTH_USERNAME: ${{ secrets.ADMIN_BASIC_AUTH_USERNAME }}
+          ADMIN_BASIC_AUTH_PASSWORD: ${{ secrets.ADMIN_BASIC_AUTH_PASSWORD }}
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USERNAME }}
@@ -83,16 +85,28 @@ jobs:
           timeout: 60s
           command_timeout: 20m
           script_stop: true
-          envs: CHZZK_CLIENT_ID,CHZZK_CLIENT_SECRET
+          envs: CHZZK_CLIENT_ID,CHZZK_CLIENT_SECRET,ADMIN_BASIC_AUTH_USERNAME,ADMIN_BASIC_AUTH_PASSWORD
           script: |
             cd ${{ secrets.DEPLOY_PATH }}
             git fetch origin main
             git reset --hard origin/main
             touch .env
-            grep -v '^CHZZK_CLIENT_ID=' .env | grep -v '^CHZZK_CLIENT_SECRET=' > .env.tmp || true
+            cp .env .env.tmp
+            upsert_env_var() {
+              local name="$1"
+              local value="$2"
+              if [ -z "${value}" ]; then
+                return 0
+              fi
+              grep -v "^${name}=" .env.tmp > .env.next || true
+              mv .env.next .env.tmp
+              printf '%s=%s\n' "${name}" "${value}" >> .env.tmp
+            }
+            upsert_env_var CHZZK_CLIENT_ID "${CHZZK_CLIENT_ID:-}"
+            upsert_env_var CHZZK_CLIENT_SECRET "${CHZZK_CLIENT_SECRET:-}"
+            upsert_env_var ADMIN_BASIC_AUTH_USERNAME "${ADMIN_BASIC_AUTH_USERNAME:-}"
+            upsert_env_var ADMIN_BASIC_AUTH_PASSWORD "${ADMIN_BASIC_AUTH_PASSWORD:-}"
             mv .env.tmp .env
-            echo "CHZZK_CLIENT_ID=${CHZZK_CLIENT_ID}" >> .env
-            echo "CHZZK_CLIENT_SECRET=${CHZZK_CLIENT_SECRET}" >> .env
             ./frontend/deploy.sh --clean
 
       - name: Retry deploy once on SSH failure
@@ -101,6 +115,8 @@ jobs:
         env:
           CHZZK_CLIENT_ID: ${{ secrets.CHZZK_CLIENT_ID }}
           CHZZK_CLIENT_SECRET: ${{ secrets.CHZZK_CLIENT_SECRET }}
+          ADMIN_BASIC_AUTH_USERNAME: ${{ secrets.ADMIN_BASIC_AUTH_USERNAME }}
+          ADMIN_BASIC_AUTH_PASSWORD: ${{ secrets.ADMIN_BASIC_AUTH_PASSWORD }}
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USERNAME }}
@@ -109,14 +125,26 @@ jobs:
           timeout: 60s
           command_timeout: 20m
           script_stop: true
-          envs: CHZZK_CLIENT_ID,CHZZK_CLIENT_SECRET
+          envs: CHZZK_CLIENT_ID,CHZZK_CLIENT_SECRET,ADMIN_BASIC_AUTH_USERNAME,ADMIN_BASIC_AUTH_PASSWORD
           script: |
             cd ${{ secrets.DEPLOY_PATH }}
             git fetch origin main
             git reset --hard origin/main
             touch .env
-            grep -v '^CHZZK_CLIENT_ID=' .env | grep -v '^CHZZK_CLIENT_SECRET=' > .env.tmp || true
+            cp .env .env.tmp
+            upsert_env_var() {
+              local name="$1"
+              local value="$2"
+              if [ -z "${value}" ]; then
+                return 0
+              fi
+              grep -v "^${name}=" .env.tmp > .env.next || true
+              mv .env.next .env.tmp
+              printf '%s=%s\n' "${name}" "${value}" >> .env.tmp
+            }
+            upsert_env_var CHZZK_CLIENT_ID "${CHZZK_CLIENT_ID:-}"
+            upsert_env_var CHZZK_CLIENT_SECRET "${CHZZK_CLIENT_SECRET:-}"
+            upsert_env_var ADMIN_BASIC_AUTH_USERNAME "${ADMIN_BASIC_AUTH_USERNAME:-}"
+            upsert_env_var ADMIN_BASIC_AUTH_PASSWORD "${ADMIN_BASIC_AUTH_PASSWORD:-}"
             mv .env.tmp .env
-            echo "CHZZK_CLIENT_ID=${CHZZK_CLIENT_ID}" >> .env
-            echo "CHZZK_CLIENT_SECRET=${CHZZK_CLIENT_SECRET}" >> .env
             ./frontend/deploy.sh --clean

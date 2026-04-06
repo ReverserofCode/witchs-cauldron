@@ -91,26 +91,6 @@ export default function Header({ brand, items = defaultItems }: HeaderProps) {
         {/* Desktop nav */}
         <nav aria-label="헤더 내비게이션" className="hidden md:block">
           <ul className="flex items-center gap-2 md:gap-3">
-            <li>
-              <Link
-                href="/admin/analytics"
-                className="nav-indicator inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-ink transition-all duration-200 hover:bg-[rgba(var(--moing-accent),0.35)] hover:text-[rgb(var(--moing-deep))] md:px-4 md:py-3"
-                aria-label="분석 대시보드"
-                title="분석 대시보드"
-                data-analytics-menu="true"
-                data-analytics-id="/admin/analytics"
-                data-analytics-label="분석 대시보드"
-                data-analytics-location="header"
-                data-analytics-type="admin_link"
-              >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 md:h-6 md:w-6" aria-hidden="true">
-                  <path d="M3 3v18h18" />
-                  <path d="M7 16l4-8 4 4 4-6" />
-                </svg>
-                <span className="text-xs font-semibold tracking-tight md:text-sm">통계</span>
-              </Link>
-            </li>
-            <li className="mx-1 h-5 w-px bg-purple-300/40" role="separator" aria-hidden="true" />
             <li className="mr-1 text-xs font-semibold tracking-wide text-purple-700/60 uppercase">커뮤니티</li>
             {items.map((item) => (
               <li key={item.href}>
@@ -185,22 +165,6 @@ export default function Header({ brand, items = defaultItems }: HeaderProps) {
                   </li>
                 ))}
               </ul>
-              <div className="mt-2 border-t border-purple-200/40 pt-2">
-                <p className="mb-1 px-2 text-[10px] font-semibold uppercase tracking-widest text-purple-600/70">
-                  관리
-                </p>
-                <Link
-                  href="/admin/analytics"
-                  className="flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-purple-900 transition-colors hover:bg-purple-100/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/70 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
-                  onClick={() => { closeMenu(); }}
-                >
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 flex-shrink-0" aria-hidden="true">
-                    <path d="M3 3v18h18" />
-                    <path d="M7 16l4-8 4 4 4-6" />
-                  </svg>
-                  <span>분석 대시보드</span>
-                </Link>
-              </div>
             </div>
           )}
         </div>

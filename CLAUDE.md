@@ -204,8 +204,8 @@ witchs-cauldron/                      # 프로젝트 루트
 | `/api/youtubeShorts` | YouTube Shorts (팬채널) | ISR 1분 |
 | `/api/youtubeShorts/official` | YouTube Shorts (공식채널) | ISR 1분 |
 | `/api/analytics/track` | 페이지뷰/클릭 이벤트 수집 | no-store |
-| `/api/analytics/stats` | 통계 조회 | no-store |
-| `/admin/analytics` | 분석 대시보드 | - |
+| `/api/analytics/stats` | 통계 조회 (프로덕션 Basic Auth) | no-store |
+| `/admin/analytics` | 분석 대시보드 (프로덕션 Basic Auth) | - |
 
 ### Backend API (FastAPI)
 
@@ -544,7 +544,7 @@ RootLayout
 
 ### 2) 운영자 대시보드
 - **경로**: `/admin/analytics`
-- **접근**: 별도 인증 없이 접근 가능
+- **접근**: 프로덕션에서는 Basic Auth 필요 (`ADMIN_BASIC_AUTH_USERNAME`, `ADMIN_BASIC_AUTH_PASSWORD`); development는 env 미설정 시 우회
 
 ### 3) 공개 모드
 - (제거됨) 통계 API 인증/공개 모드 관련 설정은 더 이상 사용하지 않음
@@ -644,8 +644,8 @@ curl http://localhost:3000/api/youTubePlayer
 curl http://localhost:3000/api/youTubePlayer/topOfficial
 curl http://localhost:3000/api/youtubeShorts
 
-# Analytics API
-curl http://localhost:3000/api/analytics/stats
+# Analytics API (프로덕션과 동일하게 Basic Auth 포함)
+curl -u '<admin-username>:<admin-password>' http://localhost:3000/api/analytics/stats
 ```
 
 ### 4) 사이트 직접 방문 테스트
@@ -655,7 +655,7 @@ curl http://localhost:3000/api/analytics/stats
 | URL | 확인 사항 |
 |-----|----------|
 | http://localhost:3000 | 메인 페이지 정상 렌더링, YouTube 영상 표시 |
-| http://localhost:3000/admin/analytics | 대시보드 로드, Recharts 그래프 표시 |
+| http://localhost:3000/admin/analytics | 브라우저 Basic Auth 로그인 후 대시보드 로드, Recharts 그래프 표시 |
 
 **메인 페이지 확인 항목**:
 - [ ] Hero 섹션 (프로필, 치지직 라이브 상태)
