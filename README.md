@@ -596,7 +596,7 @@ WantedBy=multi-user.target
 
 ### 개요
 
-- **경로**: `/admin/analytics` (프로덕션 Basic Auth 필수 / development는 env 미설정 시 우회)
+- **경로**: `/admin/analytics` (실제 대시보드) / `/admin` (운영자용 짧은 진입점, `/admin/analytics` 로 리다이렉트)
 - **보호 범위**: `/admin/:path*`, `/api/analytics/stats`
 - **DB**: PostgreSQL 기반 자체 분석 (외부 서비스 없음)
 - **이벤트 타입**: `pageview`, `menu_click`, `content_click`, `section_view`
@@ -881,6 +881,7 @@ curl -u '<admin-username>:<admin-password>' 'http://localhost:3000/api/analytics
 | URL | 확인 사항 |
 |-----|----------|
 | http://localhost:3000 | 메인 페이지 렌더링, YouTube 영상 표시 |
+| http://localhost:3000/admin | 브라우저 Basic Auth 로그인 후 `/admin/analytics` 로 이동 |
 | http://localhost:3000/admin/analytics | 브라우저 Basic Auth 로그인 후 대시보드/차트 표시 |
 
 ### 알려진 경고 (사전 존재, 비차단)
@@ -896,8 +897,8 @@ curl -u '<admin-username>:<admin-password>' 'http://localhost:3000/api/analytics
 | 증상 | 원인 | 해결 |
 |------|------|------|
 | Tailwind CSS 빌드 오류 | `postcss.config.js` 설정 문제 | `@tailwindcss/postcss`만 남기고 autoprefixer 제거 |
-| `/admin/analytics` 또는 `/api/analytics/stats` 가 401 | Basic Auth 미입력/오입력 | 브라우저 또는 `curl -u '<admin-username>:<admin-password>' ...` 로 확인 |
-| `/admin/analytics` 또는 `/api/analytics/stats` 가 503 | `ADMIN_BASIC_AUTH_USERNAME` / `ADMIN_BASIC_AUTH_PASSWORD` 미설정 | `.env` 또는 GitHub Actions secrets 설정 후 재배포 |
+| `/admin` / `/admin/analytics` / `/api/analytics/stats` 가 401 | Basic Auth 미입력/오입력 | 브라우저 또는 `curl -u '<admin-username>:<admin-password>' ...` 로 확인 |
+| `/admin` / `/admin/analytics` / `/api/analytics/stats` 가 503 | `ADMIN_BASIC_AUTH_USERNAME` / `ADMIN_BASIC_AUTH_PASSWORD` 미설정 | `.env` 또는 GitHub Actions secrets 설정 후 재배포 |
 | 모듈 찾을 수 없음 | 빌드 캐시 | `docker builder prune -f && ./deploy.sh --clean` |
 | Docker Compose 버전 경고 | 최신 Compose에서 불필요 | 무시 가능 |
 | YouTube API 키 오류 | `YOUTUBE_API_KEY` 미설정 | `.env`에 키 추가 후 컨테이너 재시작 |
