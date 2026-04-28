@@ -10,17 +10,23 @@ from app.services.job_manager import job_manager
 
 router = APIRouter()
 file_manager = FileManager()
+MAX_CLIPS_LIMIT = 10
 
 
 @router.get("", response_model=ClipList)
 async def list_clips(
-    limit: int = Query(default=50, ge=1, le=100, description="Maximum clips to return"),
+    limit: int = Query(
+        default=MAX_CLIPS_LIMIT,
+        ge=1,
+        le=MAX_CLIPS_LIMIT,
+        description="Maximum clips to return",
+    ),
     offset: int = Query(default=0, ge=0, description="Number of clips to skip"),
 ):
     """
     List all available clips
 
-    Returns clips sorted by modification time (newest first).
+    Returns up to 10 clips sorted by modification time (newest first).
     Compatible with frontend ClipsViewer component.
     """
     clips, total = file_manager.list_clips(limit=limit, offset=offset)

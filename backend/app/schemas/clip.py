@@ -46,7 +46,7 @@ class ClipList(BaseModel):
 class CollectRequest(BaseModel):
     """Request schema for clip collection"""
 
-    max_clips: int = Field(default=5, ge=1, le=20, description="Maximum clips to collect")
+    max_clips: int = Field(default=5, ge=1, le=10, description="Maximum clips to collect")
     filter_type: str = Field(default="ALL", description="Filter type: ALL, WEEKLY, MONTHLY")
     order_type: str = Field(
         default="POPULAR",

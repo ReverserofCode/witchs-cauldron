@@ -13,6 +13,7 @@ interface Clip {
 
 const CLIPS_DIR = path.join(process.cwd(), "public", "clips");
 const VIDEO_EXTENSIONS = [/\.mp4$/i, /\.webm$/i, /\.ogg$/i, /\.mov$/i];
+const MAX_VISIBLE_CLIPS = 10;
 
 function loadClipsFromDirectory(): Clip[] {
   let files: Array<{ name: string; mtimeMs: number }> = [];
@@ -30,10 +31,11 @@ function loadClipsFromDirectory(): Clip[] {
     return [];
   }
 
-  return files.map(({ name: filename, mtimeMs }, index) => {
+  return files.slice(0, MAX_VISIBLE_CLIPS).map(({ name: filename, mtimeMs }, index) => {
     const base = filename.replace(/\.[^.]+$/, "");
     const encodedFilename = encodeURIComponent(filename);
     const cleanName = base
+      .replace(/^clip_[^_]+_/, "")
       .replace(/^clip_/, "")
       .replace(/[_-]+/g, " ")
       .replace(/\s+/g, " ")

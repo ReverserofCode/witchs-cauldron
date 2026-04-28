@@ -90,7 +90,6 @@ export default async function Page(): Promise<ReactElement> {
                         alt="패러블 엔터테인먼트 로고"
                         width={98}
                         height={16}
-                        className="h-3.5 w-auto sm:h-4"
                         unoptimized
                       />
                     </span>

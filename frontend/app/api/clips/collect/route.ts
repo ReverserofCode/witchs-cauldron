@@ -8,6 +8,7 @@ interface CollectRequestBody {
 
 const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:8000";
 const COLLECT_API_KEY = process.env.COLLECT_API_KEY || "";
+const MAX_CLIPS_PER_COLLECTION = 10;
 
 function isAuthorized(req: NextRequest): boolean {
   if (!COLLECT_API_KEY) return true; // optional auth
@@ -17,6 +18,13 @@ function isAuthorized(req: NextRequest): boolean {
   const bearer = auth.toLowerCase().startsWith("bearer ") ? auth.slice(7) : "";
 
   return xApiKey === COLLECT_API_KEY || bearer === COLLECT_API_KEY;
+}
+
+function normalizeMaxClips(value: unknown): number {
+  const parsed = Number(value ?? 5);
+  if (!Number.isFinite(parsed)) return 5;
+
+  return Math.min(Math.max(Math.floor(parsed), 1), MAX_CLIPS_PER_COLLECTION);
 }
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
@@ -35,7 +43,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
 
   const payload: CollectRequestBody = {
-    max_clips: Math.min(Math.max(Number(body.max_clips ?? 5), 1), 20),
+    max_clips: normalizeMaxClips(body.max_clips),
     filter_type: body.filter_type ?? "ALL",
     order_type: body.order_type ?? "POPULAR",
   };
