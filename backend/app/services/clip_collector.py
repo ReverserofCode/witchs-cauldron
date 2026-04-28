@@ -658,7 +658,11 @@ class ChzzkClipCollector:
                     # Rate limiting (same as original: 2 seconds)
                     time.sleep(2)
 
-                result.success = True
+                successful_items = result.clips_collected + result.clips_skipped
+                result.success = successful_items > 0 or not result.errors
+
+                if not result.success and not result.errors:
+                    result.errors.append("No clips were collected")
 
         except Exception as e:
             result.errors.append(f"Collection error: {str(e)}")

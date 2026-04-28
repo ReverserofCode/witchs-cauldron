@@ -110,7 +110,6 @@ class JobManager:
                 collector = ChzzkClipCollector()
 
                 def progress_callback(current: int, total: int, message: str):
-                    job.clips_collected = current
                     job.total_clips = total
                     job.progress = int((current / total) * 100) if total > 0 else 0
                     job.message = message
@@ -129,9 +128,12 @@ class JobManager:
                 if result.success:
                     job.status = JobStatus.COMPLETED
                     job.progress = 100
+                    failed_count = len(result.errors)
+                    warning_suffix = f", {failed_count} failed" if failed_count else ""
                     job.message = (
                         f"Completed: {result.clips_collected} clips collected"
                         f", {result.clips_skipped} skipped(existing)"
+                        f"{warning_suffix}"
                     )
                 else:
                     job.status = JobStatus.FAILED
