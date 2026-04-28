@@ -12,6 +12,7 @@ import json
 import os
 import re
 import shutil
+import subprocess
 import time
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -113,7 +114,10 @@ class ChzzkClipCollector:
                 if clip_id.lower() in lower and lower.endswith(
                     (".mp4", ".webm", ".m4v")
                 ):
-                    return os.path.join(self.download_dir, name)
+                    path = os.path.join(self.download_dir, name)
+                    if self._is_playable_video_file(path):
+                        return path
+                    self._remove_invalid_clip(path)
         except FileNotFoundError:
             return None
 
@@ -121,8 +125,33 @@ class ChzzkClipCollector:
         for ext in (".mp4", ".webm", ".m4v"):
             path = os.path.join(self.download_dir, f"clip_{clip_id}{ext}")
             if os.path.exists(path):
-                return path
+                if self._is_playable_video_file(path):
+                    return path
+                self._remove_invalid_clip(path)
         return None
+
+    def _is_playable_video_file(self, filepath: str) -> bool:
+        """Reject TS/HLS fragments that were previously saved with an MP4 name."""
+        if not os.path.exists(filepath) or os.path.getsize(filepath) <= 0:
+            return False
+
+        lower = filepath.lower()
+        if lower.endswith(".mp4") or lower.endswith(".m4v"):
+            try:
+                with open(filepath, "rb") as f:
+                    header = f.read(32)
+                return b"ftyp" in header
+            except Exception:
+                return False
+
+        return True
+
+    def _remove_invalid_clip(self, filepath: str) -> None:
+        try:
+            print(f"Removing invalid clip file: {os.path.basename(filepath)}")
+            os.remove(filepath)
+        except Exception as e:
+            print(f"Could not remove invalid clip file: {e}")
 
     def get_clip_links(
         self, driver, filter_type: str = "ALL", order_type: str = "POPULAR"
@@ -397,8 +426,10 @@ class ChzzkClipCollector:
                 except (json.JSONDecodeError, KeyError):
                     continue
 
-            # Fallback: resolve direct media URLs via VOD play API from PlayCount URL
-            if not media_urls and playcount_urls:
+            # Resolve VOD play API candidates even when TS segments were captured.
+            # Captured TS URLs are often a single segment and are not browser-playable
+            # when saved as .mp4, so prefer play API MP4/HLS sources when available.
+            if playcount_urls:
                 for pc_url in playcount_urls:
                     resolved = self._extract_media_urls_from_playcount(pc_url)
                     for media_url in resolved:
@@ -514,6 +545,20 @@ class ChzzkClipCollector:
 
             print(f"Downloading: {filename}")
 
+            lower_media_url = media_url.lower()
+            if ".m3u8" in lower_media_url or ".ts" in lower_media_url:
+                self._download_stream_with_ffmpeg(media_url, filepath)
+                file_size = os.path.getsize(filepath)
+                print(f"FFmpeg download complete: {filename} ({file_size} bytes)")
+                self._sync_to_frontend(filepath)
+
+                return {
+                    "filename": filename,
+                    "filepath": filepath,
+                    "file_size": file_size,
+                    "already_existed": False,
+                }
+
             # Same headers as original
             headers = {
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
@@ -542,6 +587,53 @@ class ChzzkClipCollector:
             self._last_download_error = str(e)
             print(f"Download failed ({filename}): {e}")
             return None
+
+    def _download_stream_with_ffmpeg(self, media_url: str, filepath: str) -> None:
+        """Download HLS/TS sources and remux them into a browser-playable MP4."""
+        temp_path = f"{filepath}.part"
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+
+        command = [
+            "ffmpeg",
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-y",
+            "-user_agent",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            "-i",
+            media_url,
+            "-c",
+            "copy",
+            "-movflags",
+            "+faststart",
+            "-f",
+            "mp4",
+            temp_path,
+        ]
+
+        try:
+            completed = subprocess.run(
+                command,
+                check=True,
+                capture_output=True,
+                text=True,
+                timeout=120,
+            )
+            if completed.stderr:
+                print(f"FFmpeg stderr: {completed.stderr[:500]}")
+
+            if not os.path.exists(temp_path) or os.path.getsize(temp_path) <= 0:
+                raise RuntimeError("FFmpeg did not create a valid output file")
+
+            os.replace(temp_path, filepath)
+        except subprocess.CalledProcessError as e:
+            detail = (e.stderr or e.stdout or str(e)).strip()
+            raise RuntimeError(f"FFmpeg failed: {detail[:500]}") from e
+        finally:
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
 
     def collect_clips(
         self,
