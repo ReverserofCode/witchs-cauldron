@@ -37,6 +37,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxrandr2 \
     xdg-utils \
     # Utilities
+    gosu \
     wget \
     curl \
     && rm -rf /var/lib/apt/lists/*
@@ -68,8 +69,10 @@ COPY . .
 # Create shared clips directory
 RUN mkdir -p /app/shared/clips && chown -R appuser:appuser /app
 
-# Switch to non-root user
-USER appuser
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+ENTRYPOINT ["docker-entrypoint.sh"]
 
 # Expose port
 EXPOSE 8000
@@ -80,4 +83,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
 
 # Run Xvfb and uvicorn
 # Xvfb creates a virtual display for Chrome to render video properly
-CMD Xvfb :99 -screen 0 1920x1080x24 -nolisten tcp & sleep 2 && uvicorn app.main:app --host 0.0.0.0 --port 8000
+CMD ["sh", "-lc", "Xvfb :99 -screen 0 1920x1080x24 -nolisten tcp & sleep 2 && uvicorn app.main:app --host 0.0.0.0 --port 8000"]

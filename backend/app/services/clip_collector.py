@@ -80,6 +80,7 @@ class ChzzkClipCollector:
         self.download_dir = download_dir or settings.clips_dir
         self.frontend_clips_dir = (settings.frontend_clips_dir or "").strip()
         self.base_url = f"https://chzzk.naver.com/{self.channel_id}/clips"
+        self._last_download_error = ""
 
         # Ensure download directory exists
         os.makedirs(self.download_dir, exist_ok=True)
@@ -483,6 +484,8 @@ class ChzzkClipCollector:
         """
         Download media file from URL (same logic as original)
         """
+        self._last_download_error = ""
+
         try:
             if not filename:
                 parsed_url = urlparse(media_url)
@@ -536,6 +539,7 @@ class ChzzkClipCollector:
             }
 
         except Exception as e:
+            self._last_download_error = str(e)
             print(f"Download failed ({filename}): {e}")
             return None
 
@@ -651,8 +655,13 @@ class ChzzkClipCollector:
                             }
                         )
                     else:
+                        detail = (
+                            f" ({self._last_download_error})"
+                            if self._last_download_error
+                            else ""
+                        )
                         result.errors.append(
-                            f"Download failed for clip: {clip_info.clip_id}"
+                            f"Download failed for clip: {clip_info.clip_id}{detail}"
                         )
 
                     # Rate limiting (same as original: 2 seconds)
