@@ -22,6 +22,7 @@
 - [CI/CD](#cicd)
 - [배포 가이드](#배포-가이드)
 - [운영/유지보수](#운영유지보수)
+- [클립 수집 운영 런북](docs/CLIP_COLLECTION_RUNBOOK.md)
 - [Analytics 대시보드](#analytics-대시보드)
 - [Agent Teams](#agent-teams)
 - [Docker 테스트](#docker-테스트)
@@ -97,9 +98,11 @@ witchs-cauldron/
 │   │   │   ├── health/          # 헬스체크
 │   │   │   ├── broadCastSchedule/ # 방송 일정 (Google Sheets)
 │   │   │   ├── chzzkPlayer/     # 치지직 라이브/클립
+│   │   │   ├── clips/           # 클립 수집 작업 프록시
 │   │   │   ├── youTubePlayer/   # YouTube 영상
 │   │   │   ├── youtubeShorts/   # YouTube Shorts
 │   │   │   └── analytics/       # 방문자/클릭 분석 API
+│   │   ├── clips/[...filename]/ # 수집 클립 동적 스트리밍 (Range 지원)
 │   │   ├── admin/analytics/     # 운영자 분석 대시보드
 │   │   ├── components/
 │   │   │   ├── cards/           # 카드 컴포넌트
@@ -300,9 +303,11 @@ COLLECTION_TIMEOUT=300
 
 ### 치지직 클립 렌더링
 
-- 운영 서버에 클립 수집 기능이 없어 **클립 파일을 Git에 포함**
-- 위치: `frontend/public/clips/`
-- 한글/공백 파일명 안전 로드를 위한 URL 인코딩 적용
+- 운영 서버에서 Backend가 치지직 클립을 수집해 Docker `shared_clips` 볼륨에 저장
+- Frontend는 같은 볼륨을 `/app/public/clips`로 읽고, `ClipsSection`에서 최신 10개만 표시
+- `/clips/[...filename]` 동적 라우트가 MP4 파일을 직접 스트리밍하며 `Range` 요청을 지원
+- 한글/공백 파일명 안전 로드를 위해 파일명 URL 인코딩과 `?v=<mtime>` 캐시 버스터 적용
+- Next standalone 정적 `public` 캐시에 의존하지 않음. 서버 시작 후 새로 생성된 클립도 재배포 없이 재생 가능
 
 ### 패키지 관리 (Docker)
 
@@ -349,10 +354,14 @@ curl http://localhost:8000/api/jobs/{job_id}
 curl http://localhost:8000/api/clips
 ```
 
-- 클립당 약 30~40초 소요
+- 최대 10개 수집 (`MAX_CLIPS_PER_COLLECTION=10`)
+- 클립당 약 30~60초 소요
 - 최소 1GB RAM 권장 (Selenium)
 - 파일명: `clip_{clip_id}_{title}.mp4`
 - 저장: Backend `/app/shared/clips` → Frontend `/clips/` (공유 볼륨)
+- HLS/TS 후보는 `ffmpeg -c copy -movflags +faststart`로 브라우저 재생 가능한 MP4 컨테이너로 remux
+- 기존에 TS 세그먼트가 `.mp4` 확장자로 잘못 저장된 경우 `ftyp` 헤더 검사 후 제거하고 재수집
+- 수집 결과가 0건이고 오류가 있으면 작업을 `failed`로 표시해 실패 원인을 API 응답에 노출
 
 ### Xvfb 가상 디스플레이
 
@@ -444,6 +453,7 @@ python ShortForm.py --max-clips 10 --order POPULAR --filter ALL \
 | `SSH_HOST` | 서버 IP |
 | `SSH_USERNAME` | SSH 사용자명 |
 | `SSH_PASSWORD` | SSH 비밀번호 |
+| `DESK_SSH_PASSWORD` | 배포 비밀번호 대체 fallback (`SSH_PASSWORD`가 비어 있을 때 사용) |
 | `SSH_PORT` | SSH 포트 |
 | `DEPLOY_PATH` | 서버 프로젝트 경로 |
 
@@ -579,6 +589,9 @@ WantedBy=multi-user.target
 | Backend 응답 없음 | `docker compose logs backend` → 재시작 |
 | YouTube API 오류 | `YOUTUBE_API_KEY` 확인/교체 |
 | 클립 수집 실패 | `/api/health`로 Selenium 상태 확인, 메모리 확인 (최소 1GB) |
+| 수집 작업이 완료됐지만 클립이 0개 | `/api/clips/jobs/{job_id}`의 `error` 확인. 미디어 URL/다운로드 실패가 숨겨지지 않고 노출되어야 함 |
+| 수집된 클립이 404 | Frontend `/clips/[...filename]` 동적 라우트 배포 여부, `shared_clips` 볼륨 마운트 확인 |
+| 수집된 클립이 재생되지 않음 | `curl -H "Range: bytes=0-31" <clip-url>` 결과가 `206`, `video/mp4`, `ftyp` 헤더인지 확인. `0x47`로 시작하면 TS 조각이므로 재수집 필요 |
 | Analytics DB 연결 실패 | `ANALYTICS_DATABASE_URL` 확인, `docker compose logs analytics-db` |
 | 디스크 부족 | `docker system prune -a` |
 | 빌드 실패 (SWC) | Docker 환경에서 빌드 (Node.js 22) |
@@ -876,7 +889,28 @@ curl http://localhost:3000/api/youtubeShorts
 curl -u '<admin-username>:<admin-password>' 'http://localhost:3000/api/analytics/stats'
 ```
 
-### 4) 사이트 방문 테스트
+### 4) 클립 수집/재생 검증
+
+```bash
+# 수집 시작 (최대 10개)
+curl -X POST http://localhost:3000/api/clips/collect \
+  -H "Content-Type: application/json" \
+  -d '{"max_clips":10,"filter_type":"ALL","order_type":"RECENT"}'
+
+# 작업 상태 확인
+curl http://localhost:3000/api/clips/jobs/<job_id>
+
+# 클립 Range/MP4 헤더 확인
+curl -I -H "Range: bytes=0-31" "http://localhost:3000/clips/<filename>.mp4"
+```
+
+정상 조건:
+- 페이지에 치지직 클립이 10개 이하로 렌더링됨
+- 클립 응답이 `206 Partial Content`, `Content-Type: video/mp4`, `Accept-Ranges: bytes`
+- 첫 32바이트에 `ftyp` 문자열 포함
+- 브라우저 `<video>`가 `readyState >= 2`, `error = null`, `currentTime` 증가
+
+### 5) 사이트 방문 테스트
 
 | URL | 확인 사항 |
 |-----|----------|
@@ -911,6 +945,14 @@ curl -u '<admin-username>:<admin-password>' 'http://localhost:3000/api/analytics
 ---
 
 ## 변경 이력
+
+### 2026-04-28
+- 치지직 클립 수집 상한을 10개로 고정
+- Backend 수집 작업 실패 상태 보고 개선 (`0 collected + errors`를 실패로 노출)
+- 운영 Docker `shared_clips` 볼륨 권한 보정 (`docker-entrypoint.sh`)
+- Next standalone 환경에서 새 클립이 404가 되지 않도록 `/clips/[...filename]` 동적 스트리밍 라우트 추가
+- HLS/TS 클립을 브라우저 재생 가능한 MP4로 remux하고, 잘못 저장된 TS 기반 `.mp4`를 재수집하도록 보정
+- 운영 검증: CD 성공, 최신 수집 job 10개 완료, 10개 클립 모두 `206`/`video/mp4`/`ftyp` 확인, Chrome 재생 확인
 
 ### 2026-04-06
 - `/admin/*`, `/api/analytics/stats` 에 Basic Auth 보호 추가
