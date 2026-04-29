@@ -23,6 +23,7 @@
 - [배포 가이드](#배포-가이드)
 - [운영/유지보수](#운영유지보수)
 - [클립 수집 운영 런북](docs/CLIP_COLLECTION_RUNBOOK.md)
+- [UI/UX 및 Analytics 개선안](docs/UI_ANALYTICS_IMPROVEMENT_PLAN.md)
 - [Analytics 대시보드](#analytics-대시보드)
 - [Agent Teams](#agent-teams)
 - [Docker 테스트](#docker-테스트)
@@ -612,7 +613,7 @@ WantedBy=multi-user.target
 - **경로**: `/admin/analytics` (실제 대시보드) / `/admin` (운영자용 짧은 진입점, `/admin/analytics` 로 리다이렉트)
 - **보호 범위**: `/admin/:path*`, `/api/analytics/stats`
 - **DB**: PostgreSQL 기반 자체 분석 (외부 서비스 없음)
-- **이벤트 타입**: `pageview`, `menu_click`, `content_click`, `section_view`
+- **이벤트 타입**: `pageview`, `menu_click`, `content_click`, `section_view`, `scroll_depth`, `page_exit`
 - **세션**: UUID 쿠키(`wc_session`, 30일 만료) 기반, IP/User-Agent 저장
 - **재방문자**: 조회 기간 내 첫 방문 이전 30일 내 pageview 기록이 있는 방문자
 
@@ -637,14 +638,14 @@ WantedBy=multi-user.target
         (sendBeacon 우선,      │    ├── 세션 UPSERT ─────▶ analytics_sessions
          fetch 폴백)           │    └── 이벤트 INSERT ───▶ analytics_events
                                │                         │
-        GET /api/analytics/stats◀── 6개 SQL 쿼리 ────────┘
+        GET /api/analytics/stats◀── 병렬 SQL 집계 ────────┘
 ```
 
 ### 클라이언트 수집 메커니즘
 
 #### 1. AnalyticsProvider (`components/analytics/AnalyticsProvider.tsx`)
 
-루트 레이아웃에 마운트되어 자동으로 두 가지 이벤트를 수집합니다.
+루트 레이아웃에 마운트되어 자동으로 네 가지 이벤트를 수집합니다.
 
 **pageview**: Next.js 라우트 변경 시 자동 발송
 - `/admin` 경로는 제외
@@ -657,6 +658,14 @@ WantedBy=multi-user.target
 - 위치 자동 추론: `header`, `footer`, `aside`, `nav`, `unknown`
 - 수집 필드: `element.type`, `element.id`, `element.label`, `metadata.location`
 - 라벨 우선순위: `data-analytics-label` > `aria-label` > `textContent`
+
+**scroll_depth**: 25/50/75/100% 스크롤 도달 시 threshold별 1회 발송
+- 수집 필드: `metadata.threshold`, `metadata.depth`
+- 깊은 스크롤 도달률은 75% 이상 threshold를 방문자 기준으로 계산
+
+**page_exit**: `pagehide` 또는 `visibilitychange=hidden` 시 발송
+- 수집 필드: `metadata.dwell_seconds`, `metadata.max_scroll_depth`
+- 체류 시간, 빠른 이탈률, 평균 이탈 스크롤 계산에 사용
 
 #### 2. useSectionView 훅 (`hooks/useSectionView.ts`)
 
@@ -701,14 +710,18 @@ WantedBy=multi-user.target
 | **재방문자** | `totals.returningVisitors` | 조회 기간 내 첫 pageview 이전 30일 내 동일 visitor_key의 pageview 존재 여부 | AnalyticsProvider pageview |
 | **페이지뷰** | `totals.pageviews` | `COUNT(*)` WHERE event_type = 'pageview' | AnalyticsProvider pageview |
 | **메뉴 클릭** | `totals.menuClicks` | `COUNT(*)` WHERE event_type = 'menu_click' | AnalyticsProvider menu_click |
-| **CTR** | 클라이언트 계산 | `menuClicks / pageviews * 100` | 위 두 값 조합 |
-| **일별 트렌드** | `daily[]` | `date_trunc('day')` GROUP BY, pageview 카운트 + DISTINCT visitor + menu_click 카운트 | pageview, menu_click |
-| **기간 요약** | 클라이언트 계산 | daily 배열에서 일평균, 최고/최저 트래픽일, 평균 CTR 계산 | daily[] 데이터 |
-| **이벤트 구성** | 클라이언트 계산 | totals에서 pageview/menuClick 비율을 도넛 차트로 표현 | totals 데이터 |
-| **섹션 조회 수** | `sectionViews[]` | `COUNT(*)` WHERE event_type = 'section_view' GROUP BY element_id, element_label | useSectionView section_view |
-| **메뉴 클릭 TOP 10** | `topMenuClicks[]` | `COUNT(*)` WHERE event_type = 'menu_click' GROUP BY element_id, element_label LIMIT 10 | AnalyticsProvider menu_click |
-| **페이지 경로 TOP 10** | `topPaths[]` | `COUNT(*)` WHERE event_type = 'pageview' GROUP BY path LIMIT 10 | AnalyticsProvider pageview |
-| **Referrer TOP 10** | `topReferrers[]` | referrer에서 호스트명 추출 후 GROUP BY, NULL/빈값은 '(direct)' | AnalyticsProvider pageview |
+| **클릭률** | `metrics.clickThroughRate` | `(menu_click + content_click) / pageviews * 100` | pageview, click 이벤트 |
+| **페이지/방문** | `metrics.pagesPerVisitor` | `pageviews / visitors` | pageview |
+| **재방문율** | `metrics.returningVisitorRate` | `returningVisitors / visitors * 100` | pageview |
+| **깊은 스크롤** | `metrics.deepScrollRate` | 75% 이상 scroll_depth visitor / visitors * 100 | AnalyticsProvider scroll_depth |
+| **일별 트렌드** | `daily[]` | `generate_series`로 날짜를 채우고 일별 event_type별 집계 | pageview, menu_click, section_view, page_exit |
+| **기간 요약** | 클라이언트 계산 | 일평균, 최고/최저 트래픽일, 페이지/방문, 재방문율, 빠른 이탈률 | daily[] + metrics |
+| **이벤트 구성** | `eventTypes[]` | event_type별 `COUNT(*)`, DISTINCT visitor | analytics_events |
+| **섹션 조회 수** | `sectionViews[]` | `COUNT(*)`, DISTINCT visitor WHERE event_type = 'section_view' GROUP BY element_id, element_label | useSectionView section_view |
+| **상호작용 TOP 12** | `topInteractions[]` | `menu_click`, `content_click` 통합 GROUP BY element/location | AnalyticsProvider click 이벤트 |
+| **메뉴 클릭 TOP 10** | `topMenuClicks[]` | `COUNT(*)`, DISTINCT visitor WHERE event_type = 'menu_click' GROUP BY element/location LIMIT 10 | AnalyticsProvider menu_click |
+| **페이지 경로 TOP 10** | `topPaths[]` | `COUNT(*)`, DISTINCT visitor WHERE event_type = 'pageview' GROUP BY path LIMIT 10 | AnalyticsProvider pageview |
+| **Referrer TOP 10** | `topReferrers[]` | referrer 호스트명 GROUP BY, NULL/빈값은 '(direct)', 방문자 수 포함 | AnalyticsProvider pageview |
 
 ### 추적 대상 섹션 (7개)
 

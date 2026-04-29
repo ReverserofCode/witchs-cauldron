@@ -233,8 +233,8 @@ RootLayout (app/layout.tsx)
 ### 8. `/api/analytics/track`
 - **목적**: 페이지뷰/클릭/섹션뷰 이벤트 수집
 - **메서드**: POST
-- **이벤트 타입**: `pageview`, `menu_click`, `content_click`, `section_view`
-- **세션 관리**: UUID 기반 (클라이언트에서 생성)
+- **이벤트 타입**: `pageview`, `menu_click`, `content_click`, `section_view`, `scroll_depth`, `page_exit`
+- **세션 관리**: `wc_session` 쿠키 기반 UUID
 
 ### 9. `/api/analytics/stats`
 - **목적**: 통계 집계
@@ -243,12 +243,15 @@ RootLayout (app/layout.tsx)
   - 무인증 요청: `401 Authentication required`
   - auth env 미설정 배포: `503 Admin access is disabled ...`
 - **응답**:
-  - `totals`: 고유 방문자, 페이지뷰, 메뉴 클릭
-  - `daily[]`: 일별 페이지뷰, 고유 방문자, 메뉴 클릭
+  - `totals`: 고유 방문자, 재방문자, 페이지뷰, 클릭/섹션/이탈/전체 이벤트
+  - `metrics`: 페이지/방문, 클릭률, 재방문율, 깊은 스크롤 도달률, 빠른 이탈률
+  - `daily[]`: 일별 페이지뷰, 고유 방문자, 메뉴 클릭, 섹션 조회, 이탈 수
   - `topMenuClicks[]`: 메뉴 클릭 TOP 10
   - `sectionViews[]`: 섹션별 조회 수
   - `topPaths[]`: 페이지뷰 경로 TOP 10
   - `topReferrers[]`: referrer TOP 10
+  - `eventTypes[]`: 이벤트 타입별 비중
+  - `topInteractions[]`: 메뉴/콘텐츠 클릭 통합 TOP 12
 
 ### 10. `/admin/analytics`
 - **목적**: 분석 대시보드
