@@ -274,6 +274,55 @@ class ChzzkClipCollector:
             print(f"Could not rename clip with title: {e}")
             return existing_path
 
+    def _get_clip_links_from_api(
+        self, filter_type: str = "ALL", order_type: str = "POPULAR"
+    ) -> list[ClipInfo]:
+        """Fetch channel clip metadata directly from CHZZK's JSON API."""
+        api_url = f"https://api.chzzk.naver.com/service/v1/channels/{self.channel_id}/clips"
+
+        try:
+            response = requests.get(
+                api_url,
+                params={
+                    "filterType": filter_type,
+                    "orderType": order_type,
+                    "page": 0,
+                    "size": 30,
+                },
+                headers={
+                    "Accept": "application/json",
+                    "Referer": self.base_url,
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                },
+                timeout=20,
+            )
+            response.raise_for_status()
+            payload = response.json()
+            data = ((payload.get("content") or {}).get("data") or [])
+
+            entries: list[ClipInfo] = []
+            for item in data:
+                clip_id = item.get("clipUID") or ""
+                if not clip_id:
+                    continue
+
+                title = self._normalize_clip_title(item.get("clipTitle") or "")
+                entries.append(
+                    ClipInfo(
+                        url=f"https://chzzk.naver.com/clips/{clip_id}",
+                        title=title,
+                        clip_id=clip_id,
+                    )
+                )
+
+            if entries:
+                print(f"Found {len(entries)} clip links via CHZZK API")
+            return entries
+
+        except Exception as e:
+            print(f"CHZZK clip API fallback needed: {e}")
+            return []
+
     def _clip_already_downloaded(self, clip_id: str) -> Optional[str]:
         """Check if clip already exists in download directory (same as original)"""
         if not clip_id:
@@ -331,6 +380,10 @@ class ChzzkClipCollector:
         Extract clip URLs and titles from Chzzk clips page
         (Same logic as original ShortForm.py)
         """
+        api_entries = self._get_clip_links_from_api(filter_type, order_type)
+        if api_entries:
+            return api_entries
+
         url = f"{self.base_url}?filterType={filter_type}&orderType={order_type}"
         print(f"Accessing clips page: {url}")
 
