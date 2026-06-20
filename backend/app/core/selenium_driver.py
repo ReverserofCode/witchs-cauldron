@@ -27,6 +27,7 @@ def create_driver() -> webdriver.Chrome:
     """
     settings = get_settings()
     options = Options()
+    options.page_load_strategy = "eager"
 
     # IMPORTANT: Do NOT use headless mode
     # Xvfb provides a virtual display that allows full video playback
