@@ -132,18 +132,8 @@ jobs:
               exit 1
             fi
 
-            status="$(python - <<'PY'
-            import json
-            with open("job-response.json", encoding="utf-8") as response:
-                print(json.load(response).get("status", ""))
-            PY
-            )"
-            message="$(python - <<'PY'
-            import json
-            with open("job-response.json", encoding="utf-8") as response:
-                print(json.load(response).get("message", ""))
-            PY
-            )"
+            status="$(python -c 'import json; print(json.load(open("job-response.json", encoding="utf-8")).get("status", ""))')"
+            message="$(python -c 'import json; print(json.load(open("job-response.json", encoding="utf-8")).get("message", ""))')"
             echo "Attempt ${attempt}: ${status} - ${message}"
 
             if [ "${status}" = "completed" ]; then
