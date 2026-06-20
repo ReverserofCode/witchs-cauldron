@@ -80,6 +80,8 @@ def create_driver() -> webdriver.Chrome:
         driver = webdriver.Chrome(options=options)
 
     driver.implicitly_wait(10)
+    driver.set_page_load_timeout(settings.selenium_page_load_timeout)
+    driver.set_script_timeout(settings.selenium_script_timeout)
     return driver
 
 

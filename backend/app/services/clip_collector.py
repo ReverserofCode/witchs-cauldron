@@ -400,6 +400,10 @@ class ChzzkClipCollector:
 
         except TimeoutException:
             print("Page loading timeout")
+            try:
+                driver.execute_script("window.stop();")
+            except Exception:
+                pass
             return []
         except Exception as e:
             print(f"Error extracting clip links: {e}")

@@ -26,6 +26,8 @@ class Settings(BaseSettings):
     chromedriver_path: str = "/usr/bin/chromedriver"
     headless: bool = False  # Disabled - using Xvfb virtual display instead
     use_xvfb: bool = True   # Use Xvfb for video playback support
+    selenium_page_load_timeout: int = Field(default=45, ge=5)
+    selenium_script_timeout: int = Field(default=30, ge=5)
 
     # Collection settings
     max_clips_per_collection: int = 10
