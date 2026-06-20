@@ -85,12 +85,13 @@ export default async function Page(): Promise<ReactElement> {
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="chip text-xs sm:text-sm">KR V-tuber • Moing</span>
                     <span className="chip text-[11px] sm:text-xs">패러블 엔터테인먼트 소속</span>
-                    <span className="inline-flex items-center rounded-md bg-white/95 px-2 py-1 shadow-sm ring-1 ring-black/10">
+                    <span className="inline-flex h-8 w-12 items-center justify-center rounded-full bg-white/95 shadow-sm ring-1 ring-black/10">
                       <Image
                         src="/logos/parable-ent.svg"
                         alt="패러블 엔터테인먼트 로고"
-                        width={98}
-                        height={16}
+                        width={33}
+                        height={20}
+                        className="h-5 w-[33px]"
                         unoptimized
                       />
                     </span>

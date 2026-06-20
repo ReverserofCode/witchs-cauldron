@@ -29,13 +29,13 @@ export default function Footer() {
               패러블 엔터테인먼트 소속 버튜버 모잉(Moing)을 응원하는<br />
               비공식 팬페이지입니다.
             </p>
-            <div className="inline-flex items-center rounded-md bg-white/80 px-2 py-1 ring-1 ring-black/10 w-fit">
+            <div className="inline-flex h-8 w-12 items-center justify-center rounded-full bg-white/80 ring-1 ring-black/10">
               <Image
                 src="/logos/parable-ent.svg"
                 alt="패러블 엔터테인먼트 로고"
-                width={122}
+                width={33}
                 height={20}
-                className="h-5 w-auto"
+                className="h-5 w-[33px]"
                 loading="lazy"
                 unoptimized
               />
