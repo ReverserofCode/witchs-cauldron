@@ -3,6 +3,7 @@ Application configuration using pydantic-settings
 """
 
 from functools import lru_cache
+from pydantic import Field
 from pydantic_settings import BaseSettings
 
 
@@ -30,6 +31,15 @@ class Settings(BaseSettings):
     max_clips_per_collection: int = 10
     collection_timeout: int = 300  # 5 minutes
 
+    # Scheduled clip collection
+    clip_auto_collect_enabled: bool = False
+    clip_auto_collect_interval_minutes: int = Field(default=360, ge=5)
+    clip_auto_collect_run_on_startup: bool = True
+    clip_auto_collect_startup_delay_seconds: int = Field(default=60, ge=0)
+    clip_auto_collect_max_clips: int = Field(default=10, ge=1, le=10)
+    clip_auto_collect_filter_type: str = "ALL"
+    clip_auto_collect_order_type: str = "MIXED"
+
     # API settings
     api_prefix: str = "/api"
     cors_origins: list[str] = ["http://localhost:3000", "http://frontend:3000"]
@@ -37,6 +47,7 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
+        extra = "ignore"
 
 
 @lru_cache

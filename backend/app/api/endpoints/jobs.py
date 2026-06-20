@@ -5,9 +5,16 @@ Job status API endpoints
 from fastapi import APIRouter, HTTPException
 
 from app.schemas.job import Job
+from app.services.clip_scheduler import clip_scheduler
 from app.services.job_manager import job_manager
 
 router = APIRouter()
+
+
+@router.get("/automation")
+async def get_automation_status():
+    """Get scheduled clip collection status."""
+    return clip_scheduler.get_status()
 
 
 @router.get("/{job_id}", response_model=Job)

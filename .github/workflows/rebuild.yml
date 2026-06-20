@@ -21,20 +21,62 @@ jobs:
           port: ${{ secrets.SSH_PORT }}
           timeout: 600s
           script: |
+            set -euo pipefail
             cd ${{ secrets.DEPLOY_PATH }}
             git fetch origin main
             git reset --hard origin/main
-            docker compose -f docker-compose.prod.yml down -v
+
+            COMPOSE_FILE="${DEPLOY_COMPOSE_FILE:-docker-compose.server.yml}"
+            if [ ! -f "$COMPOSE_FILE" ]; then
+              if [ "$COMPOSE_FILE" = "docker-compose.server.yml" ] && [ -f "docker-compose.prod.yml" ]; then
+                COMPOSE_FILE="docker-compose.prod.yml"
+              else
+                echo "Compose file not found: $COMPOSE_FILE" >&2
+                exit 1
+              fi
+            fi
+
+            HEALTHCHECK_URL="${DEPLOY_HEALTHCHECK_URL:-http://localhost:3000}"
+            if [ "$COMPOSE_FILE" = "docker-compose.server.yml" ] && [ -z "${DEPLOY_HEALTHCHECK_URL:-}" ]; then
+              HEALTHCHECK_URL="http://127.0.0.1:13000"
+            fi
+
+            if [ "$COMPOSE_FILE" = "docker-compose.server.yml" ]; then
+              docker network inspect web >/dev/null
+            fi
+
+            docker compose -f "$COMPOSE_FILE" down -v
             docker builder prune -f
-            docker compose -f docker-compose.prod.yml up -d --build --force-recreate
+            docker compose -f "$COMPOSE_FILE" up -d --build --force-recreate
             echo "Waiting for health check..."
+            healthy=false
             for i in $(seq 1 30); do
-              if curl -sf http://localhost:3000/api/health > /dev/null 2>&1; then
-                echo "Frontend healthy!"
+              frontend_ok=false
+              backend_ok=false
+
+              if curl -sf "$HEALTHCHECK_URL/api/health" > /dev/null 2>&1; then
+                frontend_ok=true
+              fi
+
+              if docker compose -f "$COMPOSE_FILE" exec -T backend curl -sf http://localhost:8000/api/health > /dev/null 2>&1; then
+                backend_ok=true
+              fi
+
+              if [ "$frontend_ok" = true ] && [ "$backend_ok" = true ]; then
+                echo "Frontend and backend healthy!"
+                healthy=true
                 break
               fi
-              echo "Attempt $i/30..."
+
+              echo "Attempt $i/30... frontend=$frontend_ok backend=$backend_ok"
               sleep 3
             done
-            docker compose -f docker-compose.prod.yml ps
+
+            if [ "$healthy" != true ]; then
+              echo "Health check failed after 30 attempts" >&2
+              docker compose -f "$COMPOSE_FILE" logs --tail 80
+              exit 1
+            fi
+
+            docker compose -f "$COMPOSE_FILE" ps
             docker image prune -f

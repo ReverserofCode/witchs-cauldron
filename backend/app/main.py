@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.router import api_router
 from app.config import get_settings
+from app.services.clip_scheduler import clip_scheduler
 
 
 @asynccontextmanager
@@ -21,10 +22,12 @@ async def lifespan(app: FastAPI):
 
     os.makedirs(settings.clips_dir, exist_ok=True)
     print(f"Clips directory ready: {settings.clips_dir}")
+    clip_scheduler.start()
 
     yield
 
     # Shutdown: Cleanup
+    clip_scheduler.shutdown()
     print("Shutting down backend service...")
 
 

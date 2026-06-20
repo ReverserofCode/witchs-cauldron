@@ -2,11 +2,10 @@
 Background job manager for clip collection tasks
 """
 
-import asyncio
 import threading
 import uuid
 from datetime import datetime
-from typing import Callable, Optional
+from typing import Optional
 
 from app.schemas.job import Job, JobStatus
 from app.services.clip_collector import ChzzkClipCollector
@@ -32,6 +31,7 @@ class JobManager:
         self._initialized = True
         self._jobs: dict[str, Job] = {}
         self._running_job: Optional[str] = None
+        self._state_lock = threading.Lock()
 
     def create_job(self, total_clips: int) -> Job:
         """
@@ -55,17 +55,23 @@ class JobManager:
             total_clips=total_clips,
         )
 
-        self._jobs[job_id] = job
+        with self._state_lock:
+            self._jobs[job_id] = job
+
         return job
 
     def get_job(self, job_id: str) -> Optional[Job]:
         """Get job by ID"""
-        return self._jobs.get(job_id)
+        with self._state_lock:
+            return self._jobs.get(job_id)
 
     def list_jobs(self, limit: int = 10) -> list[Job]:
         """List recent jobs"""
+        with self._state_lock:
+            jobs = list(self._jobs.values())
+
         sorted_jobs = sorted(
-            self._jobs.values(),
+            jobs,
             key=lambda j: j.started_at or datetime.min,
             reverse=True,
         )
@@ -73,7 +79,8 @@ class JobManager:
 
     def is_job_running(self) -> bool:
         """Check if any job is currently running"""
-        return self._running_job is not None
+        with self._state_lock:
+            return self._running_job is not None
 
     def run_collection_job(
         self,
@@ -81,7 +88,7 @@ class JobManager:
         max_clips: int,
         filter_type: str,
         order_type: str,
-    ) -> None:
+    ) -> bool:
         """
         Start a collection job in background thread
 
@@ -91,18 +98,21 @@ class JobManager:
             filter_type: Filter type for clips
             order_type: Order type for clips
         """
-        job = self._jobs.get(job_id)
-        if not job:
-            return
+        with self._state_lock:
+            job = self._jobs.get(job_id)
+            if not job:
+                return False
 
-        if self._running_job:
-            job.status = JobStatus.FAILED
-            job.error = "Another job is already running"
-            return
+            if self._running_job:
+                job.status = JobStatus.FAILED
+                job.error = "Another job is already running"
+                job.completed_at = datetime.now()
+                return False
+
+            self._running_job = job_id
 
         def run():
             try:
-                self._running_job = job_id
                 job.status = JobStatus.RUNNING
                 job.started_at = datetime.now()
                 job.message = "Starting clip collection..."
@@ -145,10 +155,13 @@ class JobManager:
                 job.completed_at = datetime.now()
 
             finally:
-                self._running_job = None
+                with self._state_lock:
+                    if self._running_job == job_id:
+                        self._running_job = None
 
         thread = threading.Thread(target=run, daemon=True)
         thread.start()
+        return True
 
 
 # Global instance

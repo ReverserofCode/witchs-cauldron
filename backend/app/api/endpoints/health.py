@@ -9,6 +9,7 @@ from typing import Optional
 from fastapi import APIRouter
 
 from app.config import get_settings
+from app.services.clip_scheduler import clip_scheduler
 
 router = APIRouter()
 
@@ -80,4 +81,5 @@ async def health_check():
             "chrome_path": settings.chrome_binary,
             "chromedriver_path": settings.chromedriver_path,
         },
+        "automation": clip_scheduler.get_status(),
     }

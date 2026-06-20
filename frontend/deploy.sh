@@ -57,6 +57,14 @@ require_command() {
     fi
 }
 
+compose_cmd() {
+    if docker compose version >/dev/null 2>&1; then
+        docker compose "$@"
+    else
+        docker-compose "$@"
+    fi
+}
+
 preflight_checks() {
     log_info "배포 전 사전 점검을 수행합니다..."
     require_command curl
@@ -170,7 +178,16 @@ health_check() {
 
     max_attempts=30
     attempt=1
-    backend_health_url="${DEPLOY_BACKEND_HEALTHCHECK_URL:-http://127.0.0.1:13000/api/health}"
+
+    check_backend_health() {
+        if [ -n "${DEPLOY_BACKEND_HEALTHCHECK_URL:-}" ]; then
+            curl -fsS "$DEPLOY_BACKEND_HEALTHCHECK_URL" > /dev/null 2>&1
+            return $?
+        fi
+
+        compose_cmd -f "$COMPOSE_FILE" exec -T backend \
+            curl -fsS http://localhost:8000/api/health > /dev/null 2>&1
+    }
 
     while [ $attempt -le $max_attempts ]; do
         frontend_ok=false
@@ -180,7 +197,7 @@ health_check() {
             frontend_ok=true
         fi
 
-        if curl -fsS "$backend_health_url" > /dev/null 2>&1; then
+        if check_backend_health; then
             backend_ok=true
         fi
 
@@ -235,6 +252,7 @@ main() {
     # 실행 단계
     check_docker
     check_docker_compose
+    preflight_checks
 
     # 1. 새 이미지 빌드 (기존 컨테이너 유지)
     if [ "$CLEAN_BUILD" = true ]; then
