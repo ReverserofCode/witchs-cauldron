@@ -57,6 +57,7 @@ services:
     environment:
       - NODE_ENV=production
       - BACKEND_URL=http://backend:8000
+      - COLLECT_API_KEY=${COLLECT_API_KEY:-}
       - YOUTUBE_API_KEY=${YOUTUBE_API_KEY:-}
       - ANALYTICS_DATABASE_URL=${ANALYTICS_DATABASE_URL:-}
       - ADMIN_BASIC_AUTH_USERNAME=${ADMIN_BASIC_AUTH_USERNAME:-}

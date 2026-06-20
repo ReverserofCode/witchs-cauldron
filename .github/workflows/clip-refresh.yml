@@ -1,0 +1,181 @@
+name: Clip Refresh
+
+on:
+  schedule:
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: "Production base URL"
+        required: false
+        default: "https://moingfans.com"
+      max_clips:
+        description: "Maximum clips to collect"
+        required: false
+        default: "10"
+      filter_type:
+        description: "Chzzk clip filter type"
+        required: false
+        default: "ALL"
+      order_type:
+        description: "Chzzk clip order type"
+        required: false
+        default: "RECENT"
+      wait_for_completion:
+        description: "Poll the collection job until it completes"
+        required: false
+        default: "true"
+
+concurrency:
+  group: clip-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+
+    steps:
+      - name: Trigger clip collection
+        id: collect
+        env:
+          BASE_URL: ${{ inputs.base_url || vars.CLIP_REFRESH_BASE_URL || 'https://moingfans.com' }}
+          COLLECT_API_KEY: ${{ secrets.COLLECT_API_KEY || secrets.CLIP_REFRESH_API_KEY }}
+          MAX_CLIPS: ${{ inputs.max_clips || '10' }}
+          FILTER_TYPE: ${{ inputs.filter_type || 'ALL' }}
+          ORDER_TYPE: ${{ inputs.order_type || 'RECENT' }}
+        run: |
+          set -euo pipefail
+
+          BASE_URL="${BASE_URL%/}"
+          headers=(-H "Content-Type: application/json")
+          if [ -n "${COLLECT_API_KEY}" ]; then
+            headers+=(-H "Authorization: Bearer ${COLLECT_API_KEY}")
+          fi
+
+          payload="$(python - <<'PY'
+          import json
+          import os
+
+          def clamp_int(value, default, lower, upper):
+              try:
+                  parsed = int(value)
+              except (TypeError, ValueError):
+                  parsed = default
+              return max(lower, min(parsed, upper))
+
+          print(json.dumps({
+              "max_clips": clamp_int(os.getenv("MAX_CLIPS"), 10, 1, 10),
+              "filter_type": os.getenv("FILTER_TYPE") or "ALL",
+              "order_type": os.getenv("ORDER_TYPE") or "RECENT",
+          }))
+          PY
+          )"
+
+          http_code="$(curl -sS -w "%{http_code}" -o collect-response.json \
+            -X POST "${headers[@]}" \
+            -d "${payload}" \
+            "${BASE_URL}/api/clips/collect")"
+
+          echo "HTTP ${http_code}"
+          python -m json.tool collect-response.json || cat collect-response.json
+
+          if [ "${http_code}" = "409" ]; then
+            echo "already_running=true" >> "${GITHUB_OUTPUT}"
+            echo "A clip collection job is already running; scheduled refresh skipped."
+            exit 0
+          fi
+
+          if [ "${http_code}" -lt 200 ] || [ "${http_code}" -ge 300 ]; then
+            echo "Clip collection trigger failed with HTTP ${http_code}" >&2
+            exit 1
+          fi
+
+          job_id="$(python - <<'PY'
+          import json
+          with open("collect-response.json", encoding="utf-8") as response:
+              print(json.load(response).get("job_id", ""))
+          PY
+          )"
+
+          if [ -z "${job_id}" ]; then
+            echo "Response did not include job_id" >&2
+            exit 1
+          fi
+
+          echo "job_id=${job_id}" >> "${GITHUB_OUTPUT}"
+          echo "Collection job queued: ${job_id}"
+
+      - name: Wait for collection job
+        if: ${{ steps.collect.outputs.job_id != '' && inputs.wait_for_completion != 'false' }}
+        env:
+          BASE_URL: ${{ inputs.base_url || vars.CLIP_REFRESH_BASE_URL || 'https://moingfans.com' }}
+          COLLECT_API_KEY: ${{ secrets.COLLECT_API_KEY || secrets.CLIP_REFRESH_API_KEY }}
+          JOB_ID: ${{ steps.collect.outputs.job_id }}
+        run: |
+          set -euo pipefail
+
+          BASE_URL="${BASE_URL%/}"
+          headers=()
+          if [ -n "${COLLECT_API_KEY}" ]; then
+            headers+=(-H "Authorization: Bearer ${COLLECT_API_KEY}")
+          fi
+
+          for attempt in $(seq 1 60); do
+            http_code="$(curl -sS -w "%{http_code}" -o job-response.json \
+              "${headers[@]}" \
+              "${BASE_URL}/api/clips/jobs/${JOB_ID}")"
+
+            if [ "${http_code}" -lt 200 ] || [ "${http_code}" -ge 300 ]; then
+              echo "Job status request failed with HTTP ${http_code}" >&2
+              cat job-response.json >&2
+              exit 1
+            fi
+
+            status="$(python - <<'PY'
+            import json
+            with open("job-response.json", encoding="utf-8") as response:
+                print(json.load(response).get("status", ""))
+            PY
+            )"
+            message="$(python - <<'PY'
+            import json
+            with open("job-response.json", encoding="utf-8") as response:
+                print(json.load(response).get("message", ""))
+            PY
+            )"
+            echo "Attempt ${attempt}: ${status} - ${message}"
+
+            if [ "${status}" = "completed" ]; then
+              python -m json.tool job-response.json
+              exit 0
+            fi
+
+            if [ "${status}" = "failed" ]; then
+              python -m json.tool job-response.json
+              exit 1
+            fi
+
+            sleep 10
+          done
+
+          echo "Collection job did not finish within polling window" >&2
+          python -m json.tool job-response.json || cat job-response.json
+          exit 1
+
+      - name: Show automation status
+        if: always()
+        env:
+          BASE_URL: ${{ inputs.base_url || vars.CLIP_REFRESH_BASE_URL || 'https://moingfans.com' }}
+          COLLECT_API_KEY: ${{ secrets.COLLECT_API_KEY || secrets.CLIP_REFRESH_API_KEY }}
+        run: |
+          set -euo pipefail
+
+          BASE_URL="${BASE_URL%/}"
+          headers=()
+          if [ -n "${COLLECT_API_KEY}" ]; then
+            headers+=(-H "Authorization: Bearer ${COLLECT_API_KEY}")
+          fi
+
+          curl -sS "${headers[@]}" "${BASE_URL}/api/clips/automation" \
+            | python -m json.tool

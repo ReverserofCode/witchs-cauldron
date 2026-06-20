@@ -86,6 +86,7 @@ jobs:
           CHZZK_CLIENT_SECRET: ${{ secrets.CHZZK_CLIENT_SECRET }}
           ADMIN_BASIC_AUTH_USERNAME: ${{ secrets.ADMIN_BASIC_AUTH_USERNAME }}
           ADMIN_BASIC_AUTH_PASSWORD: ${{ secrets.ADMIN_BASIC_AUTH_PASSWORD }}
+          COLLECT_API_KEY: ${{ secrets.COLLECT_API_KEY || secrets.CLIP_REFRESH_API_KEY }}
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USERNAME }}
@@ -94,7 +95,7 @@ jobs:
           timeout: 60s
           command_timeout: 20m
           script_stop: true
-          envs: CHZZK_CLIENT_ID,CHZZK_CLIENT_SECRET,ADMIN_BASIC_AUTH_USERNAME,ADMIN_BASIC_AUTH_PASSWORD
+          envs: CHZZK_CLIENT_ID,CHZZK_CLIENT_SECRET,ADMIN_BASIC_AUTH_USERNAME,ADMIN_BASIC_AUTH_PASSWORD,COLLECT_API_KEY
           script: |
             cd ${{ secrets.DEPLOY_PATH }}
             git fetch origin main
@@ -115,6 +116,7 @@ jobs:
             upsert_env_var CHZZK_CLIENT_SECRET "${CHZZK_CLIENT_SECRET:-}"
             upsert_env_var ADMIN_BASIC_AUTH_USERNAME "${ADMIN_BASIC_AUTH_USERNAME:-}"
             upsert_env_var ADMIN_BASIC_AUTH_PASSWORD "${ADMIN_BASIC_AUTH_PASSWORD:-}"
+            upsert_env_var COLLECT_API_KEY "${COLLECT_API_KEY:-}"
             mv .env.tmp .env
             ./frontend/deploy.sh --clean
 
@@ -126,6 +128,7 @@ jobs:
           CHZZK_CLIENT_SECRET: ${{ secrets.CHZZK_CLIENT_SECRET }}
           ADMIN_BASIC_AUTH_USERNAME: ${{ secrets.ADMIN_BASIC_AUTH_USERNAME }}
           ADMIN_BASIC_AUTH_PASSWORD: ${{ secrets.ADMIN_BASIC_AUTH_PASSWORD }}
+          COLLECT_API_KEY: ${{ secrets.COLLECT_API_KEY || secrets.CLIP_REFRESH_API_KEY }}
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USERNAME }}
@@ -134,7 +137,7 @@ jobs:
           timeout: 60s
           command_timeout: 20m
           script_stop: true
-          envs: CHZZK_CLIENT_ID,CHZZK_CLIENT_SECRET,ADMIN_BASIC_AUTH_USERNAME,ADMIN_BASIC_AUTH_PASSWORD
+          envs: CHZZK_CLIENT_ID,CHZZK_CLIENT_SECRET,ADMIN_BASIC_AUTH_USERNAME,ADMIN_BASIC_AUTH_PASSWORD,COLLECT_API_KEY
           script: |
             cd ${{ secrets.DEPLOY_PATH }}
             git fetch origin main
@@ -155,5 +158,6 @@ jobs:
             upsert_env_var CHZZK_CLIENT_SECRET "${CHZZK_CLIENT_SECRET:-}"
             upsert_env_var ADMIN_BASIC_AUTH_USERNAME "${ADMIN_BASIC_AUTH_USERNAME:-}"
             upsert_env_var ADMIN_BASIC_AUTH_PASSWORD "${ADMIN_BASIC_AUTH_PASSWORD:-}"
+            upsert_env_var COLLECT_API_KEY "${COLLECT_API_KEY:-}"
             mv .env.tmp .env
             ./frontend/deploy.sh --clean

@@ -85,6 +85,7 @@ services:
     environment:
       - NODE_ENV=production
       - BACKEND_URL=http://backend:8000
+      - COLLECT_API_KEY=${COLLECT_API_KEY:-}
       # YouTube Data API
       - YOUTUBE_API_KEY=${YOUTUBE_API_KEY:-}
       # Analytics (Postgres)

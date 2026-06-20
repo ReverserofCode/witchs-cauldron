@@ -9,6 +9,7 @@
 - Frontend(Next.js)는 같은 볼륨을 `/app/public/clips`로 읽는다.
 - `ClipsSection`은 최신 파일 기준 최대 10개만 렌더링한다.
 - `/clips/[...filename]` 라우트가 파일을 직접 스트리밍하며 `Range` 요청을 지원한다.
+- 운영 compose는 백엔드 내부 APScheduler로 자동 수집을 실행한다.
 
 ## 정상 동작 기준
 
@@ -18,6 +19,58 @@
 - 각 클립 URL이 `206 Partial Content`, `Content-Type: video/mp4`, `Accept-Ranges: bytes`를 반환한다.
 - 파일 첫 32바이트에 `ftyp` 문자열이 포함된다.
 - 브라우저에서 `<video>`의 `readyState >= 2`, `error = null`, `currentTime` 증가가 확인된다.
+
+## 자동 갱신
+
+자동 갱신은 두 겹으로 구성한다.
+
+- Backend 내부 APScheduler: 컨테이너가 실행 중인 동안 주기적으로 수집한다.
+- GitHub Actions `Clip Refresh`: 6시간마다 운영 API를 호출하고 job 완료까지 확인한다.
+
+운영 compose(`docker-compose.prod.yml`, `docker-compose.server.yml`) 기본값:
+
+```bash
+CLIP_AUTO_COLLECT_ENABLED=true
+CLIP_AUTO_COLLECT_INTERVAL_MINUTES=360
+CLIP_AUTO_COLLECT_RUN_ON_STARTUP=true
+CLIP_AUTO_COLLECT_STARTUP_DELAY_SECONDS=60
+CLIP_AUTO_COLLECT_MAX_CLIPS=10
+CLIP_AUTO_COLLECT_FILTER_TYPE=ALL
+CLIP_AUTO_COLLECT_ORDER_TYPE=MIXED
+```
+
+GitHub Actions cron:
+
+- 파일: `.github/workflows/clip-refresh.yml`
+- 주기: `17 */6 * * *` (6시간마다)
+- 기본 대상: `https://moingfans.com`
+- 수동 실행: GitHub Actions에서 `workflow_dispatch`
+
+선택 인증:
+
+```bash
+COLLECT_API_KEY=<random-long-token>
+```
+
+`COLLECT_API_KEY`를 운영 `.env`에 설정하면 `/api/clips/collect`, `/api/clips/jobs/*`,
+`/api/clips/automation` 호출에 같은 값을 `Authorization: Bearer <token>` 또는
+`x-api-key: <token>`으로 보내야 한다. GitHub Actions에는 동일한 값을
+`COLLECT_API_KEY` 또는 `CLIP_REFRESH_API_KEY` secret으로 등록한다.
+
+대상 URL을 바꾸려면 repository variable `CLIP_REFRESH_BASE_URL`을 설정한다.
+
+상태 확인:
+
+```bash
+curl https://moingfans.com/api/clips/automation
+```
+
+확인 항목:
+
+- `enabled=true`, `running=true`
+- `next_run_at`가 존재
+- `last_job_id`가 있으면 `GET /api/clips/jobs/{last_job_id}`로 완료 여부 확인
+- 수동 수집이 실행 중이면 예약 실행은 `last_skip_reason=collection job already running`으로 스킵된다.
 
 ## 수집 실행
 
@@ -121,6 +174,7 @@ console.log({
 ## 관련 파일
 
 - `backend/app/services/clip_collector.py`
+- `backend/app/services/clip_scheduler.py`
 - `backend/app/services/job_manager.py`
 - `backend/docker-entrypoint.sh`
 - `frontend/app/components/sections/ClipsSection.tsx`
