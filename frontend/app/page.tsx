@@ -71,16 +71,17 @@ export default async function Page(): Promise<ReactElement> {
   const liveStatus = await getChzzkLiveStatus()
 
   return (
-    <main className="py-8 lg:py-12">
-      <div className="w-full px-4 mx-auto max-w-6xl sm:px-6 lg:px-8">
-        <div className="flex min-w-0 flex-col gap-5 text-[15px] leading-relaxed">
-          <div className="flex flex-col w-full gap-5 Intro-section">
+    <main className="py-4 lg:py-12">
+      <div className="w-full px-3 mx-auto max-w-6xl sm:px-6 lg:px-8">
+        <div className="flex min-w-0 flex-col gap-3 text-[15px] leading-relaxed sm:gap-5">
+          <div className="flex flex-col w-full gap-3 Intro-section sm:gap-5">
             <SectionCard
               tone="dimmed"
-              bodyClassName="gap-5"
+              className="p-3 sm:p-4"
+              bodyClassName="gap-4 sm:gap-5"
             >
-              <div className="grid gap-5 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.85fr)] xl:items-start">
-                <div className="space-y-4">
+              <div className="grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.85fr)] xl:items-start xl:gap-5">
+                <div className="space-y-3 sm:space-y-4">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="chip text-xs sm:text-sm">KR V-tuber • Moing</span>
                     <span className="chip text-[11px] sm:text-xs">패러블 엔터테인먼트 소속</span>
@@ -105,11 +106,15 @@ export default async function Page(): Promise<ReactElement> {
                     <p className="max-w-2xl text-sm font-light text-purple-100/90 typography-lead sm:text-base">
                       포션을 만들면 폭발하거나, 고백하게 만드는 재앙 제조기. 모잉의 방송, 영상, 숏폼, 팬 콘텐츠를 한곳에서 모아 봅니다.
                     </p>
-                    <LiveStatusDescription initialStatus={liveStatus} />
+                    <div className="hidden sm:block">
+                      <LiveStatusDescription initialStatus={liveStatus} />
+                    </div>
                   </div>
 
-                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                    <LiveStatusCard initialStatus={liveStatus} />
+                  <div className="grid grid-cols-2 gap-2.5 sm:gap-3 xl:grid-cols-3">
+                    <div className="col-span-2 sm:col-span-1">
+                      <LiveStatusCard initialStatus={liveStatus} />
+                    </div>
                       {HERO_FOCUS_ITEMS.map((item) => (
                         <div
                           key={item.label}
@@ -119,19 +124,19 @@ export default async function Page(): Promise<ReactElement> {
                           {item.label}
                         </p>
                         <p className="mt-2 text-base font-bold text-white">{item.value}</p>
-                        <p className="mt-1 text-xs text-purple-100/75">{item.description}</p>
+                        <p className="mt-1 hidden text-xs text-purple-100/75 sm:block">{item.description}</p>
                       </div>
                     ))}
                   </div>
-                  <p className="text-xs text-purple-100/72 typography-body">
+                  <p className="hidden text-xs text-purple-100/72 typography-body sm:block">
                     콘텐츠: 방송 · 숏폼 · 클립 · 팬카페 · 팬아트
                   </p>
                 </div>
 
-                <div className="grid gap-6">
-                  <div className="liquid-glass-panel flex items-center gap-4 rounded-[24px] p-4">
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-1 sm:gap-6">
+                  <div className="liquid-glass-panel flex flex-col items-start gap-3 rounded-[24px] p-3 sm:flex-row sm:items-center sm:gap-4 sm:p-4">
                     <div className="profile-avatar flex-shrink-0">
-                      <div className="relative h-24 w-24 sm:h-28 sm:w-28" aria-hidden>
+                      <div className="relative h-16 w-16 sm:h-28 sm:w-28" aria-hidden>
                         <div className="h-full w-full avatar-frame">
                           <div className="glow" />
                           <Image
@@ -149,15 +154,15 @@ export default async function Page(): Promise<ReactElement> {
                       <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-purple-200/70">
                         프로필
                       </p>
-                      <p className="text-lg font-bold text-white">모잉</p>
+                      <p className="text-base font-bold text-white sm:text-lg">모잉</p>
                       <div className="space-y-0.5 text-purple-100/80">
-                        <p className="text-sm sm:whitespace-nowrap">버튜버 · 스트리머</p>
-                        <p className="text-[13px] text-purple-200/85">패러블 엔터테인먼트 소속</p>
+                        <p className="text-xs sm:whitespace-nowrap sm:text-sm">버튜버 · 스트리머</p>
+                        <p className="hidden text-[13px] text-purple-200/85 sm:block">패러블 엔터테인먼트 소속</p>
                       </div>
                     </div>
                   </div>
 
-                  <div className="liquid-glass-panel rounded-[24px] p-4">
+                  <div className="liquid-glass-panel rounded-[24px] p-3 sm:p-4">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-purple-200/70">
                       채널 바로가기
                     </p>
@@ -170,7 +175,7 @@ export default async function Page(): Promise<ReactElement> {
                             href={link.href}
                             target={isExternal ? '_blank' : undefined}
                             rel={isExternal ? 'noreferrer' : undefined}
-                            className="liquid-glass-control inline-flex min-h-10 w-full items-center justify-center rounded-[16px] px-3 py-2 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5"
+                            className="liquid-glass-control inline-flex min-h-9 w-full items-center justify-center rounded-[16px] px-2 py-2 text-xs font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 sm:min-h-10 sm:px-3 sm:text-sm"
                             data-analytics-menu="true"
                             data-analytics-id={link.href}
                             data-analytics-label={link.label}

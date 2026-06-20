@@ -148,5 +148,6 @@ class FileManager:
             parts = name[5:].split("_", 1)  # Remove 'clip_' prefix
             if len(parts) > 1:
                 return parts[1].replace("_", " ")
+            return "치지직 하이라이트"
 
         return name

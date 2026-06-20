@@ -82,6 +82,7 @@ class ChzzkClipCollector:
         self.frontend_clips_dir = (settings.frontend_clips_dir or "").strip()
         self.base_url = f"https://chzzk.naver.com/{self.channel_id}/clips"
         self._last_download_error = ""
+        self._last_extracted_title = ""
 
         # Ensure download directory exists
         os.makedirs(self.download_dir, exist_ok=True)
@@ -102,6 +103,176 @@ class ChzzkClipCollector:
         if len(cleaned) > max_length:
             cleaned = cleaned[:max_length].rstrip("._- ")
         return cleaned
+
+    def _normalize_clip_title(self, value: str) -> str:
+        """Normalize and reject metadata-only title candidates."""
+        if not value:
+            return ""
+
+        text = re.sub(r"\s+", " ", value).strip(" \t\r\n-_|")
+        if not text:
+            return ""
+
+        for suffix in (
+            " - CHZZK",
+            " | CHZZK",
+            " - 치지직",
+            " | 치지직",
+            " - 네이버 치지직",
+            " | 네이버 치지직",
+        ):
+            if text.endswith(suffix):
+                text = text[: -len(suffix)].strip(" \t\r\n-_|")
+
+        lower = text.lower()
+        if lower.startswith(("http://", "https://")):
+            return ""
+        if re.fullmatch(r"[A-Za-z0-9_-]{6,}", text):
+            return ""
+        if text in {"CHZZK", "치지직", "클립", "치지직 클립"}:
+            return ""
+
+        return text[:160]
+
+    def _looks_like_clip_metadata(self, value: str) -> bool:
+        text = value.strip()
+        if not text:
+            return True
+        if re.fullmatch(r"\d{1,2}:\d{2}(?::\d{2})?", text):
+            return True
+        if re.search(r"(조회수|좋아요|댓글|재생|팔로워|시청자|명|회)$", text):
+            return True
+        if re.search(r"(초 전|분 전|시간 전|일 전|주 전|개월 전|년 전)$", text):
+            return True
+        return False
+
+    def _pick_title_from_text(self, value: str) -> str:
+        if not value:
+            return ""
+
+        lines = [
+            self._normalize_clip_title(line)
+            for line in re.split(r"[\r\n]+", value)
+        ]
+        for line in lines:
+            if line and not self._looks_like_clip_metadata(line):
+                return line
+
+        return self._normalize_clip_title(value)
+
+    def _extract_clip_title_from_element(self, element) -> str:
+        selectors = [
+            "strong[class*='clip_card_title']",
+            "[class*='clip_card_title']",
+            "[class*='title']",
+            "strong",
+            "span[title]",
+            "img[alt]",
+        ]
+
+        for selector in selectors:
+            try:
+                title_el = element.find_element(By.CSS_SELECTOR, selector)
+                title = self._pick_title_from_text(
+                    title_el.text
+                    or title_el.get_attribute("title")
+                    or title_el.get_attribute("aria-label")
+                    or title_el.get_attribute("alt")
+                    or title_el.get_attribute("textContent")
+                    or ""
+                )
+                if title:
+                    return title
+            except NoSuchElementException:
+                continue
+            except Exception:
+                continue
+
+        for attr in ("title", "aria-label", "data-title"):
+            try:
+                title = self._pick_title_from_text(element.get_attribute(attr) or "")
+                if title:
+                    return title
+            except Exception:
+                continue
+
+        try:
+            return self._pick_title_from_text(
+                element.text or element.get_attribute("textContent") or ""
+            )
+        except Exception:
+            return ""
+
+    def _extract_clip_title_from_current_page(self, driver) -> str:
+        selectors = [
+            "meta[property='og:title']",
+            "meta[name='twitter:title']",
+            "h1",
+            "[class*='clip'][class*='title']",
+            "[class*='title']",
+        ]
+
+        for selector in selectors:
+            try:
+                element = driver.find_element(By.CSS_SELECTOR, selector)
+                title = self._pick_title_from_text(
+                    element.get_attribute("content")
+                    or element.text
+                    or element.get_attribute("textContent")
+                    or ""
+                )
+                if title:
+                    return title
+            except NoSuchElementException:
+                continue
+            except Exception:
+                continue
+
+        try:
+            return self._pick_title_from_text(driver.title or "")
+        except Exception:
+            return ""
+
+    def _rename_existing_clip_with_title(
+        self, existing_path: str, clip_id: str, title: str
+    ) -> str:
+        """Rename clip_<id>.mp4 to clip_<id>_<title>.mp4 when title becomes known."""
+        safe_title = self._sanitize_filename(title)
+        if not existing_path or not clip_id or not safe_title:
+            return existing_path
+
+        basename = os.path.basename(existing_path)
+        if re.match(rf"^clip_{re.escape(clip_id)}_.+\.[^.]+$", basename):
+            return existing_path
+
+        _, ext = os.path.splitext(basename)
+        target_name = f"clip_{clip_id}_{safe_title}{ext or '.mp4'}"
+        target_path = os.path.join(self.download_dir, target_name)
+
+        if os.path.abspath(existing_path) == os.path.abspath(target_path):
+            return existing_path
+
+        if os.path.exists(target_path):
+            return target_path
+
+        try:
+            os.replace(existing_path, target_path)
+            print(f"Renamed clip with title: {basename} -> {target_name}")
+
+            if self.frontend_clips_dir:
+                frontend_old = os.path.join(self.frontend_clips_dir, basename)
+                frontend_new = os.path.join(self.frontend_clips_dir, target_name)
+                if (
+                    os.path.abspath(frontend_old) != os.path.abspath(existing_path)
+                    and os.path.exists(frontend_old)
+                    and not os.path.exists(frontend_new)
+                ):
+                    os.replace(frontend_old, frontend_new)
+
+            return target_path
+        except Exception as e:
+            print(f"Could not rename clip with title: {e}")
+            return existing_path
 
     def _clip_already_downloaded(self, clip_id: str) -> Optional[str]:
         """Check if clip already exists in download directory (same as original)"""
@@ -185,15 +356,7 @@ class ChzzkClipCollector:
             if card_links:
                 for link_el in card_links:
                     href = link_el.get_attribute("href") or ""
-                    title = ""
-
-                    try:
-                        title_el = link_el.find_element(
-                            By.CSS_SELECTOR, "strong.clip_card_title__Pc2jc"
-                        )
-                        title = title_el.text.strip()
-                    except NoSuchElementException:
-                        pass
+                    title = self._extract_clip_title_from_element(link_el)
 
                     full_url = urljoin(self.base_url, href) if href else ""
                     if full_url and "clip" in full_url:
@@ -218,7 +381,8 @@ class ChzzkClipCollector:
                                 href = element.get_attribute("href") or ""
                                 full_url = urljoin(self.base_url, href) if href else ""
                                 if full_url and "clip" in full_url:
-                                    clip_entries.append(ClipInfo(url=full_url, title=""))
+                                    title = self._extract_clip_title_from_element(element)
+                                    clip_entries.append(ClipInfo(url=full_url, title=title))
                             break
                     except Exception:
                         continue
@@ -319,6 +483,7 @@ class ChzzkClipCollector:
         Lines 308-387 of the original code.
         """
         print(f"Analyzing clip: {clip_url}")
+        self._last_extracted_title = ""
 
         try:
             # Clear previous logs by opening/closing new tab (same as original)
@@ -334,6 +499,9 @@ class ChzzkClipCollector:
             WebDriverWait(driver, 15).until(
                 EC.presence_of_element_located((By.TAG_NAME, "body"))
             )
+            self._last_extracted_title = self._extract_clip_title_from_current_page(driver)
+            if self._last_extracted_title:
+                print(f"Extracted page title: {self._last_extracted_title}")
 
             # Wait for video element to appear (increased timeout for dynamic content)
             print("Waiting for video element to load...")
@@ -700,6 +868,9 @@ class ChzzkClipCollector:
                     # Check for existing download
                     existing = self._clip_already_downloaded(clip_info.clip_id)
                     if existing:
+                        existing = self._rename_existing_clip_with_title(
+                            existing, clip_info.clip_id, clip_info.title
+                        )
                         print(f"Already downloaded: {os.path.basename(existing)}")
                         self._sync_to_frontend(existing)
                         result.clips_skipped += 1
@@ -715,6 +886,8 @@ class ChzzkClipCollector:
 
                     # Extract media URLs
                     media_urls = self.extract_media_urls(driver, clip_info.url)
+                    if not clip_info.title and self._last_extracted_title:
+                        clip_info.title = self._last_extracted_title
 
                     if not media_urls:
                         result.errors.append(

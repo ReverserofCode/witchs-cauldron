@@ -14,6 +14,24 @@ interface Clip {
 const CLIPS_DIR = path.join(process.cwd(), "public", "clips");
 const VIDEO_EXTENSIONS = [/\.mp4$/i, /\.webm$/i, /\.ogg$/i, /\.mov$/i];
 const MAX_VISIBLE_CLIPS = 10;
+const CLIP_FILE_PATTERN = /^clip_([^_]+)(?:_(.+))?$/;
+const CLIP_ID_PATTERN = /^[A-Za-z0-9_-]{6,}$/;
+
+function getClipTitle(filename: string, index: number): string {
+  const base = filename.replace(/\.[^.]+$/, "");
+  const clipMatch = base.match(CLIP_FILE_PATTERN);
+  const rawTitle = clipMatch ? clipMatch[2] ?? "" : base;
+  const cleanName = rawTitle
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (!cleanName || CLIP_ID_PATTERN.test(cleanName)) {
+    return `치지직 하이라이트 #${index + 1}`;
+  }
+
+  return cleanName;
+}
 
 function loadClipsFromDirectory(): Clip[] {
   let files: Array<{ name: string; mtimeMs: number }> = [];
@@ -34,17 +52,11 @@ function loadClipsFromDirectory(): Clip[] {
   return files.slice(0, MAX_VISIBLE_CLIPS).map(({ name: filename, mtimeMs }, index) => {
     const base = filename.replace(/\.[^.]+$/, "");
     const encodedFilename = encodeURIComponent(filename);
-    const cleanName = base
-      .replace(/^clip_[^_]+_/, "")
-      .replace(/^clip_/, "")
-      .replace(/[_-]+/g, " ")
-      .replace(/\s+/g, " ")
-      .trim();
 
     return {
       id: `${base}-${Math.floor(mtimeMs)}`,
       src: `/clips/${encodedFilename}?v=${Math.floor(mtimeMs)}`,
-      title: cleanName.length > 0 ? `${cleanName}` : `하이라이트 클립 #${index + 1}`,
+      title: getClipTitle(filename, index),
     } satisfies Clip;
   });
 }

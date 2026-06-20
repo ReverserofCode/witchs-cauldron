@@ -291,6 +291,7 @@ export default function ClipsViewer({ clips }: ClipsViewerProps) {
           <div className="absolute bottom-[4.5rem] right-3 flex flex-col gap-3">
             {/* 뮤트 토글 */}
             <button
+              type="button"
               onClick={(e) => {
                 e.stopPropagation();
                 setIsMuted((prev) => !prev);
@@ -316,6 +317,7 @@ export default function ClipsViewer({ clips }: ClipsViewerProps) {
 
       <div className="mt-4 flex items-center justify-center gap-3">
         <button
+          type="button"
           onClick={goToPrev}
           disabled={isTransitioning}
           className="flex h-9 w-9 items-center justify-center rounded-full bg-purple-600 shadow-md transition-all duration-200 hover:scale-105 hover:bg-purple-700 active:scale-95 disabled:opacity-50"
@@ -329,6 +331,7 @@ export default function ClipsViewer({ clips }: ClipsViewerProps) {
         <div className="flex justify-center gap-1.5">
         {clips.map((_, index) => (
           <button
+            type="button"
             key={index}
             onClick={() => {
               if (!isTransitioning) {
@@ -348,6 +351,7 @@ export default function ClipsViewer({ clips }: ClipsViewerProps) {
         </div>
 
         <button
+          type="button"
           onClick={goToNext}
           disabled={isTransitioning}
           className="flex h-9 w-9 items-center justify-center rounded-full bg-purple-600 shadow-md transition-all duration-200 hover:scale-105 hover:bg-purple-700 active:scale-95 disabled:opacity-50"
@@ -359,8 +363,7 @@ export default function ClipsViewer({ clips }: ClipsViewerProps) {
         </button>
       </div>
 
-      {/* 조작 힌트 */}
-      <p className="mt-3 text-center text-[11px] text-purple-500/70">
+      <p className="sr-only" aria-live="polite">
         {isViewerFocused ? "뷰어 포커스됨: ↑↓ 탐색 · Space 재생/일시정지 · M 음소거" : "클릭으로 포커스 후 ↑↓ 키 탐색 · Space 재생/일시정지 · M 음소거"}
       </p>
     </div>
