@@ -12,6 +12,7 @@ from typing import Optional
 from apscheduler.schedulers.background import BackgroundScheduler
 
 from app.config import get_settings
+from app.schemas.job import JobStatus
 from app.services.job_manager import job_manager
 
 
@@ -86,6 +87,11 @@ class ClipCollectionScheduler:
             self._record_skip("collection job already running")
             return None
 
+        cooldown_skip_reason = self._recent_failure_skip_reason()
+        if cooldown_skip_reason:
+            self._record_skip(cooldown_skip_reason)
+            return None
+
         max_clips = min(
             settings.clip_auto_collect_max_clips,
             settings.max_clips_per_collection,
@@ -129,6 +135,8 @@ class ClipCollectionScheduler:
             if scheduled_job and scheduled_job.next_run_time:
                 next_run_at = scheduled_job.next_run_time.isoformat()
 
+        failure_cooldown_until = self._failure_cooldown_until()
+
         return {
             "enabled": settings.clip_auto_collect_enabled,
             "running": bool(scheduler and scheduler.running),
@@ -142,11 +150,48 @@ class ClipCollectionScheduler:
             ),
             "filter_type": settings.clip_auto_collect_filter_type,
             "order_type": settings.clip_auto_collect_order_type,
+            "failure_cooldown_minutes": settings.clip_auto_collect_failure_cooldown_minutes,
+            "failure_cooldown_until": failure_cooldown_until.isoformat()
+            if failure_cooldown_until
+            else None,
             "last_job_id": last_job_id,
             "last_run_at": last_run_at.isoformat() if last_run_at else None,
             "last_skip_reason": last_skip_reason,
             "next_run_at": next_run_at,
         }
+
+    def _failure_cooldown_until(self) -> Optional[datetime]:
+        settings = get_settings()
+        cooldown_minutes = settings.clip_auto_collect_failure_cooldown_minutes
+        if cooldown_minutes <= 0:
+            return None
+
+        with self._lock:
+            last_job_id = self._last_job_id
+
+        if not last_job_id:
+            return None
+
+        job = job_manager.get_job(last_job_id)
+        if (
+            not job
+            or job.status != JobStatus.FAILED
+            or not job.completed_at
+        ):
+            return None
+
+        cooldown_until = job.completed_at + timedelta(minutes=cooldown_minutes)
+        if cooldown_until <= datetime.now():
+            return None
+
+        return cooldown_until
+
+    def _recent_failure_skip_reason(self) -> Optional[str]:
+        cooldown_until = self._failure_cooldown_until()
+        if not cooldown_until:
+            return None
+
+        return f"recent collection failure cooldown active until {cooldown_until.isoformat()}"
 
     def _record_skip(self, reason: str) -> None:
         with self._lock:

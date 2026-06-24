@@ -3,6 +3,8 @@
 // - Returns { ok: boolean, ts: number }
 import { NextResponse } from "next/server";
 
+export const dynamic = "force-dynamic";
+
 interface HealthResponse {
   ok: boolean;
   ts: number;
@@ -17,6 +19,9 @@ export async function GET(): Promise<NextResponse<HealthResponse>> {
 
   return NextResponse.json(data, {
     status: 200,
-    headers: { "content-type": "application/json; charset=utf-8" },
+    headers: {
+      "content-type": "application/json; charset=utf-8",
+      "cache-control": "no-store, max-age=0",
+    },
   });
 }

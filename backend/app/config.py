@@ -35,12 +35,13 @@ class Settings(BaseSettings):
 
     # Scheduled clip collection
     clip_auto_collect_enabled: bool = False
-    clip_auto_collect_interval_minutes: int = Field(default=360, ge=5)
-    clip_auto_collect_run_on_startup: bool = True
+    clip_auto_collect_interval_minutes: int = Field(default=720, ge=5)
+    clip_auto_collect_run_on_startup: bool = False
     clip_auto_collect_startup_delay_seconds: int = Field(default=60, ge=0)
-    clip_auto_collect_max_clips: int = Field(default=10, ge=1, le=10)
+    clip_auto_collect_max_clips: int = Field(default=2, ge=1, le=10)
     clip_auto_collect_filter_type: str = "ALL"
-    clip_auto_collect_order_type: str = "MIXED"
+    clip_auto_collect_order_type: str = "RECENT"
+    clip_auto_collect_failure_cooldown_minutes: int = Field(default=720, ge=0)
 
     # API settings
     api_prefix: str = "/api"

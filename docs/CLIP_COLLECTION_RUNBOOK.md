@@ -22,27 +22,28 @@
 
 ## 자동 갱신
 
-자동 갱신은 두 겹으로 구성한다.
+자동 갱신은 운영 서버 내부 scheduler 하나만 사용한다.
 
 - Backend 내부 APScheduler: 컨테이너가 실행 중인 동안 주기적으로 수집한다.
-- GitHub Actions `Clip Refresh`: 6시간마다 운영 API를 호출하고 job 완료까지 확인한다.
+- GitHub Actions `Clip Refresh`: 정기 실행하지 않고, 수동 복구/검증 시에만 운영 API를 호출한다.
 
 운영 compose(`docker-compose.prod.yml`, `docker-compose.server.yml`) 기본값:
 
 ```bash
 CLIP_AUTO_COLLECT_ENABLED=true
-CLIP_AUTO_COLLECT_INTERVAL_MINUTES=360
-CLIP_AUTO_COLLECT_RUN_ON_STARTUP=true
+CLIP_AUTO_COLLECT_INTERVAL_MINUTES=720
+CLIP_AUTO_COLLECT_RUN_ON_STARTUP=false
 CLIP_AUTO_COLLECT_STARTUP_DELAY_SECONDS=60
-CLIP_AUTO_COLLECT_MAX_CLIPS=10
+CLIP_AUTO_COLLECT_MAX_CLIPS=2
 CLIP_AUTO_COLLECT_FILTER_TYPE=ALL
-CLIP_AUTO_COLLECT_ORDER_TYPE=MIXED
+CLIP_AUTO_COLLECT_ORDER_TYPE=RECENT
+CLIP_AUTO_COLLECT_FAILURE_COOLDOWN_MINUTES=720
 ```
 
-GitHub Actions cron:
+GitHub Actions 수동 실행:
 
 - 파일: `.github/workflows/clip-refresh.yml`
-- 주기: `17 */6 * * *` (6시간마다)
+- 주기: 없음 (`workflow_dispatch` only)
 - 기본 대상: `https://moingfans.com`
 - 수동 실행: GitHub Actions에서 `workflow_dispatch`
 
@@ -69,6 +70,8 @@ curl https://moingfans.com/api/clips/automation
 
 - `enabled=true`, `running=true`
 - `next_run_at`가 존재
+- `max_clips=2`, `order_type=RECENT`
+- 최근 실패 후에는 `failure_cooldown_until` 동안 자동 수집을 건너뛴다.
 - `last_job_id`가 있으면 `GET /api/clips/jobs/{last_job_id}`로 완료 여부 확인
 - 수동 수집이 실행 중이면 예약 실행은 `last_skip_reason=collection job already running`으로 스킵된다.
 
