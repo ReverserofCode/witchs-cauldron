@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import SectionCard from '../cards/SectionCard';
 import { ScheduleModal } from '../modals';
 import type { ScheduleDiagnostics, ScheduleEvent, ScheduleFeed } from '@/app/api/broadCastSchedule/schedule';
-import { addDays, formatDateKey, normalizeScheduleEvents, selectUpcomingScheduleEvents, startOfDay } from '@/app/lib/schedule';
+import { addDays, formatDateKey, normalizeScheduleEvents, selectScheduleWindowEvents, startOfDay } from '@/app/lib/schedule';
 
 type ScheduleStatus = 'idle' | 'loading' | 'ready' | 'error';
 
@@ -25,7 +25,7 @@ interface WeekColumn {
 
 const SCHEDULE_ENDPOINT = '/api/broadCastSchedule';
 const MAX_EVENTS_PER_DAY = 4;
-const DAYS_TO_SHOW = 5;
+const DAYS_TO_SHOW = 7;
 const SHOW_SCHEDULE_DIAGNOSTICS =
   process.env.NODE_ENV !== 'production' ||
   process.env.NEXT_PUBLIC_ENABLE_SCHEDULE_DIAGNOSTICS === 'true';
@@ -86,10 +86,9 @@ export default function ScheduleSection({
         const data = (await res.json()) as ScheduleFeed;
         if (!cancelled) {
           const normalizedEvents = normalizeScheduleEvents(data.events).map((item) => item.event);
-          const upcomingEvents = selectUpcomingScheduleEvents(normalizedEvents, undefined, new Date());
-          const { events: upcomingWeek, range } = selectEventsForWeek(upcomingEvents, clampedDaysToShow);
-          setEvents(upcomingWeek);
-          setAllEvents(upcomingEvents);
+          const { events: scheduleWindow, range } = selectScheduleWindowEvents(normalizedEvents, clampedDaysToShow, new Date());
+          setEvents(scheduleWindow);
+          setAllEvents(normalizedEvents);
           setWeekRange(range);
           setStatus('ready');
         }
@@ -132,10 +131,9 @@ export default function ScheduleSection({
 
       const feedEvents = payload.feed?.events ?? [];
       const normalizedEvents = normalizeScheduleEvents(feedEvents).map((item) => item.event);
-      const upcomingEvents = selectUpcomingScheduleEvents(normalizedEvents, undefined, new Date());
-      const { events: upcomingWeek, range } = selectEventsForWeek(upcomingEvents, clampedDaysToShow);
-      setEvents(upcomingWeek);
-      setAllEvents(upcomingEvents);
+      const { events: scheduleWindow, range } = selectScheduleWindowEvents(normalizedEvents, clampedDaysToShow, new Date());
+      setEvents(scheduleWindow);
+      setAllEvents(normalizedEvents);
       setWeekRange(range);
       setStatus('ready');
 
@@ -280,7 +278,7 @@ export default function ScheduleSection({
               ))}
             </ul>
           ) : (
-            <ul className={`grid grid-cols-1 gap-3 ${clampedDaysToShow >= 4 ? 'sm:grid-cols-2 xl:grid-cols-4' : clampedDaysToShow === 3 ? 'sm:grid-cols-3' : clampedDaysToShow === 2 ? 'sm:grid-cols-2' : ''}`}>
+            <ul className={`grid grid-cols-1 gap-3 ${clampedDaysToShow >= 5 ? 'sm:grid-cols-2 xl:grid-cols-4' : clampedDaysToShow >= 4 ? 'sm:grid-cols-2 xl:grid-cols-4' : clampedDaysToShow === 3 ? 'sm:grid-cols-3' : clampedDaysToShow === 2 ? 'sm:grid-cols-2' : ''}`}>
               {weekColumns.map((day) => (
                 <li
                   key={day.isoDate}
@@ -356,66 +354,12 @@ export default function ScheduleSection({
       tone="lavender"
       eyebrow="일정"
       title="라이브 일정표"
-      description={`오늘부터 ${clampedDaysToShow}일 일정과 예정 방송을 확인할 수 있습니다.`}
+      description={`이번 주 ${clampedDaysToShow}일 일정과 예정 방송을 확인할 수 있습니다.`}
       bodyClassName="relative gap-4"
     >
       {sectionContent}
     </SectionCard>
   );
-}
-
-function selectEventsForWeek(
-  events: ScheduleEvent[],
-  daysToShow: number
-): { events: ScheduleEvent[]; range: { start: string; end: string } } {
-  const todayAnchor = startOfDay(new Date());
-  
-  // 오늘부터 지정된 일수만큼의 이벤트만 필터링
-  return filterEventsWithinRange(events, todayAnchor, daysToShow);
-}
-
-function filterEventsWithinRange(
-  events: ScheduleEvent[],
-  anchorDate: Date,
-  daysToShow: number
-): { events: ScheduleEvent[]; range: { start: string; end: string } } {
-  const start = startOfDay(anchorDate);
-  const end = addDays(start, daysToShow);
-  const rangeStartMs = start.getTime();
-  const rangeEndMs = end.getTime();
-
-  const projected = events
-    .map((event) => {
-      const startMs = Date.parse(event.start);
-      if (!Number.isFinite(startMs)) return null;
-      const duration = event.end ? Date.parse(event.end) - startMs : 0;
-      const safeDuration = Number.isFinite(duration) ? Math.max(duration, 0) : 0;
-      return {
-        event,
-        startMs,
-        endMs: startMs + safeDuration,
-      };
-    })
-    .filter((value): value is { event: ScheduleEvent; startMs: number; endMs: number } => Boolean(value));
-
-  const filtered = projected
-    .filter(({ startMs, endMs }) => {
-      const startsInRange = startMs >= rangeStartMs && startMs < rangeEndMs;
-      const endsInRange = endMs >= rangeStartMs && endMs < rangeEndMs;
-      const spansRange = startMs < rangeStartMs && endMs >= rangeStartMs;
-
-      return startsInRange || endsInRange || spansRange;
-    })
-    .sort((a, b) => a.startMs - b.startMs)
-    .map((item) => item.event);
-
-  return {
-    events: filtered,
-    range: {
-      start: start.toISOString(),
-      end: end.toISOString(),
-    },
-  };
 }
 
 function buildWeekColumns(

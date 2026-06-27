@@ -232,7 +232,7 @@ export default async function Page(): Promise<ReactElement> {
                 >
                   <div className={`grid gap-3 ${fanArtImages.length > 0 ? 'xl:grid-cols-[minmax(0,1.08fr)_minmax(320px,0.92fr)]' : ''}`}>
                     <div className="rounded-[20px] border border-purple-200/55 bg-white/70 p-3">
-                      <ScheduleSection embedded daysToShow={5} limit={1} />
+                      <ScheduleSection embedded daysToShow={7} limit={1} />
                     </div>
 
                     {fanArtImages.length > 0 && (

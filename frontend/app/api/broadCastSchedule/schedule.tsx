@@ -1065,46 +1065,39 @@ function parseDateTime(dateValue?: string, timeValue?: string, today: Date = new
 }
 
 function normalizeDate(value: string, today: Date = new Date()): string {
-// Excel에서 연도가 바뀌며 앞에 `' 이 붙거나, 날짜 뒤에 주석이 붙은 형태까지 허용한다.
-// 예) "'26/1/15 (수)", "1/20 (월)"  2026-01-15, 2026-01-20
-const trimmed = value.trim()
-const currentYear = today.getFullYear()
+	// Excel에서 연도가 바뀌며 앞에 `' 이 붙거나, 날짜 뒤에 주석이 붙은 형태까지 허용한다.
+	// 예) "'26/1/15 (수)", "1/20 (월)" -> 2026-01-15, 2026-01-20
+	const trimmed = value.trim()
+	const currentYear = today.getFullYear()
 
-// 날짜 패턴을 먼저 추출(문자열 중간/뒤에 메모가 있어도 앞부분만 사용)
-const dateMatch = trimmed.match(/[''`]?(\d{2,4})[./-](\d{1,2})[./-](\d{1,2})/)
-if (dateMatch) {
-const rawYear = parseInt(dateMatch[1], 10)
-const month = parseInt(dateMatch[2], 10)
-const day = parseInt(dateMatch[3], 10)
+	const dateMatch = trimmed.match(/['’`]?\s*(\d{2,4})[./-](\d{1,2})[./-](\d{1,2})/)
+	if (dateMatch) {
+		const rawYear = parseInt(dateMatch[1], 10)
+		const month = parseInt(dateMatch[2], 10)
+		const day = parseInt(dateMatch[3], 10)
+		const year = rawYear < 100 ? 2000 + rawYear : rawYear >= 1000 ? rawYear : currentYear
 
-// 연도 처리: 2자리는 2000년대로, 4자리는 그대로, 그 외는 현재 연도
-const year = rawYear < 100 ? 2000 + rawYear : rawYear >= 1000 ? rawYear : currentYear
+		return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+	}
 
-const paddedMonth = ``.padStart(2, '0')
-const paddedDay = ``.padStart(2, '0')
-return `--`
-}
+	const monthDayMatch = trimmed.match(/(\d{1,2})\s*(?:[./-]|월)\s*(\d{1,2})/)
+	if (monthDayMatch) {
+		const month = parseInt(monthDayMatch[1], 10)
+		const day = parseInt(monthDayMatch[2], 10)
+		const year = resolveYearByProximity(month, today)
 
-// 월/일만 있는 경우 - 현재 연도 사용
-const monthDayMatch = trimmed.match(/(\d{1,2})\s*(?:[./-]|월)\s*(\d{1,2})/)
-if (monthDayMatch) {
-const month = parseInt(monthDayMatch[1], 10)
-const day = parseInt(monthDayMatch[2], 10)
-const paddedMonth = ``.padStart(2, '0')
-const paddedDay = ``.padStart(2, '0')
-return `--`
-}
+		return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+	}
 
-// 후속 처리: 구분자를 통일해 두지만, 패턴이 없으면 그대로 반환
-return trimmed
-.replace(/^[''`]+/, '')
-.replace(/년|\//g, '-')
-.replace(/월/g, '-')
-.replace(/일/g, '')
-.replace(/\.+/g, (match) => '-'.repeat(match.length))
-.replace(/\s+/g, '-')
-.replace(/--+/g, '-')
-.replace(/-$/g, '')
+	return trimmed
+		.replace(/^['’`]+/, '')
+		.replace(/년|\//g, '-')
+		.replace(/월/g, '-')
+		.replace(/일/g, '')
+		.replace(/\.+/g, (match) => '-'.repeat(match.length))
+		.replace(/\s+/g, '-')
+		.replace(/--+/g, '-')
+		.replace(/-$/g, '')
 }
 
 function normalizeTime(value?: string): string {
