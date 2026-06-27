@@ -81,7 +81,6 @@ jobs:
 
       - name: Recover production containers
         if: steps.public_health.outcome == 'failure' && github.event.inputs.recovery_enabled != 'false'
-        continue-on-error: true
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SSH_HOST }}
