@@ -1,0 +1,185 @@
+name: Uptime Monitor
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: "Production base URL"
+        required: false
+        default: "https://moingfans.com"
+      recovery_enabled:
+        description: "Attempt SSH container recovery when health checks fail"
+        required: false
+        default: "true"
+
+concurrency:
+  group: uptime-monitor
+  cancel-in-progress: true
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+
+    steps:
+      - name: Check public health
+        id: public_health
+        continue-on-error: true
+        env:
+          BASE_URL: ${{ github.event.inputs.base_url || vars.UPTIME_MONITOR_BASE_URL || 'https://moingfans.com' }}
+          EXPECT_CLIP_AUTO_COLLECT_ENABLED: ${{ vars.EXPECT_CLIP_AUTO_COLLECT_ENABLED || 'false' }}
+          COLLECT_API_KEY: ${{ secrets.COLLECT_API_KEY || secrets.CLIP_REFRESH_API_KEY }}
+        run: |
+          set -euo pipefail
+
+          BASE_URL="${BASE_URL%/}"
+          headers=(-H "Cache-Control: no-cache")
+          if [ -n "${COLLECT_API_KEY:-}" ]; then
+            headers+=(-H "Authorization: Bearer ${COLLECT_API_KEY}")
+          fi
+
+          check_url() {
+            local url="$1"
+            echo "Checking ${url}"
+            curl -fsS --connect-timeout 10 --max-time 20 --retry 1 --retry-delay 2 \
+              "${headers[@]}" \
+              "${url}" > /tmp/health-response
+          }
+
+          check_url "${BASE_URL}/api/health?monitor=${GITHUB_RUN_ID}"
+          python - <<'PY'
+          import json
+          with open("/tmp/health-response", encoding="utf-8") as response:
+              data = json.load(response)
+          if data.get("ok") is not True:
+              raise SystemExit(f"frontend health returned unexpected payload: {data}")
+          PY
+
+          check_url "${BASE_URL}/api/clips/automation?monitor=${GITHUB_RUN_ID}"
+          python - <<'PY'
+          import json
+          import os
+          expected = os.environ.get("EXPECT_CLIP_AUTO_COLLECT_ENABLED", "false").lower() == "true"
+          with open("/tmp/health-response", encoding="utf-8") as response:
+              data = json.load(response)
+          actual = bool(data.get("enabled"))
+          running = bool(data.get("running"))
+          if actual != expected:
+              raise SystemExit(
+                  f"clip automation enabled={actual}, expected={expected}; payload={data}"
+              )
+          if actual is False and running is True:
+              raise SystemExit(f"clip automation scheduler is running while disabled: {data}")
+          PY
+
+          check_url "${BASE_URL}/"
+
+      - name: Recover production containers
+        if: steps.public_health.outcome == 'failure' && github.event.inputs.recovery_enabled != 'false'
+        continue-on-error: true
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          password: ${{ secrets.DESK_SSH_PASSWORD || secrets.SSH_PASSWORD }}
+          port: ${{ secrets.SSH_PORT }}
+          timeout: 60s
+          command_timeout: 8m
+          script_stop: false
+          script: |
+            set -euo pipefail
+            cd ${{ secrets.DEPLOY_PATH }}
+
+            COMPOSE_FILE="${DEPLOY_COMPOSE_FILE:-docker-compose.server.yml}"
+            if [ ! -f "$COMPOSE_FILE" ]; then
+              if [ "$COMPOSE_FILE" = "docker-compose.server.yml" ] && [ -f "docker-compose.prod.yml" ]; then
+                COMPOSE_FILE="docker-compose.prod.yml"
+              else
+                echo "Compose file not found: $COMPOSE_FILE" >&2
+                exit 1
+              fi
+            fi
+
+            HEALTHCHECK_URL="${DEPLOY_HEALTHCHECK_URL:-http://localhost:3000}"
+            if [ "$COMPOSE_FILE" = "docker-compose.server.yml" ] && [ -z "${DEPLOY_HEALTHCHECK_URL:-}" ]; then
+              HEALTHCHECK_URL="http://127.0.0.1:13000"
+            fi
+
+            compose() {
+              docker compose -f "$COMPOSE_FILE" "$@"
+            }
+
+            upsert_env_var() {
+              local name="$1"
+              local value="$2"
+              touch .env
+              grep -v "^${name}=" .env > .env.next || true
+              printf '%s=%s\n' "${name}" "${value}" >> .env.next
+              mv .env.next .env
+            }
+
+            echo "Disabling in-process clip automation before recovery."
+            upsert_env_var CLIP_AUTO_COLLECT_ENABLED false
+            upsert_env_var CLIP_AUTO_COLLECT_RUN_ON_STARTUP false
+            upsert_env_var CLIP_AUTO_COLLECT_MAX_CLIPS 1
+            upsert_env_var MAX_CLIPS_PER_COLLECTION 2
+            upsert_env_var COLLECTION_TIMEOUT 180
+
+            compose ps || true
+            compose logs --tail 120 backend frontend || true
+
+            echo "Stopping possible browser leftovers inside backend."
+            compose exec -T backend pkill -f 'chromium|chromedriver|Xvfb' || true
+
+            echo "Restarting app containers."
+            compose restart backend frontend || compose up -d --force-recreate backend frontend
+
+            healthy=false
+            for i in $(seq 1 30); do
+              frontend_ok=false
+              backend_ok=false
+
+              if curl -fsS --max-time 10 "${HEALTHCHECK_URL}/api/health" >/dev/null 2>&1; then
+                frontend_ok=true
+              fi
+
+              if compose exec -T backend curl -fsS --max-time 10 http://localhost:8000/api/health >/dev/null 2>&1; then
+                backend_ok=true
+              fi
+
+              echo "Recovery check ${i}/30 frontend=${frontend_ok} backend=${backend_ok}"
+              if [ "$frontend_ok" = true ] && [ "$backend_ok" = true ]; then
+                healthy=true
+                break
+              fi
+              sleep 4
+            done
+
+            if [ "$healthy" != true ]; then
+              echo "Container restart did not recover service; forcing recreation."
+              compose up -d --force-recreate --remove-orphans backend frontend
+              sleep 20
+            fi
+
+            compose ps
+
+      - name: Verify after recovery
+        if: always()
+        env:
+          BASE_URL: ${{ github.event.inputs.base_url || vars.UPTIME_MONITOR_BASE_URL || 'https://moingfans.com' }}
+        run: |
+          set -euo pipefail
+
+          BASE_URL="${BASE_URL%/}"
+          curl -fsS --connect-timeout 10 --max-time 20 --retry 2 --retry-delay 5 \
+            -H "Cache-Control: no-cache" \
+            "${BASE_URL}/api/health?monitor=${GITHUB_RUN_ID}"
+          echo
+          curl -fsS --connect-timeout 10 --max-time 20 --retry 2 --retry-delay 5 \
+            -H "Cache-Control: no-cache" \
+            "${BASE_URL}/"

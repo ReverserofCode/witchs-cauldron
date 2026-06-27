@@ -10,7 +10,7 @@ on:
       max_clips:
         description: "Maximum clips to collect"
         required: false
-        default: "2"
+        default: "1"
       filter_type:
         description: "Chzzk clip filter type"
         required: false
@@ -39,7 +39,7 @@ jobs:
         env:
           BASE_URL: ${{ inputs.base_url || vars.CLIP_REFRESH_BASE_URL || 'https://moingfans.com' }}
           COLLECT_API_KEY: ${{ secrets.COLLECT_API_KEY || secrets.CLIP_REFRESH_API_KEY }}
-          MAX_CLIPS: ${{ inputs.max_clips || '2' }}
+          MAX_CLIPS: ${{ inputs.max_clips || '1' }}
           FILTER_TYPE: ${{ inputs.filter_type || 'ALL' }}
           ORDER_TYPE: ${{ inputs.order_type || 'RECENT' }}
         run: |
@@ -63,7 +63,7 @@ jobs:
               return max(lower, min(parsed, upper))
 
           print(json.dumps({
-              "max_clips": clamp_int(os.getenv("MAX_CLIPS"), 2, 1, 10),
+              "max_clips": clamp_int(os.getenv("MAX_CLIPS"), 1, 1, 2),
               "filter_type": os.getenv("FILTER_TYPE") or "ALL",
               "order_type": os.getenv("ORDER_TYPE") or "RECENT",
           }))

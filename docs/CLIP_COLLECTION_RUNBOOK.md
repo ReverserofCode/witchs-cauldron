@@ -9,12 +9,12 @@
 - Frontend(Next.js)는 같은 볼륨을 `/app/public/clips`로 읽는다.
 - `ClipsSection`은 최신 파일 기준 최대 10개만 렌더링한다.
 - `/clips/[...filename]` 라우트가 파일을 직접 스트리밍하며 `Range` 요청을 지원한다.
-- 운영 compose는 백엔드 내부 APScheduler로 자동 수집을 실행한다.
+- 운영 compose는 서버 안정성을 위해 백엔드 내부 APScheduler를 기본 비활성화한다.
 
 ## 정상 동작 기준
 
 - `POST /api/clips/collect`가 job id를 반환한다.
-- `GET /api/clips/jobs/{job_id}`가 `completed`와 `clips_collected <= 10`을 반환한다.
+- `GET /api/clips/jobs/{job_id}`가 `completed`와 `clips_collected <= 2`를 반환한다.
 - 운영 페이지 HTML에 `/clips/*.mp4?v=<mtime>`가 10개 이하로 포함된다.
 - 각 클립 URL이 `206 Partial Content`, `Content-Type: video/mp4`, `Accept-Ranges: bytes`를 반환한다.
 - 파일 첫 32바이트에 `ftyp` 문자열이 포함된다.
@@ -22,19 +22,21 @@
 
 ## 자동 갱신
 
-자동 갱신은 운영 서버 내부 scheduler 하나만 사용한다.
+자동 갱신은 서버 안정성을 위해 기본 비활성화한다.
 
-- Backend 내부 APScheduler: 컨테이너가 실행 중인 동안 주기적으로 수집한다.
+- Backend 내부 APScheduler: 기본 비활성화. 명시적으로 켤 때만 주기 수집한다.
 - GitHub Actions `Clip Refresh`: 정기 실행하지 않고, 수동 복구/검증 시에만 운영 API를 호출한다.
 
 운영 compose(`docker-compose.prod.yml`, `docker-compose.server.yml`) 기본값:
 
 ```bash
-CLIP_AUTO_COLLECT_ENABLED=true
+MAX_CLIPS_PER_COLLECTION=2
+COLLECTION_TIMEOUT=180
+CLIP_AUTO_COLLECT_ENABLED=false
 CLIP_AUTO_COLLECT_INTERVAL_MINUTES=720
 CLIP_AUTO_COLLECT_RUN_ON_STARTUP=false
 CLIP_AUTO_COLLECT_STARTUP_DELAY_SECONDS=60
-CLIP_AUTO_COLLECT_MAX_CLIPS=2
+CLIP_AUTO_COLLECT_MAX_CLIPS=1
 CLIP_AUTO_COLLECT_FILTER_TYPE=ALL
 CLIP_AUTO_COLLECT_ORDER_TYPE=RECENT
 CLIP_AUTO_COLLECT_FAILURE_COOLDOWN_MINUTES=720
@@ -47,13 +49,14 @@ GitHub Actions 수동 실행:
 - 기본 대상: `https://moingfans.com`
 - 수동 실행: GitHub Actions에서 `workflow_dispatch`
 
-선택 인증:
+운영 인증:
 
 ```bash
 COLLECT_API_KEY=<random-long-token>
+CLIP_COLLECTION_REQUIRES_API_KEY=true
 ```
 
-`COLLECT_API_KEY`를 운영 `.env`에 설정하면 `/api/clips/collect`, `/api/clips/jobs/*`,
+운영에서는 `COLLECT_API_KEY`가 없으면 수집 API가 거부된다. `/api/clips/collect`, `/api/clips/jobs/*`,
 `/api/clips/automation` 호출에 같은 값을 `Authorization: Bearer <token>` 또는
 `x-api-key: <token>`으로 보내야 한다. GitHub Actions에는 동일한 값을
 `COLLECT_API_KEY` 또는 `CLIP_REFRESH_API_KEY` secret으로 등록한다.
@@ -68,9 +71,9 @@ curl https://moingfans.com/api/clips/automation
 
 확인 항목:
 
-- `enabled=true`, `running=true`
-- `next_run_at`가 존재
-- `max_clips=2`, `order_type=RECENT`
+- `enabled=false`, `running=false`
+- `next_run_at`는 `null`
+- 자동 수집을 명시적으로 켠 경우에도 `max_clips<=1`, `order_type=RECENT`
 - 최근 실패 후에는 `failure_cooldown_until` 동안 자동 수집을 건너뛴다.
 - `last_job_id`가 있으면 `GET /api/clips/jobs/{last_job_id}`로 완료 여부 확인
 - 수동 수집이 실행 중이면 예약 실행은 `last_skip_reason=collection job already running`으로 스킵된다.
@@ -80,7 +83,8 @@ curl https://moingfans.com/api/clips/automation
 ```bash
 curl -X POST https://moingfans.com/api/clips/collect \
   -H "Content-Type: application/json" \
-  -d '{"max_clips":10,"filter_type":"ALL","order_type":"RECENT"}'
+  -H "Authorization: Bearer <COLLECT_API_KEY>" \
+  -d '{"max_clips":1,"filter_type":"ALL","order_type":"RECENT"}'
 ```
 
 응답 예시:
@@ -88,8 +92,8 @@ curl -X POST https://moingfans.com/api/clips/collect \
 ```json
 {
   "job_id": "2738ea2d",
-  "message": "Collection started for 10 clips",
-  "estimated_time": 350
+  "message": "Collection started for 1 clips",
+  "estimated_time": 35
 }
 ```
 
@@ -105,10 +109,10 @@ curl https://moingfans.com/api/clips/jobs/<job_id>
 {
   "status": "completed",
   "progress": 100,
-  "message": "Completed: 10 clips collected, 0 skipped(existing)",
-  "clips_collected": 10,
+  "message": "Completed: 1 clips collected, 0 skipped(existing)",
+  "clips_collected": 1,
   "clips_skipped": 0,
-  "total_clips": 10,
+  "total_clips": 1,
   "error": null
 }
 ```

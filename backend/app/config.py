@@ -30,15 +30,15 @@ class Settings(BaseSettings):
     selenium_script_timeout: int = Field(default=30, ge=5)
 
     # Collection settings
-    max_clips_per_collection: int = 10
-    collection_timeout: int = 300  # 5 minutes
+    max_clips_per_collection: int = 2
+    collection_timeout: int = 180
 
     # Scheduled clip collection
     clip_auto_collect_enabled: bool = False
     clip_auto_collect_interval_minutes: int = Field(default=720, ge=5)
     clip_auto_collect_run_on_startup: bool = False
     clip_auto_collect_startup_delay_seconds: int = Field(default=60, ge=0)
-    clip_auto_collect_max_clips: int = Field(default=2, ge=1, le=10)
+    clip_auto_collect_max_clips: int = Field(default=1, ge=1, le=2)
     clip_auto_collect_filter_type: str = "ALL"
     clip_auto_collect_order_type: str = "RECENT"
     clip_auto_collect_failure_cooldown_minutes: int = Field(default=720, ge=0)
