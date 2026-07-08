@@ -128,6 +128,35 @@ function analyticsHealthFixture() {
   };
 }
 
+async function findClippedAdminSummaryText(page) {
+  return page.evaluate(() => {
+    const selectors = [
+      '[aria-label="Analytics 운영 상태"] dd',
+      '[aria-label="핵심 지표"] [data-fit-text]',
+      '[aria-label="진단 지표"] [data-fit-text]',
+    ];
+
+    return selectors.flatMap((selector) =>
+      Array.from(document.querySelectorAll(selector))
+        .map((element) => {
+          const rect = element.getBoundingClientRect();
+          const style = window.getComputedStyle(element);
+          return {
+            selector,
+            text: element.textContent?.trim() || '',
+            clientWidth: Math.round(element.clientWidth),
+            scrollWidth: Math.round(element.scrollWidth),
+            width: Math.round(rect.width),
+            height: Math.round(rect.height),
+            overflow: style.overflow,
+            textOverflow: style.textOverflow,
+          };
+        })
+        .filter((item) => item.text && item.width > 0 && item.scrollWidth > item.clientWidth + 1)
+    );
+  });
+}
+
 async function main() {
   const browser = await chromium.launch({
     headless: true,
@@ -181,6 +210,8 @@ async function main() {
   await adminPage.getByText('Asia/Seoul · visitor_key').waitFor();
   await adminPage.getByText('v2').waitFor();
   await adminPage.locator('p', { hasText: /^방문자$/ }).first().waitFor();
+  const clippedDesktopText = await findClippedAdminSummaryText(adminPage);
+  assert.deepEqual(clippedDesktopText, [], `admin summary text should not be clipped on desktop: ${JSON.stringify(clippedDesktopText, null, 2)}`);
   await adminPage.getByRole('button', { name: '14일' }).click();
   await adminPage.getByRole('button', { name: '오늘' }).click();
   await adminPage.getByRole('button', { name: '새로고침' }).click();
@@ -196,6 +227,8 @@ async function main() {
     mobileWidth.scrollWidth <= mobileWidth.clientWidth,
     `mobile layout should not overflow horizontally: ${JSON.stringify(mobileWidth)}`
   );
+  const clippedMobileText = await findClippedAdminSummaryText(adminPage);
+  assert.deepEqual(clippedMobileText, [], `admin summary text should not be clipped on mobile: ${JSON.stringify(clippedMobileText, null, 2)}`);
 
   assert.ok(requests.length >= 3, `expected at least 3 analytics fetches, got ${requests.length}`);
   assert.ok(requests.some((url) => url.includes('from=') && url.includes('to=')), 'analytics requests should include date filters');

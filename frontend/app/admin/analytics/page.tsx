@@ -772,11 +772,13 @@ function AdminStatusStrip({
             </p>
           </div>
         </div>
-        <dl className="grid gap-2 text-xs sm:grid-cols-3 lg:min-w-[720px] lg:grid-cols-7">
+        <dl className="grid w-full min-w-0 flex-1 grid-cols-[repeat(auto-fit,minmax(8.5rem,1fr))] gap-2 text-xs lg:max-w-[880px]">
           {facts.map((item) => (
-            <div key={item.label} className="rounded-xl border border-white/70 bg-white/72 px-3 py-2">
+            <div key={item.label} className="min-w-0 rounded-xl border border-white/70 bg-white/72 px-3 py-2">
               <dt className="text-[11px] font-medium text-slate-500">{item.label}</dt>
-              <dd className="mt-0.5 truncate font-bold text-slate-900" title={item.value}>{item.value}</dd>
+              <dd className="mt-0.5 min-w-0 break-keep text-[13px] font-bold leading-5 text-slate-900" title={item.value}>
+                {item.value}
+              </dd>
             </div>
           ))}
         </dl>
@@ -791,21 +793,21 @@ function KpiGroup({ title, items, compact = false }: { title: string; items: Sta
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-sm font-black text-slate-950">{title}</h2>
       </div>
-      <div className={`grid gap-3 ${compact ? "grid-cols-2 lg:grid-cols-4" : "grid-cols-2 lg:grid-cols-4"}`}>
+      <div className={`grid gap-3 ${compact ? "grid-cols-[repeat(auto-fit,minmax(9rem,1fr))]" : "grid-cols-[repeat(auto-fit,minmax(10rem,1fr))]"}`}>
         {items.map((stat) => (
-          <div key={stat.label} className="rounded-xl border border-slate-200/80 bg-white px-3 py-3 shadow-sm">
-            <div className="flex items-center gap-3">
-              <div className="rounded-full p-2" style={{ backgroundColor: `${stat.color}15` }}>
+          <div key={stat.label} className="min-w-0 rounded-xl border border-slate-200/80 bg-white px-3 py-3 shadow-sm">
+            <div className="flex min-h-[6.75rem] flex-col items-start gap-3 sm:min-h-[7.25rem] sm:flex-row sm:items-center">
+              <div className="shrink-0 rounded-full p-2" style={{ backgroundColor: `${stat.color}15` }}>
                 <svg className="h-5 w-5" style={{ color: stat.color }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
                   {stat.icon}
                 </svg>
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-xs font-medium text-slate-500">{stat.label}</p>
-                <p className="mt-1 truncate text-xl font-black" style={{ color: stat.color }}>
+                <p data-fit-text className="break-keep text-xs font-semibold leading-5 text-slate-500">{stat.label}</p>
+                <p data-fit-text className="mt-1 whitespace-nowrap text-[clamp(1.25rem,2vw,1.75rem)] font-black leading-tight" style={{ color: stat.color }}>
                   {typeof stat.value === "number" ? stat.value.toLocaleString() : stat.value}
                 </p>
-                {stat.description && <p className="mt-0.5 truncate text-[11px] text-slate-500">{stat.description}</p>}
+                {stat.description && <p data-fit-text className="mt-1 break-keep text-[11px] leading-4 text-slate-500">{stat.description}</p>}
               </div>
             </div>
           </div>
