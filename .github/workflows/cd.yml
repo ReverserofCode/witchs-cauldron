@@ -201,3 +201,43 @@ jobs:
             upsert_env_var CLIP_AUTO_COLLECT_FAILURE_COOLDOWN_MINUTES "${CLIP_AUTO_COLLECT_FAILURE_COOLDOWN_MINUTES:-720}"
             mv .env.tmp .env
             ./frontend/deploy.sh --clean
+
+      - name: Verify analytics stats endpoint
+        env:
+          ADMIN_BASIC_AUTH_USERNAME: ${{ secrets.ADMIN_BASIC_AUTH_USERNAME }}
+          ADMIN_BASIC_AUTH_PASSWORD: ${{ secrets.ADMIN_BASIC_AUTH_PASSWORD }}
+          BASE_URL: ${{ vars.UPTIME_MONITOR_BASE_URL || 'https://moingfans.com' }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${ADMIN_BASIC_AUTH_USERNAME:-}" ] || [ -z "${ADMIN_BASIC_AUTH_PASSWORD:-}" ]; then
+            echo "Skipping analytics stats verification because admin Basic Auth secrets are not configured."
+            exit 0
+          fi
+
+          BASE_URL="${BASE_URL%/}"
+          TODAY_KST="$(TZ=Asia/Seoul date +%F)"
+          RESPONSE_FILE="$(mktemp)"
+
+          curl -fsS --connect-timeout 10 --max-time 30 --retry 2 --retry-delay 3 \
+            --user "${ADMIN_BASIC_AUTH_USERNAME}:${ADMIN_BASIC_AUTH_PASSWORD}" \
+            "${BASE_URL}/api/analytics/stats?from=${TODAY_KST}&to=${TODAY_KST}" \
+            > "${RESPONSE_FILE}"
+
+          python - "${RESPONSE_FILE}" "${TODAY_KST}" <<'PY'
+          import json
+          import sys
+
+          path, today = sys.argv[1], sys.argv[2]
+          with open(path, encoding="utf-8") as response:
+              data = json.load(response)
+
+          assert data["range"]["from"] == today, data.get("range")
+          assert data["range"]["to"] == today, data.get("range")
+          assert data["range"]["timeZone"] == "Asia/Seoul", data.get("range")
+          assert data["meta"]["visitorBasis"] == "visitor_key", data.get("meta")
+          assert isinstance(data.get("topPaths"), list), "topPaths must be a list"
+          assert isinstance(data.get("topReferrers"), list), "topReferrers must be a list"
+          assert isinstance(data.get("topMenuClicks"), list), "topMenuClicks must be a list"
+          print("analytics stats verification ok")
+          PY

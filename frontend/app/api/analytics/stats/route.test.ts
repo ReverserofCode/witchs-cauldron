@@ -32,4 +32,39 @@ describe("GET /api/analytics/stats", () => {
     expect(getPool).not.toHaveBeenCalled();
     expect(query).not.toHaveBeenCalled();
   });
+
+  it("queries aggregate rows by canonical analytics dimensions", async () => {
+    query.mockResolvedValueOnce({
+      rows: [
+        {
+          totals: {},
+          retention: {},
+          daily: [],
+          section_views: [],
+          top_menu_clicks: [],
+          top_paths: [],
+          top_referrers: [],
+          scroll_depth: [],
+          dwell_time: {},
+          device_categories: [],
+          event_types: [],
+          top_interactions: [],
+        },
+      ],
+    });
+    const { GET } = await import("./route");
+    const request = new NextRequest("http://localhost/api/analytics/stats?from=2026-07-08&to=2026-07-08");
+
+    const response = await GET(request);
+
+    expect(response.status).toBe(200);
+    const sql = String(query.mock.calls[0]?.[0] ?? "");
+    expect(sql).toContain("canonical_path");
+    expect(sql).toContain("canonical_referrer_host");
+    expect(sql).toContain("canonical_element_id");
+    expect(sql).toContain("GROUP BY canonical_path");
+    expect(sql).toContain("GROUP BY canonical_referrer_host");
+    expect(sql).toContain("GROUP BY canonical_element_id");
+    expect(sql).not.toContain("GROUP BY element_id, element_label");
+  });
 });

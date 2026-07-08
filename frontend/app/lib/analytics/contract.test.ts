@@ -4,6 +4,9 @@ import {
   ANALYTICS_TIME_ZONE,
   createIpHash,
   createVisitorKey,
+  normalizeAnalyticsPath,
+  normalizeDimensionKey,
+  normalizeElementLabel,
   normalizeReferrerHost,
   parseAnalyticsDateRange,
   resolveAnalyticsHashSecret,
@@ -47,11 +50,42 @@ describe("analytics contract", () => {
   it("normalizes referrers to one host before visitor counting", () => {
     expect(normalizeReferrerHost("https://Cafe.Naver.com/moing/a?x=1")).toBe("cafe.naver.com");
     expect(normalizeReferrerHost("https://cafe.naver.com/moing/b")).toBe("cafe.naver.com");
+    expect(normalizeReferrerHost("https://www.Bing.com/search?q=moing")).toBe("bing.com");
+    expect(normalizeReferrerHost("https://m.cafe.naver.com/ca-fe/web/cafes/moing")).toBe("cafe.naver.com");
     expect(normalizeReferrerHost("android-app://com.google.android.youtube")).toBe(
       "android-app://com.google.android.youtube"
     );
     expect(normalizeReferrerHost("")).toBe("(direct)");
     expect(normalizeReferrerHost("not-a-url")).toBe("(direct)");
+  });
+
+  it("canonicalizes paths, element ids, labels, and locations before storage", () => {
+    expect(normalizeAnalyticsPath("https://moingfans.com/clips/?utm_source=x#clip-1")).toBe("/clips");
+    expect(normalizeAnalyticsPath("/clips/?utm_source=x#clip-1")).toBe("/clips");
+    expect(normalizeDimensionKey(" https://WWW.YouTube.com/@Moing/videos?view=0#shorts ")).toBe(
+      "https://youtube.com/@Moing/videos"
+    );
+    expect(normalizeDimensionKey("  Header   Menu  ")).toBe("header menu");
+    expect(normalizeElementLabel("  공식\n  채널\t바로가기  ")).toBe("공식 채널 바로가기");
+
+    const valid = validateAnalyticsPayload({
+      type: "menu_click",
+      path: "https://moingfans.com/?utm_source=x#hero",
+      element: {
+        type: "A",
+        id: " https://www.youtube.com/@Moing/videos?view=0#shorts ",
+        label: "  공식\n  채널\t바로가기  ",
+      },
+      metadata: { location: " Header " },
+    });
+
+    expect(valid.ok).toBe(true);
+    if (!valid.ok) return;
+    expect(valid.path).toBe("/");
+    expect(valid.elementType).toBe("a");
+    expect(valid.elementId).toBe("https://youtube.com/@Moing/videos");
+    expect(valid.elementLabel).toBe("공식 채널 바로가기");
+    expect(valid.metadata).toEqual({ location: "header" });
   });
 
   it("validates event types and event-specific metadata", () => {

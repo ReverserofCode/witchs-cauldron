@@ -36,7 +36,7 @@ const STATS_SQL = `
   WITH params AS (
     SELECT $1::date AS from_date, $2::date AS to_date, $3::int AS retention_days
   ),
-  base AS (
+  event_base AS (
     SELECT
       events.id,
       events.event_type,
@@ -68,6 +68,57 @@ const STATS_SQL = `
     FROM analytics_events events, params
     WHERE COALESCE(events.event_date_kst, (events.created_at AT TIME ZONE 'Asia/Seoul')::date) >= params.from_date
       AND COALESCE(events.event_date_kst, (events.created_at AT TIME ZONE 'Asia/Seoul')::date) <= params.to_date
+  ),
+  base AS (
+    SELECT
+      event_base.*,
+      CASE
+        WHEN path IS NULL OR btrim(path) = '' THEN '(unknown)'
+        ELSE COALESCE(
+          NULLIF(
+            regexp_replace(
+              CASE
+                WHEN lower(btrim(path)) LIKE 'http://%' OR lower(btrim(path)) LIKE 'https://%'
+                  THEN regexp_replace(lower(split_part(split_part(btrim(path), '#', 1), '?', 1)), '^https?://[^/]+', '')
+                ELSE lower(split_part(split_part(btrim(path), '#', 1), '?', 1))
+              END,
+              '/+$',
+              ''
+            ),
+            ''
+          ),
+          '/'
+        )
+      END AS canonical_path,
+      CASE
+        WHEN referrer_host IS NULL OR btrim(referrer_host) = '' THEN '(direct)'
+        WHEN referrer_host = '(direct)' THEN '(direct)'
+        WHEN referrer_host LIKE 'android-app://%' THEN lower(referrer_host)
+        ELSE regexp_replace(regexp_replace(lower(referrer_host), '\\.$', ''), '^(www|m|mobile)\\.', '')
+      END AS canonical_referrer_host,
+      CASE
+        WHEN element_id IS NULL OR btrim(element_id) = '' THEN '(unknown)'
+        WHEN lower(btrim(element_id)) LIKE 'http://%' OR lower(btrim(element_id)) LIKE 'https://%'
+          THEN regexp_replace(
+            regexp_replace(lower(split_part(split_part(btrim(element_id), '#', 1), '?', 1)), '://(www|m|mobile)\\.', '://'),
+            '/+$',
+            ''
+          )
+        WHEN btrim(element_id) LIKE '/%'
+          THEN COALESCE(NULLIF(regexp_replace(lower(split_part(split_part(btrim(element_id), '#', 1), '?', 1)), '/+$', ''), ''), '/')
+        WHEN btrim(element_id) LIKE '#%'
+          THEN '#' || lower(regexp_replace(btrim(substring(element_id from 2)), '[[:space:]]+', ' ', 'g'))
+        ELSE lower(regexp_replace(btrim(element_id), '[[:space:]]+', ' ', 'g'))
+      END AS canonical_element_id,
+      COALESCE(
+        NULLIF(regexp_replace(btrim(COALESCE(element_label, '')), '[[:space:]]+', ' ', 'g'), ''),
+        NULLIF(btrim(COALESCE(element_id, '')), ''),
+        '(unknown)'
+      ) AS canonical_element_label,
+      lower(COALESCE(NULLIF(regexp_replace(btrim(COALESCE(element_type, '')), '[[:space:]]+', ' ', 'g'), ''), 'unknown')) AS canonical_element_type,
+      lower(COALESCE(NULLIF(regexp_replace(btrim(COALESCE(metadata->>'location', '')), '[[:space:]]+', ' ', 'g'), ''), 'unknown')) AS canonical_location,
+      lower(COALESCE(NULLIF(metadata->>'device_type', ''), NULLIF(metadata->>'device_category', ''), 'unknown')) AS canonical_device_category
+    FROM event_base
   ),
   range_totals AS (
     SELECT
@@ -140,48 +191,48 @@ const STATS_SQL = `
   ),
   section_view_rows AS (
     SELECT
-      COALESCE(element_id, '(unknown)') AS element_id,
-      element_label,
+      canonical_element_id AS element_id,
+      COALESCE(MIN(NULLIF(canonical_element_label, '(unknown)')), '(unknown)') AS element_label,
       COUNT(*) AS views,
       COUNT(DISTINCT visitor_key) AS visitors
     FROM base
     WHERE event_type = 'section_view'
-    GROUP BY element_id, element_label
+    GROUP BY canonical_element_id
     ORDER BY views DESC
   ),
   menu_rows AS (
     SELECT
-      COALESCE(element_id, '(unknown)') AS element_id,
-      element_label,
-      COALESCE(element_type, 'link') AS element_type,
-      COALESCE(metadata->>'location', 'unknown') AS location,
+      canonical_element_id AS element_id,
+      COALESCE(MIN(NULLIF(canonical_element_label, '(unknown)')), '(unknown)') AS element_label,
+      canonical_element_type AS element_type,
+      canonical_location AS location,
       COUNT(*) AS clicks,
       COUNT(DISTINCT visitor_key) AS visitors
     FROM base
     WHERE event_type = 'menu_click'
-    GROUP BY element_id, element_label, element_type, location
+    GROUP BY canonical_element_id, canonical_element_type, canonical_location
     ORDER BY clicks DESC
     LIMIT 10
   ),
   path_rows AS (
     SELECT
-      COALESCE(path, '(unknown)') AS path,
+      canonical_path AS path,
       COUNT(*) AS views,
       COUNT(DISTINCT visitor_key) AS visitors
     FROM base
     WHERE event_type = 'pageview'
-    GROUP BY path
+    GROUP BY canonical_path
     ORDER BY views DESC
     LIMIT 10
   ),
   referrer_rows AS (
     SELECT
-      referrer_host AS referrer,
+      canonical_referrer_host AS referrer,
       COUNT(*) AS visits,
       COUNT(DISTINCT visitor_key) AS visitors
     FROM base
     WHERE event_type = 'pageview'
-    GROUP BY referrer_host
+    GROUP BY canonical_referrer_host
     ORDER BY visits DESC
     LIMIT 10
   ),
@@ -221,13 +272,13 @@ const STATS_SQL = `
   ),
   device_rows AS (
     SELECT
-      COALESCE(metadata->>'device_type', metadata->>'device_category', 'unknown') AS category,
+      canonical_device_category AS category,
       COUNT(*) AS events,
       COUNT(*) FILTER (WHERE event_type = 'pageview') AS pageviews,
       COUNT(DISTINCT visitor_key) FILTER (WHERE event_type = 'pageview') AS visitors,
       COUNT(*) FILTER (WHERE event_type = 'menu_click') AS menu_clicks
     FROM base
-    GROUP BY category
+    GROUP BY canonical_device_category
     ORDER BY visitors DESC, events DESC
   ),
   event_type_rows AS (
@@ -242,15 +293,15 @@ const STATS_SQL = `
   interaction_rows AS (
     SELECT
       event_type,
-      COALESCE(element_type, 'unknown') AS element_type,
-      COALESCE(element_id, '(unknown)') AS element_id,
-      element_label,
-      COALESCE(metadata->>'location', 'unknown') AS location,
+      canonical_element_type AS element_type,
+      canonical_element_id AS element_id,
+      COALESCE(MIN(NULLIF(canonical_element_label, '(unknown)')), '(unknown)') AS element_label,
+      canonical_location AS location,
       COUNT(*) AS events,
       COUNT(DISTINCT visitor_key) AS visitors
     FROM base
     WHERE event_type IN ('menu_click', 'content_click')
-    GROUP BY event_type, element_type, element_id, element_label, location
+    GROUP BY event_type, canonical_element_type, canonical_element_id, canonical_location
     ORDER BY events DESC
     LIMIT 12
   )

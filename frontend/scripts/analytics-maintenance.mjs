@@ -12,6 +12,7 @@ const BATCH_SIZE = Number(process.env.ANALYTICS_MAINTENANCE_BATCH_SIZE || 500);
 const RETENTION_MONTHS = Number(process.env.ANALYTICS_RETENTION_MONTHS || 13);
 const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
 const ALLOWED_EVENT_TYPES = ["pageview", "menu_click", "content_click", "section_view", "scroll_depth", "page_exit"];
+const COMMON_HOST_PREFIX_RE = /^(?:www|m|mobile)\./;
 
 const migrationStatements = [
   `
@@ -71,13 +72,17 @@ function kstDate(date) {
   return new Date(new Date(date).getTime() + KST_OFFSET_MS).toISOString().slice(0, 10);
 }
 
+function normalizeHost(host) {
+  return host.toLowerCase().replace(/\.$/, "").replace(COMMON_HOST_PREFIX_RE, "");
+}
+
 function normalizeReferrerHost(referrer) {
   if (!referrer || typeof referrer !== "string" || !referrer.includes("://")) return "(direct)";
   try {
     const parsed = new URL(referrer);
     if (parsed.protocol === "android-app:") return `android-app://${parsed.hostname.toLowerCase()}`;
     if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return "(direct)";
-    return parsed.hostname.toLowerCase() || "(direct)";
+    return normalizeHost(parsed.hostname) || "(direct)";
   } catch {
     return "(direct)";
   }
@@ -307,7 +312,12 @@ async function profile(pool) {
     pool.query(
       `
         SELECT
-          COALESCE(NULLIF(referrer_host, ''), '(missing)') AS referrer_host,
+          CASE
+            WHEN referrer_host IS NULL OR referrer_host = '' THEN '(missing)'
+            WHEN referrer_host = '(direct)' THEN '(direct)'
+            WHEN referrer_host LIKE 'android-app://%' THEN lower(referrer_host)
+            ELSE regexp_replace(regexp_replace(lower(referrer_host), '\\.$', ''), '^(www|m|mobile)\\.', '')
+          END AS referrer_host,
           COUNT(*)::int AS events,
           COUNT(DISTINCT COALESCE(visitor_key, 'legacy:' || COALESCE(session_id::text, ip, 'unknown')))::int AS visitors
         FROM analytics_events

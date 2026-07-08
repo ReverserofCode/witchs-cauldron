@@ -68,12 +68,90 @@ const NUMERIC_METADATA_LIMITS = {
 const ALLOWED_SCROLL_THRESHOLDS = new Set([25, 50, 75, 100]);
 const ALLOWED_STRING_METADATA = new Set(["location", "device_type", "device_category"]);
 const ALLOWED_DEVICE_TYPES = new Set(["mobile", "tablet", "desktop", "unknown"]);
+const COMMON_HOST_PREFIX_RE = /^(?:www|m|mobile)\./;
+const TRACKING_QUERY_PARAM_RE =
+  /^(?:utm_|fbclid$|gclid$|dclid$|yclid$|mc_|ref$|ref_src$|spm$|feature$|view$|si$|igshid$)/i;
 
 export function safeAnalyticsText(value: unknown, limit = 500) {
   if (typeof value !== "string") return null;
   const trimmed = value.trim();
   if (!trimmed) return null;
   return trimmed.slice(0, limit);
+}
+
+function collapseWhitespace(value: string) {
+  return value.replace(/\s+/g, " ").trim();
+}
+
+function normalizeHost(value: string) {
+  return value.toLowerCase().replace(/\.$/, "").replace(COMMON_HOST_PREFIX_RE, "");
+}
+
+function normalizePathname(value: string, { lowercase = false } = {}) {
+  const [withoutHash] = value.split("#", 1);
+  const [withoutQuery] = withoutHash.split("?", 1);
+  let path = withoutQuery.trim() || "/";
+  if (!path.startsWith("/")) path = `/${path}`;
+  path = path.replace(/\/{2,}/g, "/");
+  if (path.length > 1) path = path.replace(/\/+$/, "");
+  return lowercase ? path.toLowerCase() : path;
+}
+
+function normalizeSearchParams(searchParams: URLSearchParams) {
+  const kept = Array.from(searchParams.entries())
+    .filter(([key]) => !TRACKING_QUERY_PARAM_RE.test(key))
+    .sort(([left], [right]) => left.localeCompare(right));
+  if (kept.length === 0) return "";
+  return `?${new URLSearchParams(kept).toString()}`;
+}
+
+export function normalizeAnalyticsPath(value: unknown) {
+  const text = safeAnalyticsText(value, 512);
+  if (!text) return null;
+
+  try {
+    if (/^https?:\/\//i.test(text)) {
+      const parsed = new URL(text);
+      return normalizePathname(parsed.pathname, { lowercase: true });
+    }
+  } catch {
+    return normalizePathname(text, { lowercase: true });
+  }
+
+  return normalizePathname(text, { lowercase: true });
+}
+
+export function normalizeElementLabel(value: unknown, limit = 128) {
+  const text = safeAnalyticsText(value, limit);
+  if (!text) return null;
+  return collapseWhitespace(text).slice(0, limit);
+}
+
+export function normalizeDimensionKey(value: unknown, limit = 512) {
+  const text = safeAnalyticsText(value, limit);
+  if (!text) return null;
+
+  try {
+    if (/^https?:\/\//i.test(text)) {
+      const parsed = new URL(text);
+      const path = normalizePathname(parsed.pathname);
+      const query = normalizeSearchParams(parsed.searchParams);
+      return `${parsed.protocol}//${normalizeHost(parsed.hostname)}${path}${query}`.slice(0, limit);
+    }
+  } catch {
+    // Fall through to string dimension normalization.
+  }
+
+  if (text.startsWith("/")) {
+    return normalizeAnalyticsPath(text)?.slice(0, limit) ?? null;
+  }
+
+  if (text.startsWith("#")) {
+    const anchor = collapseWhitespace(text.slice(1)).toLowerCase();
+    return anchor ? `#${anchor}`.slice(0, limit) : null;
+  }
+
+  return collapseWhitespace(text).toLowerCase().slice(0, limit);
 }
 
 export function isAnalyticsEventType(value: unknown): value is AnalyticsEventType {
@@ -159,7 +237,7 @@ export function normalizeReferrerHost(referrer: unknown) {
       return `android-app://${parsed.hostname.toLowerCase()}`;
     }
     if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return "(direct)";
-    return parsed.hostname.toLowerCase() || "(direct)";
+    return normalizeHost(parsed.hostname) || "(direct)";
   } catch {
     return "(direct)";
   }
@@ -171,7 +249,7 @@ function jsonByteLength(value: unknown) {
 
 function sanitizeStringMetadata(key: string, value: unknown) {
   const limit = key === "location" ? 128 : 32;
-  const text = safeAnalyticsText(value, limit);
+  const text = key === "location" ? normalizeDimensionKey(value, limit) : safeAnalyticsText(value, limit)?.toLowerCase();
   if (!text) return null;
   if ((key === "device_type" || key === "device_category") && !ALLOWED_DEVICE_TYPES.has(text)) {
     return null;
@@ -230,12 +308,12 @@ export function validateAnalyticsPayload(payload: unknown): AnalyticsPayloadResu
   return {
     ok: true,
     eventType,
-    path: safeAnalyticsText(record.path, 512),
+    path: normalizeAnalyticsPath(record.path),
     referrer: safeAnalyticsText(record.referrer, 512),
     eventId: safeAnalyticsText(record.event_id, 36),
-    elementType: safeAnalyticsText(element.type, 64),
-    elementId: safeAnalyticsText(element.id, 512),
-    elementLabel: safeAnalyticsText(element.label, 128),
+    elementType: normalizeDimensionKey(element.type, 64),
+    elementId: normalizeDimensionKey(element.id, 512),
+    elementLabel: normalizeElementLabel(element.label, 128),
     metadata,
   };
 }
