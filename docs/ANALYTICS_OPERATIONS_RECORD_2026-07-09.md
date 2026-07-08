@@ -66,6 +66,22 @@ The maintenance profile now separates real-looking raw IP values from the `redac
 
 The follow-up `scrub-ip` mode redacts legacy `analytics_events.ip` values only after `visitor_key`, `ip_hash`, and `event_date_kst` are present, so the compatibility column remains while operational stats continue to use hashed visitor keys.
 
+## Production Scrub Result
+
+The production `scrub-ip` run was executed after the mode was deployed:
+
+- Scrub run: `2,948` event rows and `458` session rows redacted.
+- Profile after scrub:
+  - Total events: `3,005`
+  - Missing `visitor_key`: `0`
+  - Missing `ip_hash`: `0`
+  - Missing `event_date_kst`: `0`
+  - Missing `referrer_host`: `0`
+  - Raw IP rows: `0`
+  - Redacted IP rows: `3,005`
+  - Duplicate `event_id` rows: `0`
+  - Finding: low severity, no immediate core quality issue found.
+
 ## Notes
 
 - Clip automation remained disabled during the production check: `CLIP_AUTO_COLLECT_ENABLED=false`.
