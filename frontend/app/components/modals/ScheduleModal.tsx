@@ -3,20 +3,17 @@
 import { useCallback, useEffect, useMemo, useState, type ReactElement } from "react";
 import { createPortal } from "react-dom";
 import type { ScheduleEvent } from "@/app/api/broadCastSchedule/schedule";
-import { formatDateKey, normalizeScheduleEvents } from "@/app/lib/schedule";
+import {
+  buildCalendarMonthDays,
+  formatDateKey,
+  normalizeScheduleEvents,
+  type CalendarMonthDay,
+} from "@/app/lib/schedule";
 
 interface ScheduleModalProps {
   events: ScheduleEvent[];
   isOpen: boolean;
   onClose: () => void;
-}
-
-interface CalendarDay {
-  date: Date;
-  isCurrentMonth: boolean;
-  isToday: boolean;
-  isWeekend: boolean;
-  events: ScheduleEvent[];
 }
 
 export default function ScheduleModal({
@@ -64,8 +61,12 @@ export default function ScheduleModal({
   }, [isOpen, handleKeyDown]);
 
   const calendarDays = useMemo(() => {
-    return buildCalendarDays(currentMonth, normalizedEvents);
+    return buildCalendarMonthDays(currentMonth, normalizedEvents);
   }, [currentMonth, normalizedEvents]);
+
+  const currentMonthEventCount = useMemo(() => {
+    return calendarDays.reduce((total, day) => total + (day.isCurrentMonth ? day.events.length : 0), 0);
+  }, [calendarDays]);
 
   const monthLabel = useMemo(() => {
     return new Intl.DateTimeFormat("ko-KR", {
@@ -205,7 +206,7 @@ export default function ScheduleModal({
         <div className="flex items-center justify-between px-4 py-2 text-xs border-t border-purple-100 bg-purple-50/50 text-purple-700">
           <span>방향키로 월 이동, ESC로 닫기</span>
           <span>
-            전체 일정: {normalizedEvents.length}개 | 이번 달: {normalizedEvents.filter((e) => isEventInMonth(e, currentMonth)).length}개
+            전체 일정: {normalizedEvents.length}개 | 이번 달: {currentMonthEventCount}개
           </span>
         </div>
       </div>
@@ -214,7 +215,7 @@ export default function ScheduleModal({
   );
 }
 
-function CalendarDayCell({ day }: { day: CalendarDay }) {
+function CalendarDayCell({ day }: { day: CalendarMonthDay }) {
   const dateLabel = day.date.getDate();
 
   return (
@@ -272,7 +273,7 @@ function CalendarDayCell({ day }: { day: CalendarDay }) {
   );
 }
 
-function AgendaView({ days }: { days: CalendarDay[] }) {
+function AgendaView({ days }: { days: CalendarMonthDay[] }) {
   const daysWithEvents = days.filter((day) => day.isCurrentMonth && day.events.length > 0);
   const daysWithoutEvents = days.filter((day) => day.isCurrentMonth && day.events.length === 0);
 
@@ -350,52 +351,6 @@ function AgendaView({ days }: { days: CalendarDay[] }) {
   );
 }
 
-function buildCalendarDays(month: Date, events: ScheduleEvent[]): CalendarDay[] {
-  const year = month.getFullYear();
-  const monthIndex = month.getMonth();
-
-  // First day of the month
-  const firstDay = new Date(year, monthIndex, 1);
-  // Last day of the month
-  const lastDay = new Date(year, monthIndex + 1, 0);
-
-  // Start from the Sunday of the week containing the first day
-  const startDate = new Date(firstDay);
-  startDate.setDate(startDate.getDate() - startDate.getDay());
-
-  // End at the Saturday of the week containing the last day
-  const endDate = new Date(lastDay);
-  endDate.setDate(endDate.getDate() + (6 - endDate.getDay()));
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  const days: CalendarDay[] = [];
-  const current = new Date(startDate);
-
-  while (current <= endDate) {
-    const dateKey = formatDateKey(current);
-    const dayEvents = events.filter((event) => {
-      const eventDate = new Date(event.start);
-      return formatDateKey(eventDate) === dateKey;
-    });
-
-    days.push({
-      date: new Date(current),
-      isCurrentMonth: current.getMonth() === monthIndex,
-      isToday: current.getTime() === today.getTime(),
-      isWeekend: current.getDay() === 0 || current.getDay() === 6,
-      events: dayEvents.sort((a, b) =>
-        new Date(a.start).getTime() - new Date(b.start).getTime()
-      ),
-    });
-
-    current.setDate(current.getDate() + 1);
-  }
-
-  return days;
-}
-
 function formatEventTime(startISO: string): string {
   const date = new Date(startISO);
   if (Number.isNaN(date.getTime())) {
@@ -410,14 +365,6 @@ function formatEventTime(startISO: string): string {
     hour: "numeric",
     minute: "2-digit",
   }).format(date);
-}
-
-function isEventInMonth(event: ScheduleEvent, month: Date): boolean {
-  const eventDate = new Date(event.start);
-  return (
-    eventDate.getFullYear() === month.getFullYear() &&
-    eventDate.getMonth() === month.getMonth()
-  );
 }
 
 function ChevronLeftIcon() {

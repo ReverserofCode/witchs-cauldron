@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { ScheduleEvent } from "../api/broadCastSchedule/schedule";
 import {
+  buildCalendarMonthDays,
   formatDateKey,
   normalizeScheduleEvent,
   selectScheduleWindowEvents,
@@ -75,5 +76,28 @@ describe("schedule normalization", () => {
     expect(result.events.map((event) => event.id)).toEqual(["next-week"]);
     expect(formatDateKey(new Date(result.range.start))).toBe("2026-06-28");
     expect(formatDateKey(new Date(result.range.end))).toBe("2026-07-05");
+  });
+
+  it("builds calendar month days with bucketed, time-ordered events", () => {
+    const month = new Date(2026, 6, 1);
+    const today = new Date(2026, 6, 9);
+    const days = buildCalendarMonthDays(
+      month,
+      [
+        makeEvent("late", new Date(2026, 6, 9, 21, 0, 0).toISOString()),
+        makeEvent("early", new Date(2026, 6, 9, 9, 0, 0).toISOString()),
+        makeEvent("other-month", new Date(2026, 7, 1, 12, 0, 0).toISOString()),
+      ],
+      today
+    );
+
+    const targetDay = days.find((day) => formatDateKey(day.date) === "2026-07-09");
+    const nextMonthDay = days.find((day) => formatDateKey(day.date) === "2026-08-01");
+
+    expect(days).toHaveLength(35);
+    expect(targetDay?.isToday).toBe(true);
+    expect(targetDay?.events.map((event) => event.id)).toEqual(["early", "late"]);
+    expect(nextMonthDay?.isCurrentMonth).toBe(false);
+    expect(nextMonthDay?.events.map((event) => event.id)).toEqual(["other-month"]);
   });
 });

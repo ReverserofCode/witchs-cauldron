@@ -6,6 +6,14 @@ export interface NormalizedScheduleEvent {
   endMs: number;
 }
 
+export interface CalendarMonthDay {
+  date: Date;
+  isCurrentMonth: boolean;
+  isToday: boolean;
+  isWeekend: boolean;
+  events: ScheduleEvent[];
+}
+
 export function normalizeScheduleEvent(
   event: ScheduleEvent,
   _anchor: Date = new Date()
@@ -109,6 +117,57 @@ export function formatDateKey(date: Date): string {
   const month = `${date.getMonth() + 1}`.padStart(2, "0");
   const day = `${date.getDate()}`.padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+export function buildCalendarMonthDays(
+  month: Date,
+  events: ScheduleEvent[],
+  todayDate: Date = new Date()
+): CalendarMonthDay[] {
+  const year = month.getFullYear();
+  const monthIndex = month.getMonth();
+  const firstDay = new Date(year, monthIndex, 1);
+  const lastDay = new Date(year, monthIndex + 1, 0);
+  const startDate = startOfWeek(firstDay);
+  const endDate = addDays(startOfWeek(lastDay), 6);
+  const today = startOfDay(todayDate);
+  const eventsByDate = new Map<string, Array<{ event: ScheduleEvent; startMs: number }>>();
+
+  for (const event of events) {
+    const startMs = Date.parse(event.start);
+    if (!Number.isFinite(startMs)) {
+      continue;
+    }
+
+    const dateKey = formatDateKey(new Date(startMs));
+    const bucket = eventsByDate.get(dateKey);
+    const entry = { event, startMs };
+
+    if (bucket) {
+      bucket.push(entry);
+    } else {
+      eventsByDate.set(dateKey, [entry]);
+    }
+  }
+
+  const days: CalendarMonthDay[] = [];
+
+  for (let current = new Date(startDate); current <= endDate; current = addDays(current, 1)) {
+    const dateKey = formatDateKey(current);
+    const dayEvents = (eventsByDate.get(dateKey) ?? [])
+      .sort((a, b) => a.startMs - b.startMs)
+      .map((entry) => entry.event);
+
+    days.push({
+      date: new Date(current),
+      isCurrentMonth: current.getMonth() === monthIndex,
+      isToday: current.getTime() === today.getTime(),
+      isWeekend: current.getDay() === 0 || current.getDay() === 6,
+      events: dayEvents,
+    });
+  }
+
+  return days;
 }
 
 function filterNormalizedEventsWithinRange(
