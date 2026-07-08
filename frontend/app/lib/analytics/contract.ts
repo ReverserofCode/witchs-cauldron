@@ -63,6 +63,7 @@ const NUMERIC_METADATA_LIMITS = {
   depth: { min: 0, max: 100 },
   dwell_seconds: { min: 0, max: 86_400 },
   max_scroll_depth: { min: 0, max: 100 },
+  visibility_ratio: { min: 0, max: 1 },
 } as const;
 const ALLOWED_SCROLL_THRESHOLDS = new Set([25, 50, 75, 100]);
 const ALLOWED_STRING_METADATA = new Set(["location", "device_type", "device_category"]);
@@ -186,6 +187,9 @@ function sanitizeNumericMetadata(key: keyof typeof NUMERIC_METADATA_LIMITS, valu
   }
   if (key === "threshold" && !ALLOWED_SCROLL_THRESHOLDS.has(numberValue)) {
     return null;
+  }
+  if (key === "visibility_ratio") {
+    return Math.round(numberValue * 1000) / 1000;
   }
   return Math.round(numberValue);
 }

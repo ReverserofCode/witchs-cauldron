@@ -79,6 +79,26 @@ describe("analytics contract", () => {
     expect(valid.metadata).toEqual({ threshold: 75, depth: 82 });
   });
 
+  it("accepts section view visibility ratio metadata", () => {
+    const valid = validateAnalyticsPayload({
+      type: "section_view",
+      path: "/",
+      element: {
+        type: "section",
+        id: "featured-videos",
+        label: "featured-videos",
+      },
+      metadata: {
+        visibility_ratio: 0.556,
+      },
+    });
+
+    expect(valid.ok).toBe(true);
+    if (!valid.ok) return;
+    expect(valid.eventType).toBe("section_view");
+    expect(valid.metadata).toEqual({ visibility_ratio: 0.556 });
+  });
+
   it("rejects oversized metadata payloads", () => {
     expect(
       validateAnalyticsPayload({

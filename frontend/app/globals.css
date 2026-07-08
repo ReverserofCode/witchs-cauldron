@@ -454,6 +454,11 @@ body {
 
 /* Scroll reveal: 스크롤 시 섹션 등장 애니메이션 */
 .scroll-reveal {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.scroll-reveal.pending {
     opacity: 0;
     transform: translateY(24px);
     transition: opacity 600ms cubic-bezier(0.22, 1, 0.36, 1),

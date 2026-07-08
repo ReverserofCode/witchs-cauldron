@@ -90,12 +90,12 @@ export default function Header({ brand, items = defaultItems }: HeaderProps) {
 
         {/* Desktop nav */}
         <nav aria-label="헤더 내비게이션" className="hidden md:block">
-          <ul className="flex items-center gap-2 md:gap-3">
+          <ul className="flex items-center gap-2 md:gap-2 lg:gap-3">
             <li className="mr-1 text-xs font-semibold tracking-wide text-purple-700/60 uppercase">커뮤니티</li>
             {items.map((item) => (
               <li key={item.href}>
                 <a
-                  className="nav-indicator rounded-md px-3 py-2 text-ink transition-all duration-200 hover:bg-[rgba(var(--moing-accent),0.35)] hover:text-[rgb(var(--moing-deep))] md:px-4 md:py-3"
+                  className="nav-indicator inline-flex items-center gap-2 rounded-md px-3 py-2 text-ink transition-all duration-200 hover:bg-[rgba(var(--moing-accent),0.35)] hover:text-[rgb(var(--moing-deep))] md:px-3 md:py-3 lg:px-4"
                   href={item.href}
                   aria-label={item.label}
                   title={item.label}
@@ -108,7 +108,9 @@ export default function Header({ brand, items = defaultItems }: HeaderProps) {
                   data-analytics-type="header_menu"
                 >
                   <HeaderIcon name={item.label} className="w-5 h-5 md:h-6 md:w-6" />
-                  <span className="sr-only">{item.label}</span>
+                  <span className="sr-only lg:not-sr-only lg:text-xs lg:font-semibold lg:leading-none">
+                    {item.label}
+                  </span>
                 </a>
               </li>
             ))}
@@ -138,18 +140,28 @@ export default function Header({ brand, items = defaultItems }: HeaderProps) {
 
           {/* Mobile dropdown menu */}
           {isMenuOpen && (
-            <div id="mobile-community-menu" className="absolute right-0 top-full mt-2 w-[min(92vw,20rem)] rounded-2xl border border-purple-200/60 bg-white/95 p-3 shadow-xl shadow-purple-900/15 backdrop-blur-lg animate-slide-down">
-              <p className="mb-2 px-2 text-[10px] font-semibold uppercase tracking-widest text-purple-600/70">
+            <>
+              <button
+                type="button"
+                aria-label="메뉴 닫기"
+                className="fixed inset-0 top-[4.5rem] z-40 bg-purple-950/35"
+                onClick={closeMenu}
+              />
+              <div
+                id="mobile-community-menu"
+                className="fixed left-4 right-4 top-[5rem] z-50 rounded-2xl border border-purple-200 bg-white p-4 shadow-2xl shadow-purple-950/25 ring-1 ring-purple-950/10 animate-slide-down"
+              >
+              <p className="mb-3 px-2 text-[11px] font-semibold uppercase tracking-widest text-purple-700">
                 커뮤니티 바로가기
               </p>
-              <ul className="flex flex-col gap-1">
+              <ul className="flex flex-col gap-1.5">
                 {items.map((item) => (
                   <li key={item.href}>
                     <a
                       href={item.href}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-purple-900 transition-colors hover:bg-purple-100/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/70 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+                      className="flex min-h-12 items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-purple-950 transition-colors hover:bg-purple-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/70 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
                       data-analytics-menu="true"
                       data-analytics-id={item.href}
                       data-analytics-label={item.label}
@@ -165,7 +177,8 @@ export default function Header({ brand, items = defaultItems }: HeaderProps) {
                   </li>
                 ))}
               </ul>
-            </div>
+              </div>
+            </>
           )}
         </div>
       </div>

@@ -78,13 +78,13 @@ export default async function Page(): Promise<ReactElement> {
             <SectionCard
               tone="dimmed"
               className="p-3 sm:p-4"
-              bodyClassName="gap-4 sm:gap-5"
+              bodyClassName="gap-3 sm:gap-5"
             >
-              <div className="grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.85fr)] xl:items-start xl:gap-5">
-                <div className="space-y-3 sm:space-y-4">
+              <div className="grid gap-3 sm:gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.85fr)] xl:items-start xl:gap-5">
+                <div className="space-y-2.5 sm:space-y-4">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="chip text-xs sm:text-sm">KR V-tuber • Moing</span>
-                    <span className="chip text-[11px] sm:text-xs">패러블 엔터테인먼트 소속</span>
+                    <span className="chip text-[11px] sm:text-xs">패러블 엔터테인먼트</span>
                     <span className="inline-flex h-8 w-12 items-center justify-center rounded-full bg-white/95 shadow-sm ring-1 ring-black/10">
                       <Image
                         src="/logos/parable-ent.svg"
@@ -98,13 +98,13 @@ export default async function Page(): Promise<ReactElement> {
                     <LiveStatusChip initialStatus={liveStatus} />
                   </div>
 
-                  <div className="space-y-3">
+                  <div className="space-y-2 sm:space-y-3">
                     <div className="min-w-0">
-                      <h1 className="mt-2 text-3xl font-black typography-heading sm:text-4xl lg:text-[2.8rem]">
+                      <h1 className="mt-1 text-[2rem] font-black leading-tight typography-heading sm:mt-2 sm:text-4xl lg:text-[2.8rem]">
                         마녀의 포션 공방
                       </h1>
                     </div>
-                    <p className="max-w-2xl text-sm font-light text-purple-100/90 typography-lead sm:text-base">
+                    <p className="max-w-2xl text-[13px] font-light leading-6 text-purple-100/90 typography-lead sm:text-base">
                       포션을 만들면 폭발하거나, 고백하게 만드는 재앙 제조기. 모잉의 방송, 영상, 숏폼, 팬 콘텐츠를 한곳에서 모아 봅니다.
                     </p>
                     <div className="hidden sm:block">
@@ -112,19 +112,21 @@ export default async function Page(): Promise<ReactElement> {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2.5 sm:gap-3 xl:grid-cols-3">
+                  <div className="grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-3">
                     <div className="col-span-2 sm:col-span-1">
                       <LiveStatusCard initialStatus={liveStatus} />
                     </div>
                       {HERO_FOCUS_ITEMS.map((item) => (
                         <div
                           key={item.label}
-                          className="liquid-glass-panel rounded-[24px] px-4 py-3"
+                          className="liquid-glass-panel rounded-[20px] px-3 py-2.5 sm:rounded-[24px] sm:px-4 sm:py-3"
                         >
                         <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-purple-200/70">
                           {item.label}
                         </p>
-                        <p className="mt-2 text-base font-bold text-white">{item.value}</p>
+                        <p className="mt-1.5 break-keep text-[13px] font-bold leading-snug text-white sm:mt-2 sm:text-base">
+                          {item.value}
+                        </p>
                         <p className="mt-1 hidden text-xs text-purple-100/75 sm:block">{item.description}</p>
                       </div>
                     ))}
@@ -134,10 +136,10 @@ export default async function Page(): Promise<ReactElement> {
                   </p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-1 sm:gap-6">
-                  <div className="liquid-glass-panel flex flex-col items-start gap-3 rounded-[24px] p-3 sm:flex-row sm:items-center sm:gap-4 sm:p-4">
+                <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-1 sm:gap-6">
+                  <div className="liquid-glass-panel flex flex-col items-start gap-2.5 rounded-[20px] p-3 sm:flex-row sm:items-center sm:gap-4 sm:rounded-[24px] sm:p-4">
                     <div className="profile-avatar flex-shrink-0">
-                      <div className="relative h-16 w-16 sm:h-28 sm:w-28" aria-hidden>
+                      <div className="relative h-14 w-14 sm:h-28 sm:w-28" aria-hidden>
                         <div className="h-full w-full avatar-frame">
                           <div className="glow" />
                           <Image
@@ -163,11 +165,11 @@ export default async function Page(): Promise<ReactElement> {
                     </div>
                   </div>
 
-                  <div className="liquid-glass-panel rounded-[24px] p-3 sm:p-4">
+                  <div className="liquid-glass-panel rounded-[20px] p-3 sm:rounded-[24px] sm:p-4">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-purple-200/70">
                       채널 바로가기
                     </p>
-                    <div className="mt-3 grid grid-cols-2 gap-2">
+                    <div className="mt-2.5 grid grid-cols-2 gap-2 sm:mt-3">
                       {HERO_CHANNEL_LINKS.map((link) => {
                         const isExternal = link.href.startsWith('http')
                         return (
