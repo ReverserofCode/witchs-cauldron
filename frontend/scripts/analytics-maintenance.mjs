@@ -164,6 +164,38 @@ async function retention(pool) {
   );
 }
 
+async function scrubIp(pool) {
+  const scrubbedEvents = await pool.query(
+    `
+      UPDATE analytics_events
+      SET ip = 'redacted'
+      WHERE ip IS NOT NULL
+        AND ip <> ''
+        AND ip NOT IN ('redacted', 'unknown')
+        AND visitor_key IS NOT NULL
+        AND visitor_key <> ''
+        AND ip_hash IS NOT NULL
+        AND ip_hash <> ''
+        AND event_date_kst IS NOT NULL
+    `
+  );
+  const scrubbedSessions = await pool.query(
+    `
+      UPDATE analytics_sessions
+      SET ip = 'redacted'
+      WHERE ip IS NOT NULL
+        AND ip <> ''
+        AND ip NOT IN ('redacted', 'unknown')
+    `
+  );
+
+  console.log(
+    `[analytics-maintenance] scrub-ip ok events=${scrubbedEvents.rowCount ?? 0} sessions=${
+      scrubbedSessions.rowCount ?? 0
+    }`
+  );
+}
+
 function profileFindings(overview) {
   const rows = Number(overview.rows ?? 0);
   const rate = (value) => (rows > 0 ? Number(value ?? 0) / rows : 0);
@@ -325,8 +357,8 @@ async function profile(pool) {
 
 async function main() {
   const command = process.argv[2];
-  if (!["migrate", "backfill", "retention", "profile", "all"].includes(command)) {
-    console.error("Usage: node scripts/analytics-maintenance.mjs <migrate|backfill|retention|profile|all>");
+  if (!["migrate", "backfill", "retention", "scrub-ip", "profile", "all"].includes(command)) {
+    console.error("Usage: node scripts/analytics-maintenance.mjs <migrate|backfill|retention|scrub-ip|profile|all>");
     process.exit(2);
   }
 
@@ -334,6 +366,7 @@ async function main() {
   try {
     if (command === "migrate" || command === "all") await migrate(pool);
     if (command === "backfill" || command === "all") await backfill(pool);
+    if (command === "scrub-ip" || command === "all") await scrubIp(pool);
     if (command === "retention" || command === "all") await retention(pool);
     if (command === "profile") await profile(pool);
   } finally {

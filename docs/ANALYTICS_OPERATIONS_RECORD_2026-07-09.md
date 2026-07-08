@@ -10,7 +10,7 @@ This record captures the analytics operations hardening work applied after the v
 - Added dashboard empty states and mobile navigation for operational scanning.
 - Added reusable dashboard health/data-quality helpers and tests.
 - Added `analytics:profile` maintenance command for read-only data quality review.
-- Added a manual `Analytics Maintenance` GitHub Actions workflow for production `migrate`, `backfill`, `profile`, and `retention` runs.
+- Added a manual `Analytics Maintenance` GitHub Actions workflow for production `migrate`, `backfill`, `scrub-ip`, `profile`, and `retention` runs.
 - Extended the admin analytics smoke test to cover the health API fixture and mobile overflow checks.
 
 ## Production Data Review Before Backfill
@@ -32,10 +32,12 @@ Run the maintenance script in production after deployment:
 
 ```bash
 gh workflow run "Analytics Maintenance" --ref main -f mode=backfill
+gh workflow run "Analytics Maintenance" --ref main -f mode=scrub-ip
 gh workflow run "Analytics Maintenance" --ref main -f mode=profile
 
 # Equivalent server-side command:
 docker compose -f docker-compose.server.yml exec -T frontend node scripts/analytics-maintenance.mjs backfill
+docker compose -f docker-compose.server.yml exec -T frontend node scripts/analytics-maintenance.mjs scrub-ip
 docker compose -f docker-compose.server.yml exec -T frontend node scripts/analytics-maintenance.mjs profile
 ```
 
@@ -61,6 +63,8 @@ The production `Analytics Maintenance` workflow was executed after deployment:
   - Duplicate `event_id` rows: `0`
 
 The maintenance profile now separates real-looking raw IP values from the `redacted` placeholder used by the current collection path.
+
+The follow-up `scrub-ip` mode redacts legacy `analytics_events.ip` values only after `visitor_key`, `ip_hash`, and `event_date_kst` are present, so the compatibility column remains while operational stats continue to use hashed visitor keys.
 
 ## Notes
 

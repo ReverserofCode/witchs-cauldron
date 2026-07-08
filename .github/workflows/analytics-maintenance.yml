@@ -12,6 +12,7 @@ on:
           - migrate
           - backfill
           - profile
+          - scrub-ip
           - retention
           - all
 
