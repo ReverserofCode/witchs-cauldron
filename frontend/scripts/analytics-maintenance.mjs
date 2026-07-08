@@ -11,6 +11,7 @@ const DEFAULT_DB_URLS = [
 const BATCH_SIZE = Number(process.env.ANALYTICS_MAINTENANCE_BATCH_SIZE || 500);
 const RETENTION_MONTHS = Number(process.env.ANALYTICS_RETENTION_MONTHS || 13);
 const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
+const ALLOWED_EVENT_TYPES = ["pageview", "menu_click", "content_click", "section_view", "scroll_depth", "page_exit"];
 
 const migrationStatements = [
   `
@@ -46,7 +47,11 @@ async function getPool() {
       await pool.end().catch(() => {});
     }
   }
-  throw new Error(`analytics_db_unreachable${lastError instanceof Error ? `: ${lastError.message}` : ""}`);
+  const detail =
+    lastError && typeof lastError === "object"
+      ? [lastError.code, lastError.hostname, lastError.message].filter(Boolean).join(" ")
+      : "";
+  throw new Error(`analytics_db_unreachable${detail ? `: ${detail}` : ""}`);
 }
 
 function getSecret() {
@@ -159,10 +164,163 @@ async function retention(pool) {
   );
 }
 
+function profileFindings(overview) {
+  const rows = Number(overview.rows ?? 0);
+  const rate = (value) => (rows > 0 ? Number(value ?? 0) / rows : 0);
+  const findings = [];
+
+  if (Number(overview.events_24h ?? 0) === 0) {
+    findings.push({
+      severity: "high",
+      message: "최근 24시간 이벤트가 없어 수집 중단 가능성이 있습니다.",
+    });
+  }
+
+  if (Number(overview.missing_visitor_key ?? 0) > 0 || Number(overview.missing_event_date_kst ?? 0) > 0) {
+    findings.push({
+      severity: "high",
+      message: "visitor_key 또는 event_date_kst 누락으로 운영 통계 기준이 흔들릴 수 있습니다.",
+    });
+  }
+
+  if (Number(overview.raw_ip_rows ?? 0) > 0) {
+    findings.push({
+      severity: rate(overview.raw_ip_rows) >= 0.1 ? "high" : "medium",
+      message: "raw IP가 남아 있어 backfill 또는 신규 수집 경로 점검이 필요합니다.",
+    });
+  }
+
+  if (Number(overview.unknown_events ?? 0) > 0) {
+    findings.push({
+      severity: rate(overview.unknown_events) >= 0.05 ? "high" : "medium",
+      message: "허용되지 않은 event_type이 있어 track contract와 클라이언트 수집 코드를 맞춰야 합니다.",
+    });
+  }
+
+  if (Number(overview.duplicate_event_ids ?? 0) > 0) {
+    findings.push({
+      severity: rate(overview.duplicate_event_ids) >= 0.05 ? "high" : "medium",
+      message: "event_id 중복이 있어 재전송 또는 중복 삽입 방지 정책을 확인해야 합니다.",
+    });
+  }
+
+  if (findings.length === 0) {
+    findings.push({
+      severity: "low",
+      message: "핵심 품질 규칙에서 즉시 조치할 이상은 확인되지 않았습니다.",
+    });
+  }
+
+  return findings;
+}
+
+async function profile(pool) {
+  const [overviewResult, eventTypeResult, dailyResult, referrerResult, metadataKeyResult, deviceResult] = await Promise.all([
+    pool.query(
+      `
+        SELECT
+          COUNT(*)::int AS rows,
+          MIN(created_at) AS min_created_at,
+          MAX(created_at) AS max_created_at,
+          COUNT(*) FILTER (WHERE created_at >= now() - interval '24 hours')::int AS events_24h,
+          COUNT(*) FILTER (WHERE created_at >= now() - interval '7 days')::int AS events_7d,
+          COUNT(*) FILTER (WHERE created_at >= now() - interval '30 days')::int AS events_30d,
+          COUNT(*) FILTER (WHERE created_at > now() + interval '5 minutes')::int AS future_events,
+          COUNT(*) FILTER (WHERE NOT (event_type = ANY($1::text[])))::int AS unknown_events,
+          GREATEST(
+            0,
+            COUNT(*) FILTER (WHERE event_id IS NOT NULL) - COUNT(DISTINCT event_id) FILTER (WHERE event_id IS NOT NULL)
+          )::int AS duplicate_event_ids,
+          COUNT(*) FILTER (WHERE visitor_key IS NULL OR visitor_key = '')::int AS missing_visitor_key,
+          COUNT(*) FILTER (WHERE event_date_kst IS NULL)::int AS missing_event_date_kst,
+          COUNT(*) FILTER (WHERE ip_hash IS NULL OR ip_hash = '')::int AS missing_ip_hash,
+          COUNT(*) FILTER (WHERE ip IS NOT NULL AND ip <> '')::int AS raw_ip_rows,
+          COUNT(*) FILTER (WHERE referrer_host IS NULL OR referrer_host = '')::int AS missing_referrer_host
+        FROM analytics_events
+      `,
+      [ALLOWED_EVENT_TYPES]
+    ),
+    pool.query(
+      `
+        SELECT
+          event_type,
+          COUNT(*)::int AS events,
+          COUNT(DISTINCT COALESCE(visitor_key, 'legacy:' || COALESCE(session_id::text, ip, 'unknown')))::int AS visitors
+        FROM analytics_events
+        GROUP BY event_type
+        ORDER BY events DESC, event_type
+      `
+    ),
+    pool.query(
+      `
+        SELECT
+          COALESCE(event_date_kst, (created_at AT TIME ZONE 'Asia/Seoul')::date)::text AS day,
+          COUNT(*)::int AS events,
+          COUNT(*) FILTER (WHERE event_type = 'pageview')::int AS pageviews,
+          COUNT(DISTINCT COALESCE(visitor_key, 'legacy:' || COALESCE(session_id::text, ip, 'unknown')))
+            FILTER (WHERE event_type = 'pageview')::int AS visitors
+        FROM analytics_events
+        WHERE created_at >= now() - interval '30 days'
+        GROUP BY 1
+        ORDER BY 1 DESC
+        LIMIT 30
+      `
+    ),
+    pool.query(
+      `
+        SELECT
+          COALESCE(NULLIF(referrer_host, ''), '(missing)') AS referrer_host,
+          COUNT(*)::int AS events,
+          COUNT(DISTINCT COALESCE(visitor_key, 'legacy:' || COALESCE(session_id::text, ip, 'unknown')))::int AS visitors
+        FROM analytics_events
+        WHERE event_type = 'pageview'
+        GROUP BY 1
+        ORDER BY visitors DESC, events DESC
+        LIMIT 12
+      `
+    ),
+    pool.query(
+      `
+        SELECT key, COUNT(*)::int AS rows
+        FROM analytics_events, LATERAL jsonb_object_keys(COALESCE(metadata, '{}'::jsonb)) AS key
+        GROUP BY key
+        ORDER BY rows DESC, key
+        LIMIT 50
+      `
+    ),
+    pool.query(
+      `
+        SELECT
+          COUNT(*) FILTER (WHERE metadata ? 'device_category' OR metadata ? 'deviceCategory')::int AS rows_with_device_category,
+          COUNT(*) FILTER (WHERE event_type = 'scroll_depth' AND metadata->>'threshold' IN ('25', '50', '75', '100'))::int AS valid_scroll_threshold_rows,
+          COUNT(*) FILTER (WHERE event_type = 'scroll_depth')::int AS scroll_rows,
+          COUNT(*) FILTER (WHERE event_type = 'page_exit' AND (metadata ? 'dwell_seconds' OR metadata ? 'durationMs' OR metadata ? 'durationSeconds'))::int AS exit_rows_with_duration,
+          COUNT(*) FILTER (WHERE event_type = 'page_exit')::int AS exit_rows
+        FROM analytics_events
+      `
+    ),
+  ]);
+
+  const overview = overviewResult.rows[0] ?? {};
+  const report = {
+    generatedAt: new Date().toISOString(),
+    grain: "analytics_events row = one collected event",
+    overview,
+    metadataCoverage: deviceResult.rows[0] ?? {},
+    eventTypes: eventTypeResult.rows,
+    recentDaily: dailyResult.rows,
+    topReferrers: referrerResult.rows,
+    metadataKeys: metadataKeyResult.rows,
+    findings: profileFindings(overview),
+  };
+
+  console.log(JSON.stringify(report, null, 2));
+}
+
 async function main() {
   const command = process.argv[2];
-  if (!["migrate", "backfill", "retention", "all"].includes(command)) {
-    console.error("Usage: node scripts/analytics-maintenance.mjs <migrate|backfill|retention|all>");
+  if (!["migrate", "backfill", "retention", "profile", "all"].includes(command)) {
+    console.error("Usage: node scripts/analytics-maintenance.mjs <migrate|backfill|retention|profile|all>");
     process.exit(2);
   }
 
@@ -171,6 +329,7 @@ async function main() {
     if (command === "migrate" || command === "all") await migrate(pool);
     if (command === "backfill" || command === "all") await backfill(pool);
     if (command === "retention" || command === "all") await retention(pool);
+    if (command === "profile") await profile(pool);
   } finally {
     await pool.end();
   }

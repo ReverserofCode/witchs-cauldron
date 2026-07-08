@@ -7,10 +7,12 @@
 		"build": "next build",
 		"start": "next start -p 3000",
 		"lint": "next lint",
+		"typecheck": "tsc --noEmit",
 		"test": "vitest run",
 		"dev:install:host": "npm install",
 		"capture:screens": "node scripts/capture-screenshots.mjs",
-		"smoke:admin": "node scripts/smoke-admin-analytics.mjs"
+		"smoke:admin": "node scripts/smoke-admin-analytics.mjs",
+		"analytics:profile": "node scripts/analytics-maintenance.mjs profile"
 	},
 	"dependencies": {
 		"next": "14.2.5",

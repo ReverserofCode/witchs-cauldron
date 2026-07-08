@@ -1,0 +1,61 @@
+name: Analytics Maintenance
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Maintenance mode"
+        required: true
+        default: "profile"
+        type: choice
+        options:
+          - migrate
+          - backfill
+          - profile
+          - retention
+          - all
+
+concurrency:
+  group: analytics-maintenance
+  cancel-in-progress: false
+
+jobs:
+  maintenance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Run analytics maintenance on production
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          MODE: ${{ github.event.inputs.mode }}
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          password: ${{ secrets.DESK_SSH_PASSWORD || secrets.SSH_PASSWORD }}
+          port: ${{ secrets.SSH_PORT }}
+          timeout: 60s
+          command_timeout: 12m
+          script_stop: true
+          envs: MODE
+          script: |
+            set -euo pipefail
+            cd ${{ secrets.DEPLOY_PATH }}
+
+            COMPOSE_FILE="${DEPLOY_COMPOSE_FILE:-docker-compose.server.yml}"
+            if [ ! -f "$COMPOSE_FILE" ]; then
+              if [ "$COMPOSE_FILE" = "docker-compose.server.yml" ] && [ -f "docker-compose.prod.yml" ]; then
+                COMPOSE_FILE="docker-compose.prod.yml"
+              else
+                echo "Compose file not found: $COMPOSE_FILE" >&2
+                exit 1
+              fi
+            fi
+
+            compose() {
+              docker compose -f "$COMPOSE_FILE" "$@"
+            }
+
+            echo "Running analytics maintenance mode=${MODE}"
+            compose ps frontend analytics-db
+            compose exec -T frontend node scripts/analytics-maintenance.mjs "$MODE"

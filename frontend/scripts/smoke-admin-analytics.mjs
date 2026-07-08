@@ -95,6 +95,39 @@ function analyticsFixture(from, to) {
   };
 }
 
+function analyticsHealthFixture() {
+  return {
+    ok: true,
+    database: {
+      connected: true,
+      latencyMs: 24,
+    },
+    events: {
+      latestEventAt: new Date().toISOString(),
+      events24h: 128,
+      pageviews24h: 64,
+      unknownEvents: 0,
+      missingVisitorKey: 0,
+      missingEventDateKst: 0,
+    },
+    schema: {
+      version: 2,
+      timeZone: 'Asia/Seoul',
+      requiredColumns: ['visitor_key', 'ip_hash', 'referrer_host', 'event_date_kst'],
+      requiredIndexes: [
+        'analytics_events_date_type_idx',
+        'analytics_events_type_date_idx',
+        'analytics_events_visitor_date_idx',
+        'analytics_events_referrer_date_idx',
+        'analytics_events_element_date_idx',
+      ],
+      missingColumns: [],
+      missingIndexes: [],
+    },
+    generatedAt: new Date().toISOString(),
+  };
+}
+
 async function main() {
   const browser = await chromium.launch({
     headless: true,
@@ -118,6 +151,7 @@ async function main() {
   });
   const adminPage = await adminContext.newPage();
   const requests = [];
+  const healthRequests = [];
 
   await adminPage.route('**/api/analytics/stats**', async (route) => {
     const url = new URL(route.request().url());
@@ -130,16 +164,42 @@ async function main() {
       body: JSON.stringify(analyticsFixture(from, to)),
     });
   });
+  await adminPage.route('**/api/analytics/health**', async (route) => {
+    healthRequests.push(route.request().url());
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json; charset=utf-8',
+      body: JSON.stringify(analyticsHealthFixture()),
+    });
+  });
 
   await adminPage.goto(new URL('/admin/analytics', baseUrl).toString(), { waitUntil: 'domcontentloaded', timeout: 45_000 });
   await adminPage.getByRole('heading', { name: 'Analytics Dashboard' }).waitFor();
+  await adminPage.getByRole('region', { name: 'Analytics 운영 상태' }).waitFor();
+  await adminPage.getByRole('heading', { name: '운영 상태' }).waitFor();
+  await adminPage.getByText('정상', { exact: true }).waitFor();
+  await adminPage.getByText('Asia/Seoul · visitor_key').waitFor();
+  await adminPage.getByText('v2').waitFor();
   await adminPage.locator('p', { hasText: /^방문자$/ }).first().waitFor();
   await adminPage.getByRole('button', { name: '14일' }).click();
   await adminPage.getByRole('button', { name: '오늘' }).click();
   await adminPage.getByRole('button', { name: '새로고침' }).click();
 
+  await adminPage.setViewportSize({ width: 390, height: 844 });
+  await adminPage.reload({ waitUntil: 'domcontentloaded', timeout: 45_000 });
+  await adminPage.getByRole('navigation', { name: 'Analytics 섹션' }).waitFor();
+  const mobileWidth = await adminPage.evaluate(() => ({
+    clientWidth: document.documentElement.clientWidth,
+    scrollWidth: document.documentElement.scrollWidth,
+  }));
+  assert.ok(
+    mobileWidth.scrollWidth <= mobileWidth.clientWidth,
+    `mobile layout should not overflow horizontally: ${JSON.stringify(mobileWidth)}`
+  );
+
   assert.ok(requests.length >= 3, `expected at least 3 analytics fetches, got ${requests.length}`);
   assert.ok(requests.some((url) => url.includes('from=') && url.includes('to=')), 'analytics requests should include date filters');
+  assert.ok(healthRequests.length >= 1, `expected analytics health fetch, got ${healthRequests.length}`);
 
   await publicContext.close();
   await adminContext.close();
