@@ -1,13 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies, headers } from "next/headers";
 import { ensureSchema, getPool } from "../db";
+import {
+  createIpHash,
+  createVisitorKey,
+  getKstDateString,
+  normalizeReferrerHost,
+  resolveAnalyticsHashSecret,
+  validateAnalyticsPayload,
+} from "../../../lib/analytics/contract";
 
 export const runtime = "nodejs";
 
 const SESSION_COOKIE = "wc_session";
 
-function getClientIp() {
-  const reqHeaders = headers();
+async function getClientIp() {
+  const reqHeaders = await headers();
   const forwarded = reqHeaders.get("x-forwarded-for");
   if (forwarded) {
     return forwarded.split(",")[0]?.trim() ?? "unknown";
@@ -19,8 +27,8 @@ function getClientIp() {
   );
 }
 
-function getUserAgent() {
-  return headers().get("user-agent") ?? null;
+async function getUserAgent() {
+  return (await headers()).get("user-agent") ?? null;
 }
 
 function detectDeviceType(ua: string | null): "mobile" | "tablet" | "desktop" {
@@ -32,27 +40,28 @@ function detectDeviceType(ua: string | null): "mobile" | "tablet" | "desktop" {
   return "desktop";
 }
 
-function safeText(value: unknown, limit = 500) {
-  if (typeof value !== "string") return null;
-  const trimmed = value.trim();
-  if (!trimmed) return null;
-  return trimmed.slice(0, limit);
-}
-
 function isUuid(value: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
 
 export async function POST(request: NextRequest) {
-  await ensureSchema();
-
   const payload = await request.json().catch(() => ({}));
-  const eventType = safeText(payload?.type, 64);
-  if (!eventType) {
-    return NextResponse.json({ error: "invalid_event_type" }, { status: 400 });
+  const validated = validateAnalyticsPayload(payload);
+  if (!validated.ok) {
+    return NextResponse.json({ error: validated.error }, { status: validated.status });
   }
 
-  const cookieStore = cookies();
+  let hashSecret: string;
+  try {
+    hashSecret = resolveAnalyticsHashSecret();
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "analytics_hash_secret_missing" },
+      { status: 503 }
+    );
+  }
+
+  const cookieStore = await cookies();
   const rawSessionId = cookieStore.get(SESSION_COOKIE)?.value ?? "";
   let isNewSession = !rawSessionId;
   let sessionId = rawSessionId;
@@ -62,17 +71,15 @@ export async function POST(request: NextRequest) {
     isNewSession = true;
   }
 
-  const ip = getClientIp();
-  const userAgent = getUserAgent();
-  const path = safeText(payload?.path, 512);
-  const referrer = safeText(payload?.referrer, 512);
-  const eventId = safeText(payload?.event_id, 36);
-  const elementType = safeText(payload?.element?.type, 64);
-  const elementId = safeText(payload?.element?.id, 512);
-  const elementLabel = safeText(payload?.element?.label, 128);
-  const rawMetadata = payload?.metadata && typeof payload.metadata === "object" ? payload.metadata : {};
-  const metadata = { ...rawMetadata, device_type: detectDeviceType(userAgent) };
+  const ip = await getClientIp();
+  const userAgent = await getUserAgent();
+  const ipHash = createIpHash(ip, hashSecret);
+  const visitorKey = createVisitorKey(sessionId, ipHash);
+  const referrerHost = normalizeReferrerHost(validated.referrer);
+  const eventDateKst = getKstDateString();
+  const metadata = { ...validated.metadata, device_type: detectDeviceType(userAgent) };
 
+  await ensureSchema();
   const pool = await getPool();
   await pool.query(
     `
@@ -81,18 +88,48 @@ export async function POST(request: NextRequest) {
       ON CONFLICT (session_id)
       DO UPDATE SET ip = EXCLUDED.ip, user_agent = EXCLUDED.user_agent, last_seen = now();
     `,
-    [sessionId, ip, userAgent]
+    [sessionId, "redacted", userAgent]
   );
 
   await pool.query(
     `
       INSERT INTO analytics_events
-        (event_id, session_id, ip, event_type, path, referrer, element_type, element_id, element_label, metadata)
+        (
+          event_id,
+          session_id,
+          ip,
+          ip_hash,
+          visitor_key,
+          event_type,
+          path,
+          referrer,
+          referrer_host,
+          element_type,
+          element_id,
+          element_label,
+          metadata,
+          event_date_kst
+        )
       VALUES
-        ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14::date)
       ON CONFLICT DO NOTHING;
     `,
-    [eventId, sessionId, ip, eventType, path, referrer, elementType, elementId, elementLabel, metadata]
+    [
+      validated.eventId,
+      sessionId,
+      "redacted",
+      ipHash,
+      visitorKey,
+      validated.eventType,
+      validated.path,
+      validated.referrer,
+      referrerHost,
+      validated.elementType,
+      validated.elementId,
+      validated.elementLabel,
+      metadata,
+      eventDateKst,
+    ]
   );
 
   const response = NextResponse.json({ ok: true });

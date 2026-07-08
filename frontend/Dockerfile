@@ -57,6 +57,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
 # 헬스체크 스크립트 복사 (런타임에서 참조)
 COPY --from=builder /app/healthcheck.js ./
+COPY --from=builder /app/scripts ./scripts
 
 # nextjs 사용자로 전환
 USER nextjs

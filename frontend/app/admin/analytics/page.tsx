@@ -105,7 +105,13 @@ type InteractionSummary = {
 };
 
 type AnalyticsResponse = {
-  range: { from: string; to: string; toExclusive?: string };
+  range: { from: string; to: string; toExclusive?: string; timeZone?: string; maxRangeDays?: number };
+  meta?: {
+    visitorBasis?: string;
+    retentionWindowDays?: number;
+    generatedAt?: string;
+    schemaVersion?: number;
+  };
   totals: AnalyticsTotals;
   metrics?: AnalyticsMetrics;
   daily: DailyPoint[];
@@ -126,6 +132,13 @@ function startOfDayUTC(date: Date) {
 
 function formatDateInput(date: Date) {
   return date.toISOString().slice(0, 10);
+}
+
+function formatRangeDate(value: string | undefined, fallback: string) {
+  if (!value) return fallback;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? fallback : formatDateInput(parsed);
 }
 
 function shiftUTCDate(date: Date, dayOffset: number) {
@@ -628,7 +641,7 @@ function PeriodSummary({
       color: "#F59E0B",
     },
     { label: "페이지/방문", value: metrics.pagesPerVisitor.toFixed(2), color: "#6366F1" },
-    { label: "재방문율", value: `${metrics.returningVisitorRate}%`, color: "#14B8A6" },
+    { label: "30일 재방문율", value: `${metrics.returningVisitorRate}%`, color: "#14B8A6" },
     { label: "빠른 이탈", value: `${metrics.quickExitRate}%`, sub: `${dwellTime.quickExits ?? 0}건`, color: "#64748B" },
   ];
 
@@ -770,8 +783,11 @@ export default function AnalyticsPage() {
 
   const ctr = metrics.clickThroughRate;
 
-  const fromLabel = data?.range?.from ? formatDateInput(new Date(data.range.from)) : from;
-  const toLabel = data?.range?.to ? formatDateInput(new Date(data.range.to)) : to;
+  const fromLabel = formatRangeDate(data?.range?.from, from);
+  const toLabel = formatRangeDate(data?.range?.to, to);
+  const timeZoneLabel = data?.range?.timeZone ?? "Asia/Seoul";
+  const visitorBasisLabel = data?.meta?.visitorBasis ?? "visitor_key";
+  const retentionWindowDays = data?.meta?.retentionWindowDays ?? 30;
 
   const handlePreset = (days: number) => {
     const nextTo = formatDateInput(today);
@@ -832,7 +848,7 @@ export default function AnalyticsPage() {
       ),
     },
     {
-      label: "재방문율",
+      label: `${retentionWindowDays}일 재방문율`,
       value: `${metrics.returningVisitorRate}%`,
       color: "#14B8A6",
       icon: (
@@ -878,6 +894,9 @@ export default function AnalyticsPage() {
             <h1 className="text-2xl font-black leading-tight tracking-tight text-purple-950 sm:text-3xl">Analytics Dashboard</h1>
             <p className="mt-2 text-sm font-semibold leading-6 tracking-normal text-purple-900/90 sm:mt-1.5 sm:text-base">
               {fromLabel} ~ {toLabel}
+            </p>
+            <p className="mt-1 text-xs font-semibold leading-5 tracking-normal text-purple-700/70">
+              {timeZoneLabel} 기준 · 방문자 기준 {visitorBasisLabel}
             </p>
           </div>
           <button

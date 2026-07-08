@@ -9,9 +9,17 @@ const password = process.env.ADMIN_BASIC_AUTH_PASSWORD || 'dev-password';
 function analyticsFixture(from, to) {
   return {
     range: {
-      from: `${from}T00:00:00.000Z`,
-      to: `${to}T00:00:00.000Z`,
-      toExclusive: `${to}T23:59:59.999Z`,
+      from,
+      to,
+      toExclusive: `${to}T15:00:00.000Z`,
+      timeZone: 'Asia/Seoul',
+      maxRangeDays: 366,
+    },
+    meta: {
+      visitorBasis: 'visitor_key',
+      retentionWindowDays: 30,
+      generatedAt: new Date().toISOString(),
+      schemaVersion: 2,
     },
     totals: {
       visitors: 128,

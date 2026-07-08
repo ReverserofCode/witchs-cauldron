@@ -60,5 +60,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/api/analytics/stats"],
+  matcher: ["/admin/:path*", "/api/analytics/stats", "/api/analytics/health"],
 };

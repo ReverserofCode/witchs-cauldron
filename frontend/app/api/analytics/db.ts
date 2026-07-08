@@ -80,13 +80,17 @@ export async function ensureSchema() {
           event_id text,
           session_id uuid REFERENCES analytics_sessions(session_id) ON DELETE CASCADE,
           ip text NOT NULL,
+          ip_hash text,
+          visitor_key text,
           event_type text NOT NULL,
           path text,
           referrer text,
+          referrer_host text,
           element_type text,
           element_id text,
           element_label text,
           metadata jsonb,
+          event_date_kst date,
           created_at timestamptz NOT NULL DEFAULT now()
         );
       `);
@@ -102,17 +106,26 @@ export async function ensureSchema() {
           ADD COLUMN IF NOT EXISTS event_id text,
           ADD COLUMN IF NOT EXISTS session_id uuid,
           ADD COLUMN IF NOT EXISTS ip text NOT NULL DEFAULT 'unknown',
+          ADD COLUMN IF NOT EXISTS ip_hash text,
+          ADD COLUMN IF NOT EXISTS visitor_key text,
           ADD COLUMN IF NOT EXISTS event_type text,
           ADD COLUMN IF NOT EXISTS path text,
           ADD COLUMN IF NOT EXISTS referrer text,
+          ADD COLUMN IF NOT EXISTS referrer_host text,
           ADD COLUMN IF NOT EXISTS element_type text,
           ADD COLUMN IF NOT EXISTS element_id text,
           ADD COLUMN IF NOT EXISTS element_label text,
           ADD COLUMN IF NOT EXISTS metadata jsonb,
+          ADD COLUMN IF NOT EXISTS event_date_kst date,
           ADD COLUMN IF NOT EXISTS created_at timestamptz NOT NULL DEFAULT now();
       `);
       await client.query(`CREATE INDEX IF NOT EXISTS analytics_events_created_at_idx ON analytics_events (created_at);`);
       await client.query(`CREATE INDEX IF NOT EXISTS analytics_events_ip_idx ON analytics_events (ip);`);
+      await client.query(`CREATE INDEX IF NOT EXISTS analytics_events_date_type_idx ON analytics_events (event_date_kst, event_type);`);
+      await client.query(`CREATE INDEX IF NOT EXISTS analytics_events_type_date_idx ON analytics_events (event_type, event_date_kst);`);
+      await client.query(`CREATE INDEX IF NOT EXISTS analytics_events_visitor_date_idx ON analytics_events (visitor_key, event_date_kst);`);
+      await client.query(`CREATE INDEX IF NOT EXISTS analytics_events_referrer_date_idx ON analytics_events (referrer_host, event_date_kst);`);
+      await client.query(`CREATE INDEX IF NOT EXISTS analytics_events_element_date_idx ON analytics_events (event_type, element_id, event_date_kst);`);
       await client.query(`CREATE UNIQUE INDEX IF NOT EXISTS analytics_events_event_id_uq ON analytics_events (event_id) WHERE event_id IS NOT NULL;`);
       schemaReady = true;
     } finally {
