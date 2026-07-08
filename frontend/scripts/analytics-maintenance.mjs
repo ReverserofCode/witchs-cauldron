@@ -186,7 +186,7 @@ function profileFindings(overview) {
   if (Number(overview.raw_ip_rows ?? 0) > 0) {
     findings.push({
       severity: rate(overview.raw_ip_rows) >= 0.1 ? "high" : "medium",
-      message: "raw IP가 남아 있어 backfill 또는 신규 수집 경로 점검이 필요합니다.",
+      message: "실제 raw IP로 보이는 값이 남아 있어 개인정보 최소화 관점에서 별도 scrub 정책 검토가 필요합니다.",
     });
   }
 
@@ -234,7 +234,13 @@ async function profile(pool) {
           COUNT(*) FILTER (WHERE visitor_key IS NULL OR visitor_key = '')::int AS missing_visitor_key,
           COUNT(*) FILTER (WHERE event_date_kst IS NULL)::int AS missing_event_date_kst,
           COUNT(*) FILTER (WHERE ip_hash IS NULL OR ip_hash = '')::int AS missing_ip_hash,
-          COUNT(*) FILTER (WHERE ip IS NOT NULL AND ip <> '')::int AS raw_ip_rows,
+          COUNT(*) FILTER (
+            WHERE ip IS NOT NULL
+              AND ip <> ''
+              AND ip NOT IN ('redacted', 'unknown')
+          )::int AS raw_ip_rows,
+          COUNT(*) FILTER (WHERE ip = 'redacted')::int AS redacted_ip_rows,
+          COUNT(*) FILTER (WHERE ip = 'unknown')::int AS unknown_ip_rows,
           COUNT(*) FILTER (WHERE referrer_host IS NULL OR referrer_host = '')::int AS missing_referrer_host
         FROM analytics_events
       `,

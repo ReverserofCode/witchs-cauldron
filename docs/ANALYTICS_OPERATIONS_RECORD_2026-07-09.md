@@ -43,7 +43,24 @@ Expected result:
 
 - `missing_visitor_key`, `missing_ip_hash`, and `missing_event_date_kst` should drop to `0`.
 - `duplicate_event_ids` should remain `0`.
-- `raw_ip_rows` can remain non-zero for legacy compatibility because the `ip` column is retained.
+- `raw_ip_rows` only counts values that are neither `redacted` nor `unknown`.
+
+## Production Backfill Result
+
+The production `Analytics Maintenance` workflow was executed after deployment:
+
+- Backfill run: `2,948` legacy event rows updated.
+- Profile after backfill:
+  - Total events: `3,005`
+  - Last event: `2026-07-08 16:47:10 UTC`
+  - Last 24 hours: `67` events
+  - Missing `visitor_key`: `0`
+  - Missing `ip_hash`: `0`
+  - Missing `event_date_kst`: `0`
+  - Missing `referrer_host`: `0`
+  - Duplicate `event_id` rows: `0`
+
+The maintenance profile now separates real-looking raw IP values from the `redacted` placeholder used by the current collection path.
 
 ## Notes
 
