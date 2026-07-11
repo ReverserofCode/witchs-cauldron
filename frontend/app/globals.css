@@ -84,6 +84,11 @@ body {
     backdrop-filter: blur(18px);
 }
 
+body:has(.admin-page) > header,
+body:has(.admin-page) > footer {
+    display: none;
+}
+
 /* Typography helpers: 한국어 줄바꿈 개선 및 가독성 향상 */
 .typography-heading {
     word-break: keep-all;

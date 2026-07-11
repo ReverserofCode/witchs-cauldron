@@ -1,3 +1,9 @@
+import {
+  MAX_ANALYTICS_RANGE_DAYS,
+  addDaysToDateString,
+  getKstDateString,
+} from "./dates";
+
 export type AnalyticsHealthLevel = "ok" | "warning" | "critical";
 
 export type AnalyticsHealthResponse = {
@@ -46,6 +52,18 @@ export type AnalyticsProfileFinding = {
   severity: "high" | "medium" | "low";
   message: string;
 };
+
+export function buildAnalyticsDatePreset(days: number, now = new Date()) {
+  const safeDays = Number.isFinite(days)
+    ? Math.min(MAX_ANALYTICS_RANGE_DAYS, Math.max(1, Math.trunc(days)))
+    : 7;
+  const to = getKstDateString(now);
+
+  return {
+    from: addDaysToDateString(to, -(safeDays - 1)),
+    to,
+  };
+}
 
 const EMPTY_STATES = {
   trend: {

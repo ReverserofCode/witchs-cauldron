@@ -1,24 +1,57 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import type { ChzzkLiveStatus } from "@/app/api/chzzkPlayer/chzzkPlayer";
 
-interface BaseProps {
-  initialStatus: ChzzkLiveStatus;
+type LiveStatusProviderProps = {
+  children: ReactNode;
+  initialStatus?: ChzzkLiveStatus;
   pollIntervalMs?: number;
-}
+};
 
+type LiveStatusViewModel = {
+  liveStatus: ChzzkLiveStatus;
+  isRefreshing: boolean;
+  liveChipClass: string;
+  liveChipLabel: string;
+  liveStatusValue: string;
+  liveStatusDescription: string;
+  viewerSummary: string;
+};
+
+const CHANNEL_ID = "1d333ff175b4db5bd06f87a88579ec1e";
 const LIVE_STATUS_ENDPOINT = "/api/chzzkPlayer";
 const DEFAULT_POLL_INTERVAL_MS = 60_000;
+const INITIAL_LIVE_STATUS: ChzzkLiveStatus = {
+  channelId: CHANNEL_ID,
+  channelUrl: `https://chzzk.naver.com/${CHANNEL_ID}`,
+  isLive: false,
+  status: "CHECKING",
+  title: null,
+  startedAt: null,
+  thumbnail: null,
+  liveId: null,
+  viewers: null,
+  totalViewers: null,
+};
 
-function useLiveStatus(initialStatus: ChzzkLiveStatus, pollIntervalMs = DEFAULT_POLL_INTERVAL_MS) {
+const LiveStatusContext = createContext<LiveStatusViewModel | null>(null);
+
+function useLiveStatusState(
+  initialStatus: ChzzkLiveStatus,
+  pollIntervalMs: number
+): LiveStatusViewModel {
   const [liveStatus, setLiveStatus] = useState<ChzzkLiveStatus>(initialStatus);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const lastRequestAtRef = useRef(0);
-
-  useEffect(() => {
-    setLiveStatus(initialStatus);
-  }, [initialStatus]);
 
   useEffect(() => {
     let cancelled = false;
@@ -31,31 +64,35 @@ function useLiveStatus(initialStatus: ChzzkLiveStatus, pollIntervalMs = DEFAULT_
       setIsRefreshing(true);
 
       try {
-        const res = await fetch(LIVE_STATUS_ENDPOINT, {
-          cache: "no-store",
+        const response = await fetch(LIVE_STATUS_ENDPOINT, {
           headers: { accept: "application/json" },
         });
+        const payload = (await response.json()) as ChzzkLiveStatus;
 
-        if (!res.ok) throw new Error(`live status request failed: ${res.status}`);
-        const payload = (await res.json()) as ChzzkLiveStatus;
         if (!cancelled) setLiveStatus(payload);
       } catch {
-        // 기존 상태 유지
+        if (!cancelled) {
+          setLiveStatus((current) => ({
+            ...current,
+            status: current.status === "CHECKING" ? "UNKNOWN" : current.status,
+            error: current.error ?? "LIVE_STATUS_UNAVAILABLE",
+          }));
+        }
       } finally {
         if (!cancelled) setIsRefreshing(false);
       }
     };
 
     const tick = () => {
-      if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
+      if (document.visibilityState === "hidden") return;
       void refreshLiveStatus();
     };
-
-    const intervalId = window.setInterval(tick, pollIntervalMs);
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") void refreshLiveStatus();
     };
 
+    tick();
+    const intervalId = window.setInterval(tick, pollIntervalMs);
     window.addEventListener("focus", tick);
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
@@ -68,34 +105,61 @@ function useLiveStatus(initialStatus: ChzzkLiveStatus, pollIntervalMs = DEFAULT_
   }, [pollIntervalMs]);
 
   return useMemo(() => {
+    const isChecking = liveStatus.status === "CHECKING";
     const viewerText =
       liveStatus.isLive && typeof liveStatus.viewers === "number" && Number.isFinite(liveStatus.viewers)
         ? ` • ${liveStatus.viewers.toLocaleString()}명 시청중`
         : "";
+    const statusTone = liveStatus.isLive
+      ? "bg-rose-500/90 border-rose-300/60 text-white"
+      : isChecking
+        ? "bg-purple-700/75 border-purple-400/60 text-purple-50"
+        : "bg-slate-700/80 border-slate-600/70 text-slate-100";
 
     return {
       liveStatus,
       isRefreshing,
-      liveChipClass: `chip inline-flex items-center gap-1.5 border ${
-        liveStatus.isLive
-          ? "bg-rose-500/90 border-rose-300/60 text-white"
-          : "bg-slate-700/80 border-slate-600/70 text-slate-100"
-      }`,
-      liveChipLabel: liveStatus.isLive ? `실시간 방송 중${viewerText}` : "현재 오프라인",
-      liveStatusValue: liveStatus.isLive ? "ON AIR" : "OFF AIR",
+      liveChipClass: `chip inline-flex items-center gap-1.5 border ${statusTone}`,
+      liveChipLabel: liveStatus.isLive
+        ? `실시간 방송 중${viewerText}`
+        : isChecking
+          ? "방송 상태 확인 중"
+          : "현재 오프라인",
+      liveStatusValue: liveStatus.isLive ? "ON AIR" : isChecking ? "CHECK" : "OFF AIR",
       liveStatusDescription: liveStatus.error
         ? "라이브 정보를 불러오지 못했어요. 잠시 후 다시 확인해주세요."
         : liveStatus.isLive
           ? "모잉이 지금도 마법을 선보이는 중입니다!"
-          : "다음 방송을 기다려주세요.",
+          : isChecking
+            ? "현재 방송 상태를 확인하고 있습니다."
+            : "다음 방송을 기다려주세요.",
       viewerSummary:
-        liveStatus.isLive && viewerText ? viewerText.replace(" • ", "") : "방송 상태를 주기적으로 확인합니다.",
+        liveStatus.isLive && viewerText
+          ? viewerText.replace(" • ", "")
+          : isChecking
+            ? "치지직 채널에 연결 중입니다."
+            : "방송 상태를 주기적으로 확인합니다.",
     };
   }, [isRefreshing, liveStatus]);
 }
 
-export function LiveStatusChip({ initialStatus, pollIntervalMs }: BaseProps) {
-  const { liveStatus, isRefreshing, liveChipClass, liveChipLabel } = useLiveStatus(initialStatus, pollIntervalMs);
+export function LiveStatusProvider({
+  children,
+  initialStatus = INITIAL_LIVE_STATUS,
+  pollIntervalMs = DEFAULT_POLL_INTERVAL_MS,
+}: LiveStatusProviderProps) {
+  const value = useLiveStatusState(initialStatus, pollIntervalMs);
+  return <LiveStatusContext.Provider value={value}>{children}</LiveStatusContext.Provider>;
+}
+
+function useLiveStatus() {
+  const value = useContext(LiveStatusContext);
+  if (!value) throw new Error("Live status components must be rendered inside LiveStatusProvider");
+  return value;
+}
+
+export function LiveStatusChip() {
+  const { liveStatus, isRefreshing, liveChipClass, liveChipLabel } = useLiveStatus();
 
   return (
     <a
@@ -110,14 +174,13 @@ export function LiveStatusChip({ initialStatus, pollIntervalMs }: BaseProps) {
   );
 }
 
-export function LiveStatusDescription({ initialStatus, pollIntervalMs }: BaseProps) {
-  const { liveStatusDescription } = useLiveStatus(initialStatus, pollIntervalMs);
-
+export function LiveStatusDescription() {
+  const { liveStatusDescription } = useLiveStatus();
   return <p className="text-sm font-light text-purple-200/85 typography-lead">{liveStatusDescription}</p>;
 }
 
-export function LiveStatusCard({ initialStatus, pollIntervalMs }: BaseProps) {
-  const { isRefreshing, liveStatus, liveStatusValue, viewerSummary } = useLiveStatus(initialStatus, pollIntervalMs);
+export function LiveStatusCard() {
+  const { isRefreshing, liveStatus, liveStatusValue, viewerSummary } = useLiveStatus();
 
   return (
     <div className="liquid-glass-panel rounded-[24px] px-4 py-3">
@@ -126,7 +189,7 @@ export function LiveStatusCard({ initialStatus, pollIntervalMs }: BaseProps) {
         <p className="text-xl font-black text-white">{liveStatusValue}</p>
         <span
           className={`inline-flex h-2.5 w-2.5 rounded-full ${liveStatus.isLive ? "bg-rose-400" : "bg-slate-400"} ${isRefreshing ? "animate-pulse" : ""}`}
-          aria-hidden
+          aria-hidden="true"
         />
       </div>
       <p className="mt-1 text-xs text-purple-100/75">{viewerSummary}</p>

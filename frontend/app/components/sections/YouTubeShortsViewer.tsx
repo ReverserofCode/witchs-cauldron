@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState, useEffect, useCallback, useRef } from "react";
 
 interface YouTubeShort {
@@ -17,7 +18,7 @@ export default function YouTubeShortsViewer() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
-  const [isMuted, setIsMuted] = useState(true);
+  const [isEmbedActive, setIsEmbedActive] = useState(false);
   const [retrySeed, setRetrySeed] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -56,6 +57,7 @@ export default function YouTubeShortsViewer() {
   const goToNext = useCallback(() => {
     if (isTransitioning || shorts.length <= 1) return;
     setIsTransitioning(true);
+    setIsEmbedActive(false);
     setCurrentIndex((prev) => (prev + 1) % shorts.length);
     setTimeout(() => setIsTransitioning(false), 300);
   }, [shorts.length, isTransitioning]);
@@ -63,49 +65,24 @@ export default function YouTubeShortsViewer() {
   const goToPrev = useCallback(() => {
     if (isTransitioning || shorts.length <= 1) return;
     setIsTransitioning(true);
+    setIsEmbedActive(false);
     setCurrentIndex((prev) => (prev - 1 + shorts.length) % shorts.length);
     setTimeout(() => setIsTransitioning(false), 300);
   }, [shorts.length, isTransitioning]);
 
-  // 휠 스크롤 네비게이션
+  // Horizontal swipe navigation keeps vertical page scrolling available.
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
-    let lastScrollTime = 0;
-    const scrollThreshold = 500;
-
-    const handleWheel = (e: WheelEvent) => {
-      e.preventDefault();
-      const now = Date.now();
-      if (now - lastScrollTime < scrollThreshold) return;
-      lastScrollTime = now;
-
-      if (e.deltaY > 0) {
-        goToNext();
-      } else if (e.deltaY < 0) {
-        goToPrev();
-      }
-    };
-
-    container.addEventListener("wheel", handleWheel, { passive: false });
-    return () => container.removeEventListener("wheel", handleWheel);
-  }, [goToNext, goToPrev]);
-
-  // 터치 스와이프
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    let touchStartY = 0;
+    let touchStartX = 0;
 
     const handleTouchStart = (e: TouchEvent) => {
-      touchStartY = e.touches[0].clientY;
+      touchStartX = e.touches[0].clientX;
     };
 
     const handleTouchEnd = (e: TouchEvent) => {
-      const touchEndY = e.changedTouches[0].clientY;
-      const diff = touchStartY - touchEndY;
+      const diff = touchStartX - e.changedTouches[0].clientX;
 
       if (Math.abs(diff) > 50) {
         if (diff > 0) {
@@ -194,8 +171,7 @@ export default function YouTubeShortsViewer() {
     );
   }
 
-  // YouTube embed URL with autoplay
-  const embedUrl = `https://www.youtube.com/embed/${currentShort.videoId}?autoplay=1&mute=${isMuted ? 1 : 0}&loop=1&playlist=${currentShort.videoId}&playsinline=1&rel=0&modestbranding=1&controls=0`;
+  const embedUrl = `https://www.youtube.com/embed/${currentShort.videoId}?autoplay=1&mute=1&loop=1&playlist=${currentShort.videoId}&playsinline=1&rel=0&modestbranding=1&controls=1`;
 
   return (
     <div
@@ -206,17 +182,42 @@ export default function YouTubeShortsViewer() {
       <div className="relative mx-auto w-full max-w-[min(84vw,300px)]">
         {/* 비디오 컨테이너 - 9:16 비율 */}
         <div className="relative aspect-[9/16] w-full overflow-hidden rounded-[20px] bg-black shadow-lg shadow-red-900/15">
-          {/* YouTube iframe */}
-          <iframe
-            key={currentShort.videoId}
-            src={embedUrl}
-            className={`absolute inset-0 w-full h-full transition-opacity duration-300 ${
-              isTransitioning ? "opacity-0" : "opacity-100"
-            }`}
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-            style={{ border: 0 }}
-          />
+          {isEmbedActive ? (
+            <iframe
+              key={currentShort.videoId}
+              src={embedUrl}
+              title={`${currentShort.title} YouTube Shorts`}
+              className={`absolute inset-0 h-full w-full transition-opacity duration-300 ${
+                isTransitioning ? "opacity-0" : "opacity-100"
+              }`}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              loading="lazy"
+              referrerPolicy="strict-origin-when-cross-origin"
+              style={{ border: 0 }}
+            />
+          ) : (
+            <button
+              type="button"
+              onClick={() => setIsEmbedActive(true)}
+              className="absolute inset-0 h-full w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white"
+              aria-label={`${currentShort.title} 재생`}
+            >
+              <Image
+                src={currentShort.thumbnail}
+                alt=""
+                fill
+                sizes="(min-width: 1024px) 300px, min(84vw, 300px)"
+                className="object-cover"
+              />
+              <span className="absolute inset-0 bg-black/20 transition hover:bg-black/30" aria-hidden="true" />
+              <span className="absolute left-1/2 top-1/2 flex h-14 w-14 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white/92 shadow-lg" aria-hidden="true">
+                <svg className="ml-1 h-7 w-7 text-red-600" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M8 5v14l11-7z" />
+                </svg>
+              </span>
+            </button>
+          )}
 
           {/* YouTube 로고 */}
           <div className="pointer-events-none absolute top-3 left-3 z-10">
@@ -235,30 +236,11 @@ export default function YouTubeShortsViewer() {
 
           {/* 사이드 컨트롤 */}
           <div className="absolute bottom-[4.5rem] right-3 z-10 flex flex-col gap-3">
-            {/* 뮤트 토글 */}
-            <button
-              onClick={() => setIsMuted((prev) => !prev)}
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-black/50 backdrop-blur-sm transition-all duration-200 hover:scale-105 hover:bg-black/70 active:scale-95"
-              aria-label={isMuted ? "음소거 해제" : "음소거"}
-            >
-              {isMuted ? (
-                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
-                </svg>
-              ) : (
-                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-                </svg>
-              )}
-            </button>
-
-            {/* YouTube에서 열기 */}
             <a
               href={currentShort.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-black/50 backdrop-blur-sm transition-all duration-200 hover:scale-105 hover:bg-black/70 active:scale-95"
+              className="flex h-11 w-11 items-center justify-center rounded-full bg-black/50 backdrop-blur-sm transition-all duration-200 hover:scale-105 hover:bg-black/70 active:scale-95"
               aria-label="YouTube에서 보기"
             >
               <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -282,9 +264,10 @@ export default function YouTubeShortsViewer() {
 
       <div className="mt-4 flex items-center justify-center gap-3">
         <button
+          type="button"
           onClick={goToPrev}
           disabled={isTransitioning}
-          className="flex h-9 w-9 items-center justify-center rounded-full bg-red-600 shadow-md transition-all duration-200 hover:scale-105 hover:bg-red-700 active:scale-95 disabled:opacity-50"
+          className="flex h-11 w-11 items-center justify-center rounded-full bg-red-600 shadow-md transition-all duration-200 hover:scale-105 hover:bg-red-700 active:scale-95 disabled:opacity-50"
           aria-label="이전 Shorts"
         >
           <svg className="h-4 w-4 text-white" fill="currentColor" viewBox="0 0 24 24">
@@ -292,31 +275,15 @@ export default function YouTubeShortsViewer() {
           </svg>
         </button>
 
-        <div className="flex justify-center gap-1.5">
-        {shorts.map((_, index) => (
-          <button
-            key={index}
-            onClick={() => {
-              if (!isTransitioning) {
-                setIsTransitioning(true);
-                setCurrentIndex(index);
-                setTimeout(() => setIsTransitioning(false), 300);
-              }
-            }}
-            className={`w-2 h-2 rounded-full transition-all duration-300 ${
-              index === currentIndex
-                ? "bg-red-600 w-6"
-                : "bg-red-300 hover:bg-red-400"
-            }`}
-            aria-label={`Shorts ${index + 1}로 이동`}
-          />
-        ))}
-        </div>
+        <span className="min-w-16 text-center text-sm font-bold tabular-nums text-red-700" aria-live="polite">
+          {currentIndex + 1} / {shorts.length}
+        </span>
 
         <button
+          type="button"
           onClick={goToNext}
           disabled={isTransitioning}
-          className="flex h-9 w-9 items-center justify-center rounded-full bg-red-600 shadow-md transition-all duration-200 hover:scale-105 hover:bg-red-700 active:scale-95 disabled:opacity-50"
+          className="flex h-11 w-11 items-center justify-center rounded-full bg-red-600 shadow-md transition-all duration-200 hover:scale-105 hover:bg-red-700 active:scale-95 disabled:opacity-50"
           aria-label="다음 Shorts"
         >
           <svg className="h-4 w-4 text-white" fill="currentColor" viewBox="0 0 24 24">
@@ -325,10 +292,6 @@ export default function YouTubeShortsViewer() {
         </button>
       </div>
 
-      {/* 힌트 */}
-      <p className="mt-3 text-center text-[11px] text-red-500/70">
-        스와이프로 탐색 · 클릭하여 YouTube에서 보기
-      </p>
     </div>
   );
 }

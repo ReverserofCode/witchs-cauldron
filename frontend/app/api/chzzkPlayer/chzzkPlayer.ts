@@ -34,7 +34,7 @@ async function fetchChzzkLiveFromPolling(): Promise<
   Omit<ChzzkLiveStatus, "channelId" | "channelUrl" | "error">
 > {
   const res = await fetch(CHZZK_POLLING_LIVE_URL, {
-    cache: "no-store",
+    next: { revalidate: 15 },
     headers: {
       "User-Agent":
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -93,5 +93,12 @@ export async function GET() {
   const liveStatus = await getChzzkLiveStatus();
   const statusCode = liveStatus.error ? 503 : 200;
 
-  return NextResponse.json(liveStatus, { status: statusCode });
+  return NextResponse.json(liveStatus, {
+    status: statusCode,
+    headers: {
+      "Cache-Control": liveStatus.error
+        ? "no-store"
+        : "public, max-age=15, stale-while-revalidate=45",
+    },
+  });
 }

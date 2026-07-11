@@ -23,8 +23,13 @@ export default function ClipsViewer({ clips }: ClipsViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isViewerFocused, setIsViewerFocused] = useState(false);
 
-  const currentClip = clips[currentIndex];
-  const allFailed = clips.length > 0 && failedClipIds.size >= clips.length;
+  const safeCurrentIndex = clips.length > 0 ? Math.min(currentIndex, clips.length - 1) : 0;
+  const currentClip = clips[safeCurrentIndex];
+  const allFailed = clips.length > 0 && clips.every((clip) => failedClipIds.has(clip.id));
+
+  useEffect(() => {
+    if (currentIndex !== safeCurrentIndex) setCurrentIndex(safeCurrentIndex);
+  }, [currentIndex, safeCurrentIndex]);
 
   // 비디오 진행률 업데이트
   useEffect(() => {
@@ -63,11 +68,7 @@ export default function ClipsViewer({ clips }: ClipsViewerProps) {
   // 클립 변경 시 초기화
   useEffect(() => {
     setProgress(0);
-    setIsPlaying(true);
-    const video = videoRef.current;
-    if (video) {
-      video.load();
-    }
+    setIsPlaying(false);
   }, [currentIndex]);
 
   const goToNext = useCallback(() => {
@@ -104,46 +105,19 @@ export default function ClipsViewer({ clips }: ClipsViewerProps) {
     }
   };
 
-  // 휠 스크롤로 네비게이션
+  // Horizontal swipe navigation keeps vertical page scrolling available.
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
-    let lastScrollTime = 0;
-    const scrollThreshold = 500; // 스크롤 간격 제한 (ms)
-
-    const handleWheel = (e: WheelEvent) => {
-      e.preventDefault();
-      const now = Date.now();
-      if (now - lastScrollTime < scrollThreshold) return;
-      lastScrollTime = now;
-
-      if (e.deltaY > 0) {
-        goToNext();
-      } else if (e.deltaY < 0) {
-        goToPrev();
-      }
-    };
-
-    container.addEventListener("wheel", handleWheel, { passive: false });
-    return () => container.removeEventListener("wheel", handleWheel);
-  }, [goToNext, goToPrev]);
-
-  // 터치 스와이프
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    let touchStartY = 0;
-    let touchEndY = 0;
+    let touchStartX = 0;
 
     const handleTouchStart = (e: TouchEvent) => {
-      touchStartY = e.touches[0].clientY;
+      touchStartX = e.touches[0].clientX;
     };
 
     const handleTouchEnd = (e: TouchEvent) => {
-      touchEndY = e.changedTouches[0].clientY;
-      const diff = touchStartY - touchEndY;
+      const diff = touchStartX - e.changedTouches[0].clientX;
 
       if (Math.abs(diff) > 50) {
         if (diff > 0) {
@@ -248,7 +222,7 @@ export default function ClipsViewer({ clips }: ClipsViewerProps) {
             muted={isMuted}
             autoPlay={isPlaying}
             playsInline
-            preload="metadata"
+            preload="none"
             onEnded={handleVideoEnd}
             onError={handleVideoError}
           />
@@ -263,7 +237,7 @@ export default function ClipsViewer({ clips }: ClipsViewerProps) {
 
           {/* 클립 인덱스 표시 */}
           <div className="absolute top-3 right-3 rounded-full bg-black/45 px-2 py-1 text-[11px] font-medium text-white backdrop-blur-sm">
-            {currentIndex + 1} / {clips.length}
+            {safeCurrentIndex + 1} / {clips.length}
           </div>
 
           {/* 재생/일시정지 오버레이 */}
@@ -320,7 +294,7 @@ export default function ClipsViewer({ clips }: ClipsViewerProps) {
           type="button"
           onClick={goToPrev}
           disabled={isTransitioning}
-          className="flex h-9 w-9 items-center justify-center rounded-full bg-purple-600 shadow-md transition-all duration-200 hover:scale-105 hover:bg-purple-700 active:scale-95 disabled:opacity-50"
+          className="flex h-11 w-11 items-center justify-center rounded-full bg-purple-600 shadow-md transition-all duration-200 hover:scale-105 hover:bg-purple-700 active:scale-95 disabled:opacity-50"
           aria-label="이전 클립"
         >
           <svg className="h-4 w-4 text-white" fill="currentColor" viewBox="0 0 24 24">
@@ -328,33 +302,15 @@ export default function ClipsViewer({ clips }: ClipsViewerProps) {
           </svg>
         </button>
 
-        <div className="flex justify-center gap-1.5">
-        {clips.map((_, index) => (
-          <button
-            type="button"
-            key={index}
-            onClick={() => {
-              if (!isTransitioning) {
-                setIsTransitioning(true);
-                setCurrentIndex(index);
-                setTimeout(() => setIsTransitioning(false), 300);
-              }
-            }}
-            className={`w-2 h-2 rounded-full transition-all duration-300 ${
-              index === currentIndex
-                ? "bg-purple-600 w-6"
-                : "bg-purple-300 hover:bg-purple-400"
-            }`}
-            aria-label={`클립 ${index + 1}로 이동`}
-          />
-        ))}
-        </div>
+        <span className="min-w-16 text-center text-sm font-bold tabular-nums text-purple-800" aria-live="polite">
+          {safeCurrentIndex + 1} / {clips.length}
+        </span>
 
         <button
           type="button"
           onClick={goToNext}
           disabled={isTransitioning}
-          className="flex h-9 w-9 items-center justify-center rounded-full bg-purple-600 shadow-md transition-all duration-200 hover:scale-105 hover:bg-purple-700 active:scale-95 disabled:opacity-50"
+          className="flex h-11 w-11 items-center justify-center rounded-full bg-purple-600 shadow-md transition-all duration-200 hover:scale-105 hover:bg-purple-700 active:scale-95 disabled:opacity-50"
           aria-label="다음 클립"
         >
           <svg className="h-4 w-4 text-white" fill="currentColor" viewBox="0 0 24 24">

@@ -150,12 +150,16 @@ export default function ScheduleSection({
   );
 
   const hasAnyEvents = useMemo(() => weekColumns.some((day) => day.events.length > 0), [weekColumns]);
+  const embeddedColumns = useMemo(
+    () => weekColumns.filter((day) => day.events.length > 0),
+    [weekColumns]
+  );
 
   const weekRangeLabel = useMemo(() => formatWeekRangeLabel(weekRange), [weekRange]);
 
   const sectionContent = (
     <>
-      {status === 'loading' && <ScheduleSkeleton daysToShow={clampedDaysToShow} />}
+      {status === 'loading' && <ScheduleSkeleton daysToShow={embedded ? Math.min(clampedDaysToShow, 2) : clampedDaysToShow} />}
       {status === 'error' && (
         <div className="space-y-3 rounded-2xl border border-red-200 bg-red-50/80 p-4 text-xs text-red-700 typography-small">
           <div className="typography-small">
@@ -235,7 +239,7 @@ export default function ScheduleSection({
 
           {embedded ? (
             <ul className="space-y-1.5">
-              {weekColumns.map((day) => (
+              {hasAnyEvents ? embeddedColumns.map((day) => (
                 <li
                   key={day.isoDate}
                   className={`stagger-item rounded-[20px] border px-3 py-3 transition ${
@@ -275,7 +279,12 @@ export default function ScheduleSection({
                     </div>
                   </div>
                 </li>
-              ))}
+              )) : (
+                <li className="rounded-[20px] border border-dashed border-purple-200/70 bg-white/60 px-4 py-5 text-center">
+                  <p className="text-sm font-semibold text-purple-900">예정된 방송이 없습니다</p>
+                  <p className="mt-1 text-xs text-purple-700/75">전체 일정에서 이후 계획을 확인할 수 있습니다.</p>
+                </li>
+              )}
             </ul>
           ) : (
             <ul className={`grid grid-cols-1 gap-3 ${clampedDaysToShow >= 5 ? 'sm:grid-cols-2 xl:grid-cols-4' : clampedDaysToShow >= 4 ? 'sm:grid-cols-2 xl:grid-cols-4' : clampedDaysToShow === 3 ? 'sm:grid-cols-3' : clampedDaysToShow === 2 ? 'sm:grid-cols-2' : ''}`}>

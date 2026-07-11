@@ -2,11 +2,13 @@
 
 import { useEffect, useMemo, useState, useCallback, useRef, type ReactNode } from "react";
 import {
+  buildAnalyticsDatePreset,
   getAnalyticsEmptyState,
   getAnalyticsHealthStatus,
   type AnalyticsHealthResponse,
   type AnalyticsHealthLevel,
 } from "@/app/lib/analytics/dashboard";
+import { getKstDateString } from "@/app/lib/analytics/dates";
 
 type AnalyticsTotals = {
   visitors: number;
@@ -140,25 +142,11 @@ type StatCardItem = {
   description?: string;
 };
 
-function startOfDayUTC(date: Date) {
-  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
-}
-
-function formatDateInput(date: Date) {
-  return date.toISOString().slice(0, 10);
-}
-
 function formatRangeDate(value: string | undefined, fallback: string) {
   if (!value) return fallback;
   if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
   const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? fallback : formatDateInput(parsed);
-}
-
-function shiftUTCDate(date: Date, dayOffset: number) {
-  const next = new Date(date);
-  next.setUTCDate(next.getUTCDate() + dayOffset);
-  return next;
+  return Number.isNaN(parsed.getTime()) ? fallback : getKstDateString(parsed);
 }
 
 function formatDayLabel(dateString: string) {
@@ -759,7 +747,7 @@ function AdminStatusStrip({
 
   return (
     <section className={`admin-panel ${tone.panel}`} aria-label="Analytics 운영 상태">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+      <div className="space-y-3">
         <div className="flex min-w-0 items-start gap-3">
           <span className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${tone.dot}`} aria-hidden="true" />
           <div className="min-w-0">
@@ -772,11 +760,11 @@ function AdminStatusStrip({
             </p>
           </div>
         </div>
-        <dl className="grid w-full min-w-0 flex-1 grid-cols-[repeat(auto-fit,minmax(8.5rem,1fr))] gap-2 text-xs lg:max-w-[880px]">
+        <dl className="grid w-full min-w-0 grid-cols-2 gap-2 text-xs sm:grid-cols-3 xl:grid-cols-7">
           {facts.map((item) => (
             <div key={item.label} className="min-w-0 rounded-xl border border-white/70 bg-white/72 px-3 py-2">
               <dt className="text-[11px] font-medium text-slate-500">{item.label}</dt>
-              <dd className="mt-0.5 min-w-0 break-keep text-[13px] font-bold leading-5 text-slate-900" title={item.value}>
+              <dd className="mt-0.5 min-w-0 break-words text-[13px] font-bold leading-5 text-slate-900" title={item.value}>
                 {item.value}
               </dd>
             </div>
@@ -787,16 +775,16 @@ function AdminStatusStrip({
   );
 }
 
-function KpiGroup({ title, items, compact = false }: { title: string; items: StatCardItem[]; compact?: boolean }) {
+function KpiGroup({ title, items }: { title: string; items: StatCardItem[] }) {
   return (
-    <section className="admin-panel" aria-label={title}>
+    <section aria-label={title}>
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-sm font-black text-slate-950">{title}</h2>
       </div>
-      <div className={`grid gap-3 ${compact ? "grid-cols-[repeat(auto-fit,minmax(9rem,1fr))]" : "grid-cols-[repeat(auto-fit,minmax(10rem,1fr))]"}`}>
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {items.map((stat) => (
           <div key={stat.label} className="min-w-0 rounded-xl border border-slate-200/80 bg-white px-3 py-3 shadow-sm">
-            <div className="flex min-h-[6.75rem] flex-col items-start gap-3 sm:min-h-[7.25rem] sm:flex-row sm:items-center">
+            <div className="flex min-h-[6.5rem] flex-col items-start gap-3 sm:flex-row sm:items-center">
               <div className="shrink-0 rounded-full p-2" style={{ backgroundColor: `${stat.color}15` }}>
                 <svg className="h-5 w-5" style={{ color: stat.color }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
                   {stat.icon}
@@ -847,12 +835,9 @@ function MobileSectionNav() {
 }
 
 export default function AnalyticsPage() {
-  const today = useMemo(() => startOfDayUTC(new Date()), []);
-  const [from, setFrom] = useState(() => {
-    const d = shiftUTCDate(today, -6);
-    return formatDateInput(d);
-  });
-  const [to, setTo] = useState(() => formatDateInput(today));
+  const initialRange = useMemo(() => buildAnalyticsDatePreset(7), []);
+  const [from, setFrom] = useState(initialRange.from);
+  const [to, setTo] = useState(initialRange.to);
   const [data, setData] = useState<AnalyticsResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [health, setHealth] = useState<AnalyticsHealthResponse | null>(null);
@@ -995,10 +980,9 @@ export default function AnalyticsPage() {
   const retentionWindowDays = data?.meta?.retentionWindowDays ?? 30;
 
   const handlePreset = (days: number) => {
-    const nextTo = formatDateInput(today);
-    const nextFrom = formatDateInput(shiftUTCDate(today, -(days - 1)));
-    setFrom(nextFrom);
-    setTo(nextTo);
+    const nextRange = buildAnalyticsDatePreset(days);
+    setFrom(nextRange.from);
+    setTo(nextRange.to);
     setActivePreset(days);
   };
 
@@ -1113,12 +1097,12 @@ export default function AnalyticsPage() {
   ];
 
   return (
-    <div className="admin-page min-h-screen px-4 py-8 sm:px-6 sm:py-10">
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
+    <div className="admin-page min-h-screen px-3 py-5 sm:px-6 sm:py-8">
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 sm:gap-6">
         {/* Header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div className="min-w-0">
-            <h1 className="text-2xl font-black leading-tight tracking-tight text-slate-950 sm:text-3xl">Analytics Dashboard</h1>
+            <h1 className="max-w-full break-words text-xl font-black leading-tight text-slate-950 sm:text-3xl">Analytics Dashboard</h1>
             <p className="mt-2 text-sm font-semibold leading-6 tracking-normal text-slate-700 sm:mt-1.5 sm:text-base">
               {fromLabel} ~ {toLabel}
             </p>
@@ -1126,6 +1110,12 @@ export default function AnalyticsPage() {
               {timeZoneLabel} 기준 · 방문자 기준 {visitorBasisLabel}
             </p>
           </div>
+          <a
+            href="/"
+            className="inline-flex min-h-11 shrink-0 items-center justify-center self-start rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50 sm:self-auto"
+          >
+            사이트로 돌아가기
+          </a>
         </div>
 
         <AdminStatusStrip
@@ -1164,13 +1154,14 @@ export default function AnalyticsPage() {
         )}
 
         {/* Date picker */}
-        <section className="admin-toolbar sticky top-3 z-10 p-4">
+        <section className="admin-toolbar p-4 lg:sticky lg:top-3 lg:z-10" aria-busy={isLoading}>
           <div className="flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-end lg:gap-4">
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-slate-500">시작일</label>
+              <label htmlFor="analytics-from" className="text-xs font-medium text-slate-500">시작일</label>
               <input
+                id="analytics-from"
                 type="date"
-                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm lg:w-auto"
+                className="min-h-11 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm lg:w-auto"
                 value={from}
                 onChange={(e) => {
                   const value = e.target.value;
@@ -1181,10 +1172,11 @@ export default function AnalyticsPage() {
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-slate-500">종료일</label>
+              <label htmlFor="analytics-to" className="text-xs font-medium text-slate-500">종료일</label>
               <input
+                id="analytics-to"
                 type="date"
-                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm lg:w-auto"
+                className="min-h-11 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm lg:w-auto"
                 value={to}
                 onChange={(e) => {
                   const value = e.target.value;
@@ -1208,7 +1200,7 @@ export default function AnalyticsPage() {
                     key={preset.label}
                     type="button"
                     onClick={() => handlePreset(preset.days)}
-                    className={`rounded-lg border px-3 py-2 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/70 focus-visible:ring-offset-2 focus-visible:ring-offset-white ${
+                    className={`min-h-11 rounded-lg border px-3 py-2 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/70 focus-visible:ring-offset-2 focus-visible:ring-offset-white ${
                       active
                         ? "border-purple-500 bg-purple-600 text-white"
                         : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
@@ -1219,7 +1211,7 @@ export default function AnalyticsPage() {
                 );
               })}
             </div>
-            <div className="flex min-w-0 flex-1 flex-col gap-1 text-xs text-slate-500 lg:items-end">
+            <div className="flex min-w-0 flex-1 flex-col gap-1 text-xs text-slate-500 lg:items-end" aria-live="polite">
               <span className="font-semibold text-slate-700">현재 범위 {fromLabel} ~ {toLabel}</span>
               <span>최대 조회 {data?.range?.maxRangeDays ?? 366}일 · 생성 {formatDateTimeLabel(data?.meta?.generatedAt)}</span>
             </div>
@@ -1227,7 +1219,7 @@ export default function AnalyticsPage() {
               type="button"
               onClick={() => setReloadToken((prev) => prev + 1)}
               disabled={isLoading}
-              className="rounded-xl bg-[rgb(var(--moing-primary))] px-4 py-2 text-sm font-semibold text-white shadow-md shadow-purple-900/20 transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-70"
+              className="min-h-11 rounded-xl bg-[rgb(var(--moing-primary))] px-4 py-2 text-sm font-semibold text-white shadow-md shadow-purple-900/20 transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-70"
             >
               {isLoading ? "불러오는 중..." : "새로고침"}
             </button>
@@ -1235,9 +1227,9 @@ export default function AnalyticsPage() {
         </section>
 
         {/* Stats cards */}
-        <section id="summary" className="grid gap-4 xl:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
+        <section id="summary" className="grid scroll-mt-24 gap-5">
           <KpiGroup title="핵심 지표" items={primaryStats} />
-          <KpiGroup title="진단 지표" items={secondaryStats} compact />
+          <KpiGroup title="진단 지표" items={secondaryStats} />
         </section>
 
         {/* Trend chart + Period summary */}

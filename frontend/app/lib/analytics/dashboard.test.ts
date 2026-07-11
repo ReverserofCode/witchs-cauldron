@@ -1,12 +1,31 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  buildAnalyticsDatePreset,
   buildAnalyticsProfileFindings,
   getAnalyticsEmptyState,
   getAnalyticsHealthStatus,
 } from "./dashboard";
 
 describe("analytics dashboard helpers", () => {
+  it("builds date presets from the current Asia/Seoul calendar date", () => {
+    const range = buildAnalyticsDatePreset(7, new Date("2026-07-10T15:30:00.000Z"));
+
+    expect(range).toEqual({
+      from: "2026-07-05",
+      to: "2026-07-11",
+    });
+  });
+
+  it("clamps analytics presets to the supported 366-day range", () => {
+    const range = buildAnalyticsDatePreset(500, new Date("2026-07-11T03:00:00.000Z"));
+
+    expect(range).toEqual({
+      from: "2025-07-11",
+      to: "2026-07-11",
+    });
+  });
+
   it("marks analytics health as ok when DB, schema, and recent events are healthy", () => {
     const status = getAnalyticsHealthStatus({
       ok: true,

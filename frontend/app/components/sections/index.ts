@@ -4,4 +4,9 @@ export { default as FeaturedVideoSection } from "./FeaturedVideoSection";
 export { default as ScheduleSection } from "./ScheduleSection";
 export { default as YouTubeCategorySection } from "./YouTubeCategorySection";
 export { default as YouTubeShortsViewer } from "./YouTubeShortsViewer";
-export { LiveStatusCard, LiveStatusChip, LiveStatusDescription } from "./LiveStatusPanel";
+export {
+  LiveStatusCard,
+  LiveStatusChip,
+  LiveStatusDescription,
+  LiveStatusProvider,
+} from "./LiveStatusPanel";

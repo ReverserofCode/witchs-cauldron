@@ -131,6 +131,7 @@ function analyticsHealthFixture() {
 async function findClippedAdminSummaryText(page) {
   return page.evaluate(() => {
     const selectors = [
+      '.admin-page h1',
       '[aria-label="Analytics 운영 상태"] dd',
       '[aria-label="핵심 지표"] [data-fit-text]',
       '[aria-label="진단 지표"] [data-fit-text]',
@@ -210,6 +211,10 @@ async function main() {
   await adminPage.getByText('Asia/Seoul · visitor_key').waitFor();
   await adminPage.getByText('v2').waitFor();
   await adminPage.locator('p', { hasText: /^방문자$/ }).first().waitFor();
+  assert.equal(await adminPage.locator('body > header').isVisible(), false, 'public header should be hidden on admin');
+  assert.equal(await adminPage.locator('body > footer').isVisible(), false, 'public footer should be hidden on admin');
+  await adminPage.getByLabel('시작일').waitFor();
+  await adminPage.getByLabel('종료일').waitFor();
   const clippedDesktopText = await findClippedAdminSummaryText(adminPage);
   assert.deepEqual(clippedDesktopText, [], `admin summary text should not be clipped on desktop: ${JSON.stringify(clippedDesktopText, null, 2)}`);
   await adminPage.getByRole('button', { name: '14일' }).click();
@@ -229,6 +234,22 @@ async function main() {
   );
   const clippedMobileText = await findClippedAdminSummaryText(adminPage);
   assert.deepEqual(clippedMobileText, [], `admin summary text should not be clipped on mobile: ${JSON.stringify(clippedMobileText, null, 2)}`);
+  await adminPage.getByRole('region', { name: '핵심 지표' }).scrollIntoViewIfNeeded();
+  const stickyLayout = await adminPage.evaluate(() => {
+    const nav = document.querySelector('nav[aria-label="Analytics 섹션"]')?.getBoundingClientRect();
+    const toolbar = document.querySelector('.admin-toolbar')?.getBoundingClientRect();
+    if (!nav || !toolbar) return null;
+
+    const horizontalOverlap = Math.max(0, Math.min(nav.right, toolbar.right) - Math.max(nav.left, toolbar.left));
+    const verticalOverlap = Math.max(0, Math.min(nav.bottom, toolbar.bottom) - Math.max(nav.top, toolbar.top));
+    return {
+      nav: { top: nav.top, bottom: nav.bottom },
+      toolbar: { top: toolbar.top, bottom: toolbar.bottom },
+      overlapArea: horizontalOverlap * verticalOverlap,
+    };
+  });
+  assert.ok(stickyLayout, 'mobile sticky layout should be measurable');
+  assert.equal(stickyLayout.overlapArea, 0, `mobile sticky controls should not overlap: ${JSON.stringify(stickyLayout)}`);
 
   assert.ok(requests.length >= 3, `expected at least 3 analytics fetches, got ${requests.length}`);
   assert.ok(requests.some((url) => url.includes('from=') && url.includes('to=')), 'analytics requests should include date filters');

@@ -4,7 +4,6 @@
 // - ABOUT 섹션: 브랜드 컬러 카드
 import Image from 'next/image'
 import { ReactElement } from 'react'
-import { getChzzkLiveStatus } from './api/chzzkPlayer/chzzkPlayer'
 import profileImg from '../public/mainPage/Profile.png'
 import { SectionCard } from '@/app/components/cards'
 import {
@@ -14,6 +13,7 @@ import {
   LiveStatusCard,
   LiveStatusChip,
   LiveStatusDescription,
+  LiveStatusProvider,
 } from '@/app/components/sections'
 import { SectionTracker } from '@/app/components/analytics/SectionTracker'
 import { ScrollReveal } from '@/app/components/animations'
@@ -21,7 +21,7 @@ import { FanArtGallery } from '@/app/components/gallery'
 import { loadFanArtImages } from '@/app/lib/fanart'
 import { getBirthdayBannerCopy, isBirthdayToday } from '@/app/lib/birthday'
 
-export const dynamic = 'force-dynamic'
+export const revalidate = 300
 
 const HERO_QUICK_LINKS = [
   { label: '치지직', href: 'https://chzzk.naver.com/1d333ff175b4db5bd06f87a88579ec1e' },
@@ -64,22 +64,21 @@ const SEO_FAQ = [
   },
 ]
 
-export default async function Page(): Promise<ReactElement> {
+export default function Page(): ReactElement {
   const fanArtImages = loadFanArtImages()
   const showBirthdayBanner = isBirthdayToday()
   const birthdayBannerCopy = showBirthdayBanner ? getBirthdayBannerCopy() : null
-  const liveStatus = await getChzzkLiveStatus()
-
   return (
     <main className="py-4 lg:py-12">
       <div className="w-full px-3 mx-auto max-w-6xl sm:px-6 lg:px-8">
         <div className="flex min-w-0 flex-col gap-3 text-[15px] leading-relaxed sm:gap-5">
           <div className="flex flex-col w-full gap-3 Intro-section sm:gap-5">
-            <SectionCard
-              tone="dimmed"
-              className="p-3 sm:p-4"
-              bodyClassName="gap-3 sm:gap-5"
-            >
+            <LiveStatusProvider>
+              <SectionCard
+                tone="dimmed"
+                className="p-3 sm:p-4"
+                bodyClassName="gap-3 sm:gap-5"
+              >
               <div className="grid gap-3 sm:gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.85fr)] xl:items-start xl:gap-5">
                 <div className="space-y-2.5 sm:space-y-4">
                   <div className="flex flex-wrap items-center gap-2">
@@ -95,7 +94,7 @@ export default async function Page(): Promise<ReactElement> {
                         unoptimized
                       />
                     </span>
-                    <LiveStatusChip initialStatus={liveStatus} />
+                    <LiveStatusChip />
                   </div>
 
                   <div className="space-y-2 sm:space-y-3">
@@ -108,13 +107,13 @@ export default async function Page(): Promise<ReactElement> {
                       포션을 만들면 폭발하거나, 고백하게 만드는 재앙 제조기. 모잉의 방송, 영상, 숏폼, 팬 콘텐츠를 한곳에서 모아 봅니다.
                     </p>
                     <div className="hidden sm:block">
-                      <LiveStatusDescription initialStatus={liveStatus} />
+                      <LiveStatusDescription />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-3">
                     <div className="col-span-2 sm:col-span-1">
-                      <LiveStatusCard initialStatus={liveStatus} />
+                      <LiveStatusCard />
                     </div>
                       {HERO_FOCUS_ITEMS.map((item) => (
                         <div
@@ -193,7 +192,8 @@ export default async function Page(): Promise<ReactElement> {
                   </div>
                 </div>
               </div>
-            </SectionCard>
+              </SectionCard>
+            </LiveStatusProvider>
 
             {showBirthdayBanner && birthdayBannerCopy && (
               <SectionCard

@@ -7,9 +7,17 @@
 const nextConfig = {
   reactStrictMode: true,
   output: 'standalone',
-  // 이미지 최적화를 위한 설정 (필요한 경우)
   images: {
-    unoptimized: true,
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'i.ytimg.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'img.youtube.com',
+      },
+    ],
   },
 };
 
