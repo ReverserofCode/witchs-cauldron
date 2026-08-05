@@ -2,7 +2,7 @@
 
 버튜버 **모잉(Moing)** 팬 커뮤니티 웹사이트입니다.
 
-방송 스케줄, YouTube 콘텐츠, 치지직 라이브 상태, 팬아트 갤러리, 숏폼 하이라이트, 클립 자동 수집, 방문자 분석 기능을 제공합니다.
+방송 스케줄, YouTube 콘텐츠, 치지직 라이브 상태, 방송별 다시보기, 팬아트 갤러리, 숏폼 하이라이트, 클립 자동 수집, 방문자 분석 기능을 제공합니다.
 
 **GitHub**: https://github.com/ReverserofCode/witchs-cauldron
 
@@ -13,6 +13,7 @@
 - [기술 스택](#기술-스택)
 - [아키텍처](#아키텍처)
 - [프로젝트 구조](#프로젝트-구조)
+- [구조 운영 원칙](#구조-운영-원칙)
 - [빠른 시작](#빠른-시작)
 - [환경 변수](#환경-변수)
 - [API 엔드포인트](#api-엔드포인트)
@@ -23,6 +24,7 @@
 - [배포 가이드](#배포-가이드)
 - [운영/유지보수](#운영유지보수)
 - [클립 수집 운영 런북](docs/CLIP_COLLECTION_RUNBOOK.md)
+- [방송 모아보기 운영](docs/BROADCAST_CATCHUP_HUB.md)
 - [UI/UX 및 Analytics 개선안](docs/UI_ANALYTICS_IMPROVEMENT_PLAN.md)
 - [Analytics 대시보드](#analytics-대시보드)
 - [Agent Teams](#agent-teams)
@@ -37,7 +39,7 @@
 
 | 분류 | 기술 | 버전 |
 |------|------|------|
-| **Frontend** | Next.js (App Router), TypeScript, React, Tailwind CSS v4 | 14.2.5 / 5.9.2 / 18.3.1 |
+| **Frontend** | Next.js (App Router), TypeScript, React, Tailwind CSS v4 | 16.3.0 / 6.0.3 / 19.2.5 |
 | **Backend** | FastAPI, Selenium, Chromium + Xvfb | 0.115.6 / 4.27.1 |
 | **Database** | PostgreSQL (분석용) | 16 Alpine |
 | **Infra** | Docker (multi-stage), GitHub Actions CI/CD | Node.js 22 |
@@ -93,6 +95,9 @@ RootLayout
 
 ```
 witchs-cauldron/
+├── AGENTS.md                     # Codex 작업 컨텍스트 및 프로젝트 지침
+├── README.md                     # 프로젝트 개요와 운영 문서 허브
+├── docs/                         # 운영 런북, 개선안, 템플릿 문서
 ├── frontend/                    # Next.js 프론트엔드
 │   ├── app/
 │   │   ├── api/                 # API Routes
@@ -100,10 +105,12 @@ witchs-cauldron/
 │   │   │   ├── broadCastSchedule/ # 방송 일정 (Google Sheets)
 │   │   │   ├── chzzkPlayer/     # 치지직 라이브/클립
 │   │   │   ├── clips/           # 클립 수집 작업 프록시
+│   │   │   │   └── _shared.ts   # 클립 API 프록시 공통 유틸
 │   │   │   ├── youTubePlayer/   # YouTube 영상
 │   │   │   ├── youtubeShorts/   # YouTube Shorts
 │   │   │   └── analytics/       # 방문자/클릭 분석 API
 │   │   ├── clips/[...filename]/ # 수집 클립 동적 스트리밍 (Range 지원)
+│   │   ├── broadcasts/           # 최근 방송 단위 따라잡기 허브
 │   │   ├── admin/analytics/     # 운영자 분석 대시보드
 │   │   ├── components/
 │   │   │   ├── cards/           # 카드 컴포넌트
@@ -125,8 +132,21 @@ witchs-cauldron/
 │   └── ShortForm.py             # 메인 스크립트
 │
 ├── .github/workflows/           # CI/CD (ci.yml, cd.yml)
-└── docker-compose*.yml
+├── docker-compose.yml            # 통합 개발 환경
+├── docker-compose.prod.yml       # 통합 프로덕션 환경
+└── docker-compose.server.yml     # 서버 배포용 compose
 ```
+
+---
+
+## 구조 운영 원칙
+
+- **루트가 운영 기준**입니다. Docker Compose, CI/CD, 배포 스크립트는 루트 저장소 기준으로 실행합니다.
+- **프론트엔드 API Routes는 BFF 역할**을 합니다. 외부 API, analytics DB, FastAPI 백엔드 프록시는 `frontend/app/api` 아래에서 관리합니다.
+- **백엔드는 클립 수집 전용 서비스**입니다. Selenium/Chromium/Xvfb 의존성은 `backend` 컨테이너 안에 격리합니다.
+- **공유 자산의 경계**는 `frontend/public`입니다. 수집 클립은 운영에서는 shared volume, 정적 포함이 필요한 파일은 `frontend/public/clips`에 둡니다.
+- **로컬 산출물은 커밋하지 않습니다.** `.next`, `node_modules`, `tsconfig.tsbuildinfo`, Playwright 스크린샷, 로그 파일은 ignore 대상입니다.
+- **`frontend/docker-compose*.yml`은 프론트 단독 실행용 레거시 보조 파일**입니다. 통합 실행과 배포는 루트 compose 파일을 우선 사용합니다.
 
 ---
 
@@ -211,8 +231,17 @@ HEADLESS=false
 USE_XVFB=true
 
 # 수집 설정
-MAX_CLIPS_PER_COLLECTION=10
-COLLECTION_TIMEOUT=300
+MAX_CLIPS_PER_COLLECTION=2
+COLLECTION_TIMEOUT=180
+
+# 자동 갱신 설정 (운영 compose 기본값: disabled)
+CLIP_AUTO_COLLECT_ENABLED=false
+CLIP_AUTO_COLLECT_INTERVAL_MINUTES=720
+CLIP_AUTO_COLLECT_RUN_ON_STARTUP=false
+CLIP_AUTO_COLLECT_STARTUP_DELAY_SECONDS=60
+CLIP_AUTO_COLLECT_MAX_CLIPS=1
+CLIP_AUTO_COLLECT_FILTER_TYPE=ALL
+CLIP_AUTO_COLLECT_ORDER_TYPE=RECENT
 ```
 
 ---
@@ -230,6 +259,7 @@ COLLECTION_TIMEOUT=300
 | `/api/youTubePlayer/topOfficial` | 월간 인기 영상 | no-store |
 | `/api/youtubeShorts` | YouTube Shorts (팬채널) | no-store |
 | `/api/youtubeShorts/official` | YouTube Shorts (공식채널) | no-store |
+| `/api/clips/automation` | 치지직 클립 자동 갱신 상태 프록시 | no-store |
 | `/api/analytics/track` | 페이지뷰/클릭 이벤트 수집 | no-store |
 | `/api/analytics/stats` | 통계 조회 (프로덕션 Basic Auth) | no-store |
 | `/admin/analytics` | 분석 대시보드 (프로덕션 Basic Auth) | - |
@@ -243,6 +273,7 @@ COLLECTION_TIMEOUT=300
 | GET | `/api/clips/{clip_id}` | 개별 클립 상세 |
 | POST | `/api/clips/collect` | 클립 수집 트리거 |
 | DELETE | `/api/clips/{clip_id}` | 클립 삭제 |
+| GET | `/api/jobs/automation` | 클립 자동 갱신 스케줄러 상태 |
 | GET | `/api/jobs/{job_id}` | 수집 작업 상태 확인 |
 | GET | `/api/jobs` | 최근 작업 목록 |
 
@@ -335,6 +366,7 @@ app/
 ├── services/
 │   ├── clip_collector.py   # Selenium 수집기
 │   ├── file_manager.py     # 파일 관리
+│   ├── clip_scheduler.py   # 자동 갱신 스케줄러
 │   └── job_manager.py      # 백그라운드 작업
 └── core/
     └── selenium_driver.py  # WebDriver 팩토리
@@ -355,7 +387,7 @@ curl http://localhost:8000/api/jobs/{job_id}
 curl http://localhost:8000/api/clips
 ```
 
-- 최대 10개 수집 (`MAX_CLIPS_PER_COLLECTION=10`)
+- 운영 기본 최대 2개 수집 (`MAX_CLIPS_PER_COLLECTION=2`)
 - 클립당 약 30~60초 소요
 - 최소 1GB RAM 권장 (Selenium)
 - 파일명: `clip_{clip_id}_{title}.mp4`
@@ -363,6 +395,23 @@ curl http://localhost:8000/api/clips
 - HLS/TS 후보는 `ffmpeg -c copy -movflags +faststart`로 브라우저 재생 가능한 MP4 컨테이너로 remux
 - 기존에 TS 세그먼트가 `.mp4` 확장자로 잘못 저장된 경우 `ftyp` 헤더 검사 후 제거하고 재수집
 - 수집 결과가 0건이고 오류가 있으면 작업을 `failed`로 표시해 실패 원인을 API 응답에 노출
+
+### 클립 자동 갱신
+
+운영 compose(`docker-compose.prod.yml`, `docker-compose.server.yml`)는 서버 안정성을 위해 클립 자동 수집을 기본 비활성화합니다. 수동 수집은 API 키가 필요하며, 1회 2개 이하로 제한됩니다.
+
+```bash
+# 자동 갱신 상태 확인 (프론트엔드 프록시)
+curl http://localhost:3000/api/clips/automation
+
+# 백엔드 직접 확인
+curl http://localhost:8000/api/jobs/automation
+```
+
+- `CLIP_AUTO_COLLECT_INTERVAL_MINUTES`: 반복 주기(최소 5분)
+- `CLIP_AUTO_COLLECT_RUN_ON_STARTUP`: 컨테이너 시작 후 1회 실행 여부
+- `CLIP_AUTO_COLLECT_ORDER_TYPE`: 기본 `RECENT`
+- 이미 수집된 클립은 기존 파일 검사로 건너뛰고, 수동 수집 작업이 실행 중이면 예약 실행은 스킵됩니다.
 
 ### Xvfb 가상 디스플레이
 
@@ -436,16 +485,20 @@ python ShortForm.py --max-clips 10 --order POPULAR --filter ALL \
 │  3. Install deps            3. Install deps            │
 │  4. Type Check              4. Type Check              │
 │  5. Lint                    5. Lint                     │
-│  6. Build                   6. Build                    │
-│                             7. SSH Deploy               │
+│  6. Test                    6. Test                     │
+│  7. Backend validation      7. Backend validation       │
+│  8. Build                   8. Build                    │
+│                             9. SSH Deploy               │
 └──────────────────────────────────────────────────────┘
                                  │ SSH
                                  ▼
                     ┌─────────────────────────┐
                     │   Ubuntu Server          │
-                    │  git pull → deploy.sh    │
+                    │  reset main → deploy.sh  │
                     └─────────────────────────┘
 ```
+
+Backend validation은 `backend/requirements.txt`를 설치한 뒤 `backend/app` 전체 컴파일과 `app.main` import를 수행합니다. 배포 후 헬스체크는 프론트엔드 URL과 backend 컨테이너 내부 `http://localhost:8000/api/health`를 모두 확인합니다.
 
 ### GitHub Secrets
 
@@ -458,10 +511,40 @@ python ShortForm.py --max-clips 10 --order POPULAR --filter ALL \
 | `SSH_PORT` | SSH 포트 |
 | `DEPLOY_PATH` | 서버 프로젝트 경로 |
 
+### 직접 SSH 접속용 비밀번호 파일
+
+로컬에서 운영 서버에 직접 접속할 때는 비밀번호를 명령줄에 쓰지 않고 암호화된 로컬 파일을 사용합니다. 이 파일은 `.secrets/` 아래에 두며 Git에 커밋하지 않습니다.
+
+```powershell
+# 로컬 도구 의존성 설치
+python -m pip install -r tools/requirements.txt
+
+# 최초 1회: 현재 Windows 사용자로만 복호화 가능한 비밀번호 파일 생성
+New-Item -ItemType Directory -Force .secrets
+Read-Host "SSH password" -AsSecureString |
+  ConvertFrom-SecureString |
+  Set-Content -NoNewline .secrets/prod-ssh-password.secure.txt
+
+# 접속 정보 설정
+$env:WITCHS_SSH_USERNAME = "<ssh-user>"
+$env:WITCHS_SSH_PORT = "22"
+$env:WITCHS_DEPLOY_PATH = "<server-project-path>"
+$env:WITCHS_SSH_KNOWN_HOSTS = "$env:USERPROFILE\.ssh\known_hosts"
+
+# 원격 명령 실행
+.\tools\Invoke-ProdSsh.ps1 -RemoteCommand "pwd && docker ps"
+```
+
+- `tools/Invoke-ProdSsh.ps1`는 `.secrets/prod-ssh-password.secure.txt`를 읽어 SSH 접속에 사용합니다.
+- 서버 공개키 fingerprint를 별도 채널로 확인한 뒤 `known_hosts`에 등록해야 하며, 등록되지 않았거나 달라진 키는 연결을 거부합니다.
+- 비밀번호 파일은 `ConvertFrom-SecureString` 기반이므로 생성한 Windows 계정에서만 복호화됩니다. 다른 PC나 계정에서는 다시 생성해야 합니다.
+- 비밀번호를 README, AGENTS, shell command, GitHub issue/comment, Git commit에 직접 쓰지 않습니다.
+
 ### 워크플로우 파일
 
 - `.github/workflows/ci.yml` - PR 검증
 - `.github/workflows/cd.yml` - 자동 배포
+- `.github/workflows/rebuild.yml` - 수동 전체 재빌드 및 볼륨 초기화
 - 작업 디렉터리: `frontend/`
 - 배포 스크립트: `frontend/deploy.sh --clean`
 
@@ -751,86 +834,9 @@ WantedBy=multi-user.target
 
 ## Agent Teams
 
-### 팀 구성
+프로젝트 컨텍스트는 루트 `AGENTS.md`, 역할별 에이전트 지침은 `.codex/agents/*.toml`에서 관리합니다. 모델 선택은 저장소에 고정하지 않고 실행 환경을 따릅니다.
 
-| Team | 목적 | 핵심 에이전트 |
-|---|---|---|
-| `T0-Intake` | 요구사항 정리, 범위 확정 | requirements-analyzer, codebase-structure-analyzer, orchestrator-planner |
-| `T1-Implement` | 코드 구현/수정 | code-generator, external-tool-integrator |
-| `T2-Quality` | 품질 게이트 (정적/동적 검증) | lint-checker, code-validator, code-tester, dependency-analyzer |
-| `T3-ReleaseDocs` | 문서/릴리즈 정리 | documentation-generator, orchestrator-planner |
-
-### 기본 실행 순서
-
-1. (선택) `token-optimizer`로 대규모 컨텍스트 정리
-2. `T0-Intake`에서 목표와 완료 기준(DoD) 고정
-3. `T1-Implement`에서 최소 변경 구현
-4. `T2-Quality` 병렬 실행 → 실패 시 T1로 피드백
-5. `T3-ReleaseDocs`에서 문서 정리
-
-### 작업 유형별 플레이북
-
-**기능 추가**: requirements-analyzer → codebase-structure-analyzer → code-generator → lint/test/validator 병렬 → documentation-generator
-
-**버그 수정**: codebase-structure-analyzer → code-generator → test/validator 병렬 → documentation-generator
-
-**배포 전 점검**: dependency-analyzer → lint/test 병렬 → orchestrator-planner → documentation-generator
-
-### 병렬 실행 규칙
-
-- 병렬 가능: `lint-checker` + `code-tester`, `code-validator` + `dependency-analyzer`
-- 병렬 불가: 동일 파일 동시 수정, 외부 상태 동시 변경
-
-### Handoff 템플릿
-
-```
-[Goal] 이번 단계 목표
-[Scope] 변경 파일/시스템 범위
-[Done] 완료 조건(정량)
-[Risk] 남은 리스크
-[Evidence] 실행 로그/검증 결과
-```
-
-### Definition of Done (DoD)
-
-- 기능 요구사항 충족
-- `tsc/lint/build` 또는 Docker 스모크 테스트 통과
-- 문서 1개 이상 업데이트
-- 롤백/우회 방법 기록 (운영 영향 변경 시)
-
-### 워크플로우 시각화
-
-```mermaid
-flowchart LR
-    U[User Request] --> T0
-    T0[T0-Intake] --> T1
-    T1[T1-Implement] --> T2
-    T2[T2-Quality] -->|PASS| T3
-    T2 -->|FAIL| T1
-    T3[T3-ReleaseDocs] --> D[Done]
-```
-
-### 런타임 모니터링
-
-에이전트별 작업 흐름을 터미널에서 시각적으로 확인합니다.
-
-```powershell
-# Inline 모드 (단일 터미널)
-.\tools\Invoke-AgentMonitor.ps1 -Plan quality -View inline
-
-# Window 모드 (에이전트별 새 터미널)
-.\tools\Invoke-AgentMonitor.ps1 -Plan quality -View window
-
-# Codex 실행 증빙 모드
-.\tools\Invoke-AgentMonitor.ps1 -Plan intake -View inline -Runner codex
-.\tools\Verify-AgentEvidence.ps1 -RequireCommandExecution
-```
-
-**플랜**: `intake` (요구사항/구조 체크), `quality` (lint/type/dependency 검증), `fullstack-smoke` (컨테이너 기동 + health check)
-
-### CLI 자동 주입
-
-PowerShell 프로필 래퍼를 통해 `codex`/`claude` 실행 시 `AGENT_TEAMS.md`, `CLAUDE.md`, `CLI_DOCKER_TESTING.md` 자동 주입
+기능 변경은 요구사항·구현·정적 검증·런타임 검증·문서화 순서로 진행하고, 독립적인 검토는 병렬 실행할 수 있습니다. 같은 파일을 수정하는 작업이나 배포처럼 외부 상태를 바꾸는 작업은 직렬로 수행합니다.
 
 ---
 
@@ -905,13 +911,17 @@ curl -u '<admin-username>:<admin-password>' 'http://localhost:3000/api/analytics
 ### 4) 클립 수집/재생 검증
 
 ```bash
-# 수집 시작 (최대 10개)
+# 수집 시작 (운영 기본 최대 2개, API 키 필요)
 curl -X POST http://localhost:3000/api/clips/collect \
   -H "Content-Type: application/json" \
-  -d '{"max_clips":10,"filter_type":"ALL","order_type":"RECENT"}'
+  -H "Authorization: Bearer <COLLECT_API_KEY>" \
+  -d '{"max_clips":1,"filter_type":"ALL","order_type":"RECENT"}'
 
 # 작업 상태 확인
 curl http://localhost:3000/api/clips/jobs/<job_id>
+
+# 자동 갱신 상태 확인
+curl http://localhost:3000/api/clips/automation
 
 # 클립 Range/MP4 헤더 확인
 curl -I -H "Range: bytes=0-31" "http://localhost:3000/clips/<filename>.mp4"

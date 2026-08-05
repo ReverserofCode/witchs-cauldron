@@ -10,6 +10,7 @@ const COMMUNITY_LINKS = [
 
 const SITE_LINKS = [
   { label: "홈", href: "/" },
+  { label: "방송 모아보기", href: "/broadcasts" },
   { label: "방송 일정", href: "/#schedule-section" },
   { label: "숏폼 하이라이트", href: "/#clips-section" },
 ];
