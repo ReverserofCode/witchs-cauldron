@@ -88,6 +88,7 @@ services:
     environment:
       - NODE_ENV=production
       - BACKEND_URL=http://backend:8000
+      - SHARED_CLIPS_DIR=/app/shared/clips
       - COLLECT_API_KEY=${COLLECT_API_KEY:-}
       # YouTube Data API
       - YOUTUBE_API_KEY=${YOUTUBE_API_KEY:-}
@@ -102,8 +103,8 @@ services:
       - CHZZK_CLIENT_ID=${CHZZK_CLIENT_ID:-}
       - CHZZK_CLIENT_SECRET=${CHZZK_CLIENT_SECRET:-}
     volumes:
-      # 백엔드와 동일 shared volume을 읽기 전용으로 마운트
-      - shared_clips:/app/public/clips:ro
+      # 이미지에 포함된 public/clips와 분리해 수집 클립을 읽기 전용으로 마운트
+      - shared_clips:/app/shared/clips:ro
     depends_on:
       backend:
         condition: service_healthy

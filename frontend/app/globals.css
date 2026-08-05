@@ -61,6 +61,34 @@ body {
     color: rgb(var(--ink-muted));
 }
 
+/* Admin analytics surface: 운영 도구는 브랜드 색을 낮추고 정보 판독성을 우선한다. */
+.admin-page {
+    background:
+        linear-gradient(180deg, rgba(248, 250, 252, 0.96), rgba(241, 245, 249, 0.96)),
+        rgb(var(--moing-white));
+}
+
+.admin-panel {
+    border-radius: 16px;
+    border: 1px solid rgba(148, 163, 184, 0.34);
+    background: rgba(255, 255, 255, 0.88);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+    backdrop-filter: blur(14px);
+}
+
+.admin-toolbar {
+    border-radius: 18px;
+    border: 1px solid rgba(148, 163, 184, 0.34);
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+    backdrop-filter: blur(18px);
+}
+
+body:has(.admin-page) > header,
+body:has(.admin-page) > footer {
+    display: none;
+}
+
 /* Typography helpers: 한국어 줄바꿈 개선 및 가독성 향상 */
 .typography-heading {
     word-break: keep-all;

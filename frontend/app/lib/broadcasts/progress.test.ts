@@ -4,6 +4,7 @@ import {
   isSessionNew,
   parseWatchedSessionIds,
   serializeWatchedSessionIds,
+  shouldRecordBroadcastVisit,
 } from "./progress";
 import type { BroadcastSession } from "./types";
 
@@ -46,6 +47,12 @@ describe("broadcast progress storage", () => {
 });
 
 describe("new broadcast detection", () => {
+  it("advances the last-visit marker only after the archive loaded successfully", () => {
+    expect(shouldRecordBroadcastVisit("ready")).toBe(true);
+    expect(shouldRecordBroadcastVisit("missing_api_key")).toBe(false);
+    expect(shouldRecordBroadcastVisit("unavailable")).toBe(false);
+  });
+
   it("does not label every session as new on a first visit", () => {
     expect(isSessionNew("2026-08-05T10:00:00.000Z", null)).toBe(false);
   });

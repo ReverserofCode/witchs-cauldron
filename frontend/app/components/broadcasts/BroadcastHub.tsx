@@ -10,6 +10,7 @@ import {
   isSessionNew,
   parseWatchedSessionIds,
   serializeWatchedSessionIds,
+  shouldRecordBroadcastVisit,
   type BroadcastProgressFilter,
 } from "@/app/lib/broadcasts/progress";
 import type { BroadcastAsset, BroadcastSession } from "@/app/lib/broadcasts/types";
@@ -213,14 +214,16 @@ export default function BroadcastHub({ sessions, status, partial, fetchedAt }: B
         new Set(parseWatchedSessionIds(window.localStorage.getItem(WATCHED_BROADCASTS_STORAGE_KEY)))
       );
       setLastVisitedAt(window.localStorage.getItem(LAST_BROADCAST_VISIT_STORAGE_KEY));
-      window.localStorage.setItem(LAST_BROADCAST_VISIT_STORAGE_KEY, new Date().toISOString());
+      if (shouldRecordBroadcastVisit(status)) {
+        window.localStorage.setItem(LAST_BROADCAST_VISIT_STORAGE_KEY, new Date().toISOString());
+      }
     } catch {
       setWatchedSessionIds(new Set());
       setLastVisitedAt(null);
     } finally {
       setProgressReady(true);
     }
-  }, []);
+  }, [status]);
 
   useEffect(() => {
     if (!progressReady) return;

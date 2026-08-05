@@ -22,6 +22,10 @@ if [ "$COMPOSE_FILE" = "docker-compose.server.yml" ] && [ -z "${DEPLOY_HEALTHCHE
     HEALTHCHECK_URL="http://127.0.0.1:13000"
 fi
 
+FRONTEND_ROLLBACK_IMAGE="witchs-cauldron-frontend:rollback"
+BACKEND_ROLLBACK_IMAGE="witchs-cauldron-backend:rollback"
+ROLLBACK_READY=false
+
 echo "🚀 Witchs Cauldron 프로젝트 배포를 시작합니다..."
 echo "📦 Compose: $COMPOSE_FILE"
 echo "🩺 Health URL: $HEALTHCHECK_URL"
@@ -79,6 +83,26 @@ preflight_checks() {
         log_error "외부 Docker 네트워크 'web' 이 없습니다. 먼저 생성해야 합니다."
         exit 1
     fi
+}
+
+# 현재 실행 중인 애플리케이션 이미지를 새 빌드 전에 보존합니다.
+snapshot_previous_images() {
+    local frontend_image_id
+    local backend_image_id
+
+    log_info "현재 실행 중인 이미지를 롤백용으로 보존합니다..."
+    frontend_image_id="$(docker inspect --format '{{.Image}}' witchs-cauldron-frontend-prod 2>/dev/null || true)"
+    backend_image_id="$(docker inspect --format '{{.Image}}' witchs-cauldron-backend-prod 2>/dev/null || true)"
+
+    if [ -z "$frontend_image_id" ] || [ -z "$backend_image_id" ]; then
+        log_error "기존 frontend/backend 컨테이너 이미지를 확인할 수 없어 안전한 롤백을 보장할 수 없습니다."
+        return 1
+    fi
+
+    docker image tag "$frontend_image_id" "$FRONTEND_ROLLBACK_IMAGE"
+    docker image tag "$backend_image_id" "$BACKEND_ROLLBACK_IMAGE"
+    ROLLBACK_READY=true
+    log_success "롤백 이미지 보존이 완료되었습니다."
 }
 
 # Docker 설치 확인
@@ -155,18 +179,30 @@ cleanup_stale_containers() {
     done
 }
 
-# 애플리케이션 교체 (무중단)
+# 애플리케이션 교체 (재기동 기반)
 replace_application() {
-    log_info "애플리케이션을 교체합니다 (무중단 배포)..."
+    log_info "애플리케이션을 재기동 방식으로 교체합니다..."
 
     if docker compose version >/dev/null 2>&1; then
-        docker compose -f "$COMPOSE_FILE" down --remove-orphans 2>/dev/null || true
+        if ! docker compose -f "$COMPOSE_FILE" down --remove-orphans 2>/dev/null; then
+            log_error "기존 애플리케이션 컨테이너를 중지하지 못했습니다."
+            return 1
+        fi
         cleanup_stale_containers
-        docker compose -f "$COMPOSE_FILE" up -d --force-recreate --remove-orphans
+        if ! docker compose -f "$COMPOSE_FILE" up -d --force-recreate --remove-orphans; then
+            log_error "새 애플리케이션 컨테이너를 시작하지 못했습니다."
+            return 1
+        fi
     else
-        docker-compose -f "$COMPOSE_FILE" down --remove-orphans 2>/dev/null || true
+        if ! docker-compose -f "$COMPOSE_FILE" down --remove-orphans 2>/dev/null; then
+            log_error "기존 애플리케이션 컨테이너를 중지하지 못했습니다."
+            return 1
+        fi
         cleanup_stale_containers
-        docker-compose -f "$COMPOSE_FILE" up -d --force-recreate --remove-orphans
+        if ! docker-compose -f "$COMPOSE_FILE" up -d --force-recreate --remove-orphans; then
+            log_error "새 애플리케이션 컨테이너를 시작하지 못했습니다."
+            return 1
+        fi
     fi
 
     log_success "애플리케이션이 교체되었습니다!"
@@ -222,25 +258,48 @@ cleanup_old_images() {
     docker image prune -f || true
 }
 
-# 롤백 함수 (배포 실패 시)
+# 보존한 이전 이미지로 롤백합니다.
 rollback() {
     log_error "배포 실패! 롤백을 시도합니다..."
 
-    # 이전 이미지가 있다면 롤백
-    if docker compose version >/dev/null 2>&1; then
-        docker compose -f "$COMPOSE_FILE" down
-        docker compose -f "$COMPOSE_FILE" up -d
-    else
-        docker-compose -f "$COMPOSE_FILE" down
-        docker-compose -f "$COMPOSE_FILE" up -d
+    if [ "$ROLLBACK_READY" != true ]; then
+        log_error "보존된 롤백 이미지가 없어 복구를 진행할 수 없습니다."
+        return 1
     fi
 
-    log_warning "롤백이 완료되었습니다. 수동으로 상태를 확인하세요."
+    if ! docker image inspect "$FRONTEND_ROLLBACK_IMAGE" >/dev/null 2>&1 || \
+       ! docker image inspect "$BACKEND_ROLLBACK_IMAGE" >/dev/null 2>&1; then
+        log_error "보존된 롤백 이미지가 손상되었거나 삭제되었습니다."
+        return 1
+    fi
+
+    if ! docker image tag "$FRONTEND_ROLLBACK_IMAGE" witchs-cauldron-frontend:latest || \
+       ! docker image tag "$BACKEND_ROLLBACK_IMAGE" witchs-cauldron-backend:latest; then
+        log_error "이전 이미지 태그 복구에 실패했습니다."
+        return 1
+    fi
+
+    if ! compose_cmd -f "$COMPOSE_FILE" down --remove-orphans; then
+        log_error "실패한 애플리케이션 컨테이너를 중지하지 못했습니다."
+        return 1
+    fi
+    if ! compose_cmd -f "$COMPOSE_FILE" up -d --force-recreate --remove-orphans; then
+        log_error "이전 이미지로 컨테이너를 재생성하지 못했습니다."
+        return 1
+    fi
+
+    if health_check; then
+        log_warning "새 배포는 실패했지만 이전 이미지 복구와 헬스체크는 완료되었습니다."
+        return 0
+    fi
+
+    log_error "이전 이미지 복구 후에도 헬스체크가 실패했습니다."
+    return 1
 }
 
 # 메인 실행 로직
 main() {
-    log_info "=== Witchs Cauldron 무중단 배포 스크립트 ==="
+    log_info "=== Witchs Cauldron 안전 교체 배포 스크립트 ==="
 
     # 파라미터 확인
     CLEAN_BUILD=false
@@ -253,6 +312,7 @@ main() {
     check_docker
     check_docker_compose
     preflight_checks
+    snapshot_previous_images
 
     # 1. 새 이미지 빌드 (기존 컨테이너 유지)
     if [ "$CLEAN_BUILD" = true ]; then
@@ -262,18 +322,25 @@ main() {
     fi
 
     # 2. 컨테이너 교체 (무중단)
-    replace_application
+    if ! replace_application; then
+        if ! rollback; then
+            log_error "애플리케이션 교체와 롤백이 모두 실패했습니다. 운영 상태를 즉시 확인하세요."
+        fi
+        exit 1
+    fi
 
     # 3. 헬스체크
     if ! health_check; then
-        rollback
+        if ! rollback; then
+            log_error "배포와 롤백이 모두 실패했습니다. 운영 상태를 즉시 확인하세요."
+        fi
         exit 1
     fi
 
     # 4. 정리
     cleanup_old_images
 
-    log_success "무중단 배포가 완료되었습니다! 🚀"
+    log_success "교체 배포가 완료되었습니다! 🚀"
     echo ""
     echo "유용한 명령어:"
     echo "  상태 확인: docker compose -f $COMPOSE_FILE ps"

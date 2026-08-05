@@ -35,7 +35,7 @@ function parseAuthorization(header: string | null) {
   }
 }
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const username = process.env.ADMIN_BASIC_AUTH_USERNAME?.trim();
   const password = process.env.ADMIN_BASIC_AUTH_PASSWORD?.trim();
 

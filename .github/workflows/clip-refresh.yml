@@ -3,10 +3,6 @@ name: Clip Refresh
 on:
   workflow_dispatch:
     inputs:
-      base_url:
-        description: "Production base URL"
-        required: false
-        default: "https://moingfans.com"
       max_clips:
         description: "Maximum clips to collect"
         required: false
@@ -24,20 +20,23 @@ on:
         required: false
         default: "true"
 
-concurrency:
-  group: clip-refresh
-  cancel-in-progress: false
+permissions: {}
 
 jobs:
   refresh:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 12
+    environment: production
+    concurrency:
+      group: production-operations
+      cancel-in-progress: false
 
     steps:
       - name: Trigger clip collection
         id: collect
         env:
-          BASE_URL: ${{ inputs.base_url || vars.CLIP_REFRESH_BASE_URL || 'https://moingfans.com' }}
+          BASE_URL: ${{ vars.CLIP_REFRESH_BASE_URL || 'https://moingfans.com' }}
           COLLECT_API_KEY: ${{ secrets.COLLECT_API_KEY || secrets.CLIP_REFRESH_API_KEY }}
           MAX_CLIPS: ${{ inputs.max_clips || '1' }}
           FILTER_TYPE: ${{ inputs.filter_type || 'ALL' }}
@@ -107,7 +106,7 @@ jobs:
       - name: Wait for collection job
         if: ${{ steps.collect.outputs.job_id != '' && inputs.wait_for_completion != 'false' }}
         env:
-          BASE_URL: ${{ inputs.base_url || vars.CLIP_REFRESH_BASE_URL || 'https://moingfans.com' }}
+          BASE_URL: ${{ vars.CLIP_REFRESH_BASE_URL || 'https://moingfans.com' }}
           COLLECT_API_KEY: ${{ secrets.COLLECT_API_KEY || secrets.CLIP_REFRESH_API_KEY }}
           JOB_ID: ${{ steps.collect.outputs.job_id }}
         run: |
@@ -154,7 +153,7 @@ jobs:
       - name: Show automation status
         if: always()
         env:
-          BASE_URL: ${{ inputs.base_url || vars.CLIP_REFRESH_BASE_URL || 'https://moingfans.com' }}
+          BASE_URL: ${{ vars.CLIP_REFRESH_BASE_URL || 'https://moingfans.com' }}
           COLLECT_API_KEY: ${{ secrets.COLLECT_API_KEY || secrets.CLIP_REFRESH_API_KEY }}
         run: |
           set -euo pipefail

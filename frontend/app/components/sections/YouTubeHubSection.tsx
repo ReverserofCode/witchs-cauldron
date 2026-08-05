@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { SectionCard } from "@/app/components/cards";
 import { YouTubeSectionStatus } from "@/app/components/status";
 import { useYouTubeVideos, type VideoItem } from "@/app/hooks/useYouTubeVideos";
+import { formatShortKoreanDateLabel, summarizeVideoUploads } from "@/app/lib/youtube";
 
 type TabKey = "moing" | "fullmoing" | "moingFan";
 
@@ -44,42 +45,21 @@ const EMPTY_MESSAGES: Record<TabKey, string> = {
   moingFan: "현재 팬 채널 하이라이트 영상이 없습니다.",
 };
 
+const EMPTY_VIDEOS: VideoItem[] = [];
+const TAB_META_BY_KEY = new Map(TABS.map((tab) => [tab.key, tab]));
+
 export default function YouTubeHubSection() {
   const [activeTab, setActiveTab] = useState<TabKey>("moing");
   const { data, error, status } = useYouTubeVideos();
-  const videos = data?.[activeTab] ?? [];
-  const tabMeta = TABS.find((tab) => tab.key === activeTab) ?? TABS[0];
+  const videos = data?.[activeTab] ?? EMPTY_VIDEOS;
+  const tabMeta = TAB_META_BY_KEY.get(activeTab) ?? TABS[0];
   const latestVideo = videos[0] ?? null;
-  const browseVideos = videos.slice(0, 4);
+  const browseVideos = useMemo(() => videos.slice(0, 4), [videos]);
   const isLoading = status === "idle" || status === "loading";
   const isError = status === "error";
   const isReady = status === "ready";
 
-  const stats = useMemo(() => {
-    if (!videos.length) {
-      return {
-        count: 0,
-        latestDate: null as string | null,
-        rangeLabel: null as string | null,
-      };
-    }
-
-    const timestamps = videos
-      .map((video) => Date.parse(video.publishedAt))
-      .filter((value) => Number.isFinite(value))
-      .sort((a, b) => b - a);
-
-    const latestDate = timestamps[0] ? formatDateLabel(new Date(timestamps[0]).toISOString()) : null;
-    const oldestDate = timestamps[timestamps.length - 1]
-      ? formatDateLabel(new Date(timestamps[timestamps.length - 1]).toISOString())
-      : null;
-
-    return {
-      count: videos.length,
-      latestDate,
-      rangeLabel: latestDate && oldestDate ? `${latestDate} ~ ${oldestDate}` : latestDate,
-    };
-  }, [videos]);
+  const stats = useMemo(() => summarizeVideoUploads(videos), [videos]);
 
   return (
     <SectionCard
@@ -153,7 +133,7 @@ export default function YouTubeHubSection() {
                   <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-purple-700/75">
                     <span>{latestVideo.channelTitle}</span>
                     <span className="h-1 w-1 rounded-full bg-purple-400" />
-                    <span>{formatDateLabel(latestVideo.publishedAt)}</span>
+                    <span>{formatShortKoreanDateLabel(latestVideo.publishedAt)}</span>
                   </div>
                 </div>
               </a>
@@ -197,7 +177,7 @@ function BrowseRow({ index, video }: { index: number; video: VideoItem }) {
           {video.title}
         </span>
         <span className="mt-1 block text-[11px] text-purple-700/75">
-          {video.channelTitle} · {formatDateLabel(video.publishedAt)}
+          {video.channelTitle} · {formatShortKoreanDateLabel(video.publishedAt)}
         </span>
       </span>
     </a>
@@ -225,16 +205,4 @@ function LoadingState() {
       </div>
     </div>
   );
-}
-
-function formatDateLabel(value: string): string {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return "날짜 미정";
-  }
-
-  return new Intl.DateTimeFormat("ko-KR", {
-    month: "numeric",
-    day: "numeric",
-  }).format(date);
 }

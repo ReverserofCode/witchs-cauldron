@@ -1,30 +1,44 @@
-name: Rebuild (Full Reset)
+name: Rebuild (Preserve Data)
 
 on:
   workflow_dispatch:
+    inputs:
+      mode:
+        description: "Operation mode"
+        required: false
+        default: "profile"
+        type: choice
+        options:
+          - profile
+          - rebuild
 
-concurrency:
-  group: cd-deploy-${{ github.ref }}
-  cancel-in-progress: true
+permissions: {}
 
 jobs:
   rebuild:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    timeout-minutes: 35
+    environment: production
+    concurrency:
+      group: production-operations
+      cancel-in-progress: false
 
     steps:
-      - name: Full rebuild with volume reset
-        uses: appleboy/ssh-action@v1.0.3
+      - name: Read-only analytics profile
+        if: inputs.mode == 'profile'
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USERNAME }}
           password: ${{ secrets.DESK_SSH_PASSWORD || secrets.SSH_PASSWORD }}
           port: ${{ secrets.SSH_PORT }}
-          timeout: 600s
+          fingerprint: ${{ secrets.SSH_HOST_FINGERPRINT }}
+          timeout: 60s
+          command_timeout: 8m
           script: |
             set -euo pipefail
             cd ${{ secrets.DEPLOY_PATH }}
-            git fetch origin main
-            git reset --hard origin/main
 
             COMPOSE_FILE="${DEPLOY_COMPOSE_FILE:-docker-compose.server.yml}"
             if [ ! -f "$COMPOSE_FILE" ]; then
@@ -41,42 +55,66 @@ jobs:
               HEALTHCHECK_URL="http://127.0.0.1:13000"
             fi
 
+            compose() {
+              docker compose -f "$COMPOSE_FILE" "$@"
+            }
+
+            echo "== runtime =="
+            git rev-parse --short HEAD
+            git branch --show-current
+            compose ps
+
+            echo "== app health =="
+            curl -fsS "$HEALTHCHECK_URL/api/health"
+            echo
+            compose exec -T backend curl -fsS http://localhost:8000/api/health
+            echo
+
+            echo "== analytics schema =="
+            compose exec -T analytics-db psql -U analytics -d analytics -v ON_ERROR_STOP=1 -c "SELECT to_regclass('public.analytics_events') AS analytics_events_table;"
+            compose exec -T analytics-db psql -U analytics -d analytics -v ON_ERROR_STOP=1 -c "SELECT column_name, data_type, is_nullable FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'analytics_events' ORDER BY ordinal_position;"
+            compose exec -T analytics-db psql -U analytics -d analytics -v ON_ERROR_STOP=1 -c "SELECT indexname, indexdef FROM pg_indexes WHERE schemaname = 'public' AND tablename = 'analytics_events' ORDER BY indexname;"
+
+            echo "== analytics overview =="
+            compose exec -T analytics-db psql -U analytics -d analytics -v ON_ERROR_STOP=1 -c "SELECT COUNT(*) AS total_events, MIN(created_at) AS first_event_at, MAX(created_at) AS latest_event_at, COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '24 hours') AS events_24h, COUNT(*) FILTER (WHERE event_type = 'pageview' AND created_at >= NOW() - INTERVAL '24 hours') AS pageviews_24h FROM analytics_events;"
+            compose exec -T analytics-db psql -U analytics -d analytics -v ON_ERROR_STOP=1 -c "SELECT event_type, COUNT(*) AS events FROM analytics_events GROUP BY event_type ORDER BY events DESC, event_type LIMIT 20;"
+            compose exec -T analytics-db psql -U analytics -d analytics -v ON_ERROR_STOP=1 -c "SELECT (created_at AT TIME ZONE 'Asia/Seoul')::date AS event_date_kst, COUNT(*) AS events, COUNT(*) FILTER (WHERE event_type = 'pageview') AS pageviews, COUNT(DISTINCT session_id) AS distinct_sessions FROM analytics_events WHERE created_at >= NOW() - INTERVAL '14 days' GROUP BY 1 ORDER BY 1 DESC;"
+
+            echo "== analytics v2 quality profile =="
+            compose exec -T analytics-db psql -U analytics -d analytics -v ON_ERROR_STOP=1 -c "SELECT jsonb_build_object('total_events', COUNT(*), 'missing_visitor_key', COUNT(*) FILTER (WHERE visitor_key IS NULL), 'missing_ip_hash', COUNT(*) FILTER (WHERE ip_hash IS NULL), 'missing_event_date_kst', COUNT(*) FILTER (WHERE event_date_kst IS NULL), 'missing_referrer_host_on_referrer', COUNT(*) FILTER (WHERE referrer IS NOT NULL AND referrer <> '' AND referrer_host IS NULL), 'duplicate_event_id_rows', COALESCE((SELECT SUM(dupe_count - 1) FROM (SELECT event_id, COUNT(*) AS dupe_count FROM analytics_events WHERE event_id IS NOT NULL GROUP BY event_id HAVING COUNT(*) > 1) d), 0)) AS quality_profile FROM analytics_events;" || true
+
+            echo "== top referrer hosts =="
+            compose exec -T analytics-db psql -U analytics -d analytics -v ON_ERROR_STOP=1 -c "SELECT COALESCE(NULLIF(referrer_host, ''), '(missing)') AS referrer_host, COUNT(*) AS events, COUNT(DISTINCT session_id) AS distinct_sessions FROM analytics_events WHERE referrer IS NOT NULL AND referrer <> '' GROUP BY 1 ORDER BY events DESC LIMIT 20;" || true
+
+      - name: Rebuild application while preserving data volumes
+        if: inputs.mode == 'rebuild'
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          password: ${{ secrets.DESK_SSH_PASSWORD || secrets.SSH_PASSWORD }}
+          port: ${{ secrets.SSH_PORT }}
+          fingerprint: ${{ secrets.SSH_HOST_FINGERPRINT }}
+          timeout: 60s
+          command_timeout: 30m
+          script: |
+            set -euo pipefail
+            cd ${{ secrets.DEPLOY_PATH }}
+            git fetch origin main
+            git reset --hard origin/main
+
+            COMPOSE_FILE="${DEPLOY_COMPOSE_FILE:-docker-compose.server.yml}"
+            if [ ! -f "$COMPOSE_FILE" ]; then
+              if [ "$COMPOSE_FILE" = "docker-compose.server.yml" ] && [ -f "docker-compose.prod.yml" ]; then
+                COMPOSE_FILE="docker-compose.prod.yml"
+              else
+                echo "Compose file not found: $COMPOSE_FILE" >&2
+                exit 1
+              fi
+            fi
+
             if [ "$COMPOSE_FILE" = "docker-compose.server.yml" ]; then
               docker network inspect web >/dev/null
             fi
 
-            docker compose -f "$COMPOSE_FILE" down -v
-            docker builder prune -f
-            docker compose -f "$COMPOSE_FILE" up -d --build --force-recreate
-            echo "Waiting for health check..."
-            healthy=false
-            for i in $(seq 1 30); do
-              frontend_ok=false
-              backend_ok=false
-
-              if curl -sf "$HEALTHCHECK_URL/api/health" > /dev/null 2>&1; then
-                frontend_ok=true
-              fi
-
-              if docker compose -f "$COMPOSE_FILE" exec -T backend curl -sf http://localhost:8000/api/health > /dev/null 2>&1; then
-                backend_ok=true
-              fi
-
-              if [ "$frontend_ok" = true ] && [ "$backend_ok" = true ]; then
-                echo "Frontend and backend healthy!"
-                healthy=true
-                break
-              fi
-
-              echo "Attempt $i/30... frontend=$frontend_ok backend=$backend_ok"
-              sleep 3
-            done
-
-            if [ "$healthy" != true ]; then
-              echo "Health check failed after 30 attempts" >&2
-              docker compose -f "$COMPOSE_FILE" logs --tail 80
-              exit 1
-            fi
-
-            docker compose -f "$COMPOSE_FILE" ps
-            docker image prune -f
+            DEPLOY_COMPOSE_FILE="$COMPOSE_FILE" ./frontend/deploy.sh --clean

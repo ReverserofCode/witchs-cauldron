@@ -1,6 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useState, useCallback, useRef } from "react";
+import Link from "next/link";
+import { useEffect, useMemo, useState, useCallback, useRef, type ReactNode } from "react";
+import {
+  buildAnalyticsDatePreset,
+  getAnalyticsEmptyState,
+  getAnalyticsHealthStatus,
+  type AnalyticsHealthResponse,
+  type AnalyticsHealthLevel,
+} from "@/app/lib/analytics/dashboard";
+import { getKstDateString } from "@/app/lib/analytics/dates";
 
 type AnalyticsTotals = {
   visitors: number;
@@ -126,31 +135,40 @@ type AnalyticsResponse = {
   topInteractions?: InteractionSummary[];
 };
 
-function startOfDayUTC(date: Date) {
-  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
-}
-
-function formatDateInput(date: Date) {
-  return date.toISOString().slice(0, 10);
-}
+type StatCardItem = {
+  label: string;
+  value: number | string;
+  color: string;
+  icon: ReactNode;
+  description?: string;
+};
 
 function formatRangeDate(value: string | undefined, fallback: string) {
   if (!value) return fallback;
   if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
   const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? fallback : formatDateInput(parsed);
-}
-
-function shiftUTCDate(date: Date, dayOffset: number) {
-  const next = new Date(date);
-  next.setUTCDate(next.getUTCDate() + dayOffset);
-  return next;
+  return Number.isNaN(parsed.getTime()) ? fallback : getKstDateString(parsed);
 }
 
 function formatDayLabel(dateString: string) {
   const date = new Date(dateString);
   if (Number.isNaN(date.getTime())) return dateString;
   return date.toLocaleDateString("ko-KR", { month: "2-digit", day: "2-digit" });
+}
+
+function formatDateTimeLabel(value: string | null | undefined) {
+  if (!value) return "-";
+  try {
+    return new Intl.DateTimeFormat("ko-KR", {
+      timeZone: "Asia/Seoul",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(new Date(value));
+  } catch {
+    return value;
+  }
 }
 
 function ratioToPercent(value: number, total: number) {
@@ -424,6 +442,7 @@ function TrendChart({ daily }: { daily: DailyPoint[] }) {
 
   const ready = dimensions.width > 0 && dimensions.height > 0;
   const hasData = daily.length > 0;
+  const emptyState = getAnalyticsEmptyState("trend");
 
   const selectedIndex = hasData ? (activeIndex ?? daily.length - 1) : 0;
   const selectedData = hasData ? daily[selectedIndex] : null;
@@ -445,7 +464,10 @@ function TrendChart({ daily }: { daily: DailyPoint[] }) {
       <div ref={containerRef} className="relative h-72 w-full overflow-hidden rounded-xl focus-within:ring-2 focus-within:ring-purple-500/70 focus-within:ring-offset-2 focus-within:ring-offset-white sm:h-80">
         {!hasData && (
           <div className="flex h-full items-center justify-center">
-            <p className="text-sm text-gray-500">선택한 기간에 데이터가 없습니다.</p>
+            <div className="max-w-sm px-4 text-center">
+              <p className="text-sm font-bold text-slate-700">{emptyState.title}</p>
+              <p className="mt-1 text-xs leading-5 text-slate-500">{emptyState.description}</p>
+            </div>
           </div>
         )}
         {ready && hasData && <svg
@@ -646,21 +668,21 @@ function PeriodSummary({
   ];
 
   return (
-    <article className="flex min-w-0 flex-col self-start rounded-2xl border border-purple-200/70 bg-white/85 p-4 shadow-md shadow-purple-900/10 backdrop-blur sm:p-5 lg:min-h-[446px] lg:self-stretch">
+    <article className="admin-panel flex min-w-0 flex-col self-start p-4 sm:p-5 lg:min-h-[446px] lg:self-stretch">
       <div className="flex items-center justify-between gap-3">
-        <h2 className="text-sm font-bold text-purple-950">기간 요약</h2>
-        <span className="rounded-full bg-purple-50 px-2.5 py-1 text-[11px] font-semibold text-purple-700">
+        <h2 className="text-sm font-bold text-slate-950">기간 요약</h2>
+        <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-700">
           {days}일 기준
         </span>
       </div>
       <div className="mt-3 grid flex-1 grid-cols-2 gap-2 lg:auto-rows-fr">
         {items.map((item) => (
-          <div key={item.label} className="flex min-w-0 flex-col justify-center rounded-xl border border-purple-100/80 bg-purple-50/70 px-2.5 py-2">
-            <p className="truncate text-[11px] font-medium text-gray-600">{item.label}</p>
+          <div key={item.label} className="flex min-w-0 flex-col justify-center rounded-xl border border-slate-200/80 bg-slate-50/80 px-2.5 py-2">
+            <p className="truncate text-[11px] font-medium text-slate-600">{item.label}</p>
             <div className="mt-0.5 flex min-w-0 items-baseline gap-1">
               <span className="truncate text-base font-bold" style={{ color: item.color }}>{item.value}</span>
               {item.sub && (
-                <span className="shrink-0 text-[10px] text-purple-500/80">{item.sub}</span>
+                <span className="shrink-0 text-[10px] text-slate-500">{item.sub}</span>
               )}
             </div>
           </div>
@@ -670,15 +692,157 @@ function PeriodSummary({
   );
 }
 
+function healthTone(level: AnalyticsHealthLevel) {
+  if (level === "ok") {
+    return {
+      badge: "border-emerald-200 bg-emerald-50 text-emerald-700",
+      dot: "bg-emerald-500",
+      panel: "border-emerald-200/70 bg-emerald-50/70",
+    };
+  }
+  if (level === "warning") {
+    return {
+      badge: "border-amber-200 bg-amber-50 text-amber-700",
+      dot: "bg-amber-500",
+      panel: "border-amber-200/70 bg-amber-50/70",
+    };
+  }
+  return {
+    badge: "border-rose-200 bg-rose-50 text-rose-700",
+    dot: "bg-rose-500",
+    panel: "border-rose-200/70 bg-rose-50/70",
+  };
+}
+
+function AdminStatusStrip({
+  health,
+  healthError,
+  statsGeneratedAt,
+  timeZoneLabel,
+  visitorBasisLabel,
+  schemaVersion,
+}: {
+  health: AnalyticsHealthResponse | null;
+  healthError: string | null;
+  statsGeneratedAt?: string;
+  timeZoneLabel: string;
+  visitorBasisLabel: string;
+  schemaVersion?: number;
+}) {
+  const status = healthError
+    ? { level: "critical" as const, label: "확인 실패", reasons: [healthError] }
+    : getAnalyticsHealthStatus(health);
+  const tone = healthTone(status.level);
+  const facts = [
+    {
+      label: "DB",
+      value: health?.database.connected ? `${health.database.latencyMs.toLocaleString()}ms` : health ? "연결 실패" : "확인 중",
+    },
+    { label: "최근 이벤트", value: formatDateTimeLabel(health?.events?.latestEventAt) },
+    { label: "24시간 이벤트", value: (health?.events?.events24h ?? 0).toLocaleString() },
+    { label: "24시간 PV", value: (health?.events?.pageviews24h ?? 0).toLocaleString() },
+    { label: "생성", value: formatDateTimeLabel(statsGeneratedAt ?? health?.generatedAt) },
+    { label: "기준", value: `${timeZoneLabel} · ${visitorBasisLabel}` },
+    { label: "Schema", value: `v${schemaVersion ?? health?.schema?.version ?? "-"}` },
+  ];
+
+  return (
+    <section className={`admin-panel ${tone.panel}`} aria-label="Analytics 운영 상태">
+      <div className="space-y-3">
+        <div className="flex min-w-0 items-start gap-3">
+          <span className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${tone.dot}`} aria-hidden="true" />
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-sm font-black text-slate-950">운영 상태</h2>
+              <span className={`rounded-full border px-2.5 py-1 text-[11px] font-bold ${tone.badge}`}>{status.label}</span>
+            </div>
+            <p className="mt-1 text-xs leading-5 text-slate-600">
+              {status.reasons.length ? status.reasons.join(" · ") : "수집, schema, 인덱스 상태가 정상 범위입니다."}
+            </p>
+          </div>
+        </div>
+        <dl className="grid w-full min-w-0 grid-cols-2 gap-2 text-xs sm:grid-cols-3 xl:grid-cols-7">
+          {facts.map((item) => (
+            <div key={item.label} className="min-w-0 rounded-xl border border-white/70 bg-white/72 px-3 py-2">
+              <dt className="text-[11px] font-medium text-slate-500">{item.label}</dt>
+              <dd className="mt-0.5 min-w-0 break-words text-[13px] font-bold leading-5 text-slate-900" title={item.value}>
+                {item.value}
+              </dd>
+            </div>
+          ))}
+        </dl>
+      </div>
+    </section>
+  );
+}
+
+function KpiGroup({ title, items }: { title: string; items: StatCardItem[] }) {
+  return (
+    <section aria-label={title}>
+      <div className="mb-3 flex items-center justify-between">
+        <h2 className="text-sm font-black text-slate-950">{title}</h2>
+      </div>
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {items.map((stat) => (
+          <div key={stat.label} className="min-w-0 rounded-xl border border-slate-200/80 bg-white px-3 py-3 shadow-sm">
+            <div className="flex min-h-[6.5rem] flex-col items-start gap-3 sm:flex-row sm:items-center">
+              <div className="shrink-0 rounded-full p-2" style={{ backgroundColor: `${stat.color}15` }}>
+                <svg className="h-5 w-5" style={{ color: stat.color }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+                  {stat.icon}
+                </svg>
+              </div>
+              <div className="min-w-0 flex-1">
+                <p data-fit-text className="break-keep text-xs font-semibold leading-5 text-slate-500">{stat.label}</p>
+                <p data-fit-text className="mt-1 whitespace-nowrap text-[clamp(1.25rem,2vw,1.75rem)] font-black leading-tight" style={{ color: stat.color }}>
+                  {typeof stat.value === "number" ? stat.value.toLocaleString() : stat.value}
+                </p>
+                {stat.description && <p data-fit-text className="mt-1 break-keep text-[11px] leading-4 text-slate-500">{stat.description}</p>}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function EmptyState({ kind }: { kind: Parameters<typeof getAnalyticsEmptyState>[0] }) {
+  const empty = getAnalyticsEmptyState(kind);
+  return (
+    <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50/80 px-4 py-5 text-sm">
+      <p className="font-bold text-slate-700">{empty.title}</p>
+      <p className="mt-1 text-xs leading-5 text-slate-500">{empty.description}</p>
+    </div>
+  );
+}
+
+function MobileSectionNav() {
+  const items = [
+    { href: "#summary", label: "요약" },
+    { href: "#trend", label: "트렌드" },
+    { href: "#behavior", label: "행동" },
+    { href: "#details", label: "상세" },
+  ];
+
+  return (
+    <nav className="sticky top-2 z-20 -mx-1 flex gap-2 overflow-x-auto rounded-2xl border border-slate-200/80 bg-white/88 p-2 shadow-sm backdrop-blur md:hidden" aria-label="Analytics 섹션">
+      {items.map((item) => (
+        <a key={item.href} href={item.href} className="shrink-0 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-100">
+          {item.label}
+        </a>
+      ))}
+    </nav>
+  );
+}
+
 export default function AnalyticsPage() {
-  const today = useMemo(() => startOfDayUTC(new Date()), []);
-  const [from, setFrom] = useState(() => {
-    const d = shiftUTCDate(today, -6);
-    return formatDateInput(d);
-  });
-  const [to, setTo] = useState(() => formatDateInput(today));
+  const initialRange = useMemo(() => buildAnalyticsDatePreset(7), []);
+  const [from, setFrom] = useState(initialRange.from);
+  const [to, setTo] = useState(initialRange.to);
   const [data, setData] = useState<AnalyticsResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [health, setHealth] = useState<AnalyticsHealthResponse | null>(null);
+  const [healthError, setHealthError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [reloadToken, setReloadToken] = useState(0);
   const [activePreset, setActivePreset] = useState<number | null>(7);
@@ -720,6 +884,33 @@ export default function AnalyticsPage() {
 
     return () => controller.abort();
   }, [from, to, reloadToken]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setHealthError(null);
+
+    fetch("/api/analytics/health", {
+      credentials: "include",
+      signal: controller.signal,
+      headers: { accept: "application/json" },
+    })
+      .then(async (res) => {
+        const body = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(body?.error || body?.reason || "운영 상태를 불러오지 못했습니다.");
+        }
+        return body;
+      })
+      .then((payload: AnalyticsHealthResponse) => setHealth(payload))
+      .catch((err: Error) => {
+        if (err.name !== "AbortError") {
+          setHealth(null);
+          setHealthError(err.message);
+        }
+      });
+
+    return () => controller.abort();
+  }, [reloadToken]);
 
   const daily = data?.daily ?? [];
   const sectionViews = data?.sectionViews ?? [];
@@ -790,18 +981,18 @@ export default function AnalyticsPage() {
   const retentionWindowDays = data?.meta?.retentionWindowDays ?? 30;
 
   const handlePreset = (days: number) => {
-    const nextTo = formatDateInput(today);
-    const nextFrom = formatDateInput(shiftUTCDate(today, -(days - 1)));
-    setFrom(nextFrom);
-    setTo(nextTo);
+    const nextRange = buildAnalyticsDatePreset(days);
+    setFrom(nextRange.from);
+    setTo(nextRange.to);
     setActivePreset(days);
   };
 
-  const stats = [
+  const primaryStats: StatCardItem[] = [
     {
       label: "방문자",
       value: data?.totals.visitors ?? 0,
       color: "#3B82F6",
+      description: visitorBasisLabel,
       icon: (
         <path
           strokeLinecap="round"
@@ -810,11 +1001,11 @@ export default function AnalyticsPage() {
         />
       ),
     },
-
     {
       label: "페이지뷰",
       value: data?.totals.pageviews ?? 0,
       color: "#8B5CF6",
+      description: `${fromLabel} ~ ${toLabel}`,
       icon: (
         <path
           strokeLinecap="round"
@@ -827,6 +1018,7 @@ export default function AnalyticsPage() {
       label: "메뉴 클릭",
       value: data?.totals.menuClicks ?? 0,
       color: "#F43F5E",
+      description: "menu_click",
       icon: (
         <path
           strokeLinecap="round"
@@ -839,6 +1031,7 @@ export default function AnalyticsPage() {
       label: "클릭률",
       value: `${ctr}%`,
       color: "#F59E0B",
+      description: "메뉴 클릭 / 페이지뷰",
       icon: (
         <path
           strokeLinecap="round"
@@ -847,10 +1040,14 @@ export default function AnalyticsPage() {
         />
       ),
     },
+  ];
+
+  const secondaryStats: StatCardItem[] = [
     {
       label: `${retentionWindowDays}일 재방문율`,
       value: `${metrics.returningVisitorRate}%`,
       color: "#14B8A6",
+      description: "retention window",
       icon: (
         <path
           strokeLinecap="round"
@@ -863,6 +1060,7 @@ export default function AnalyticsPage() {
       label: "페이지/방문",
       value: metrics.pagesPerVisitor.toFixed(2),
       color: "#6366F1",
+      description: "engagement",
       icon: (
         <path
           strokeLinecap="round"
@@ -875,6 +1073,7 @@ export default function AnalyticsPage() {
       label: "깊은 스크롤",
       value: `${metrics.deepScrollRate}%`,
       color: "#10B981",
+      description: "75% 이상",
       icon: (
         <path
           strokeLinecap="round"
@@ -883,32 +1082,53 @@ export default function AnalyticsPage() {
         />
       ),
     },
+    {
+      label: "빠른 이탈",
+      value: `${metrics.quickExitRate}%`,
+      color: "#64748B",
+      description: `${(dwellTime.quickExits ?? 0).toLocaleString()}건`,
+      icon: (
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M12 6v6l4 2m5-2a9 9 0 11-18 0 9 9 0 0118 0z"
+        />
+      ),
+    },
   ];
 
   return (
-    <div className="min-h-screen bg-page px-4 py-8 sm:px-6 sm:py-10">
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
+    <div className="admin-page min-h-screen px-3 py-5 sm:px-6 sm:py-8">
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 sm:gap-6">
         {/* Header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div className="min-w-0">
-            <h1 className="text-2xl font-black leading-tight tracking-tight text-purple-950 sm:text-3xl">Analytics Dashboard</h1>
-            <p className="mt-2 text-sm font-semibold leading-6 tracking-normal text-purple-900/90 sm:mt-1.5 sm:text-base">
+            <h1 className="max-w-full break-words text-xl font-black leading-tight text-slate-950 sm:text-3xl">Analytics Dashboard</h1>
+            <p className="mt-2 text-sm font-semibold leading-6 tracking-normal text-slate-700 sm:mt-1.5 sm:text-base">
               {fromLabel} ~ {toLabel}
             </p>
-            <p className="mt-1 text-xs font-semibold leading-5 tracking-normal text-purple-700/70">
+            <p className="mt-1 text-xs font-semibold leading-5 tracking-normal text-slate-500">
               {timeZoneLabel} 기준 · 방문자 기준 {visitorBasisLabel}
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => setReloadToken((prev) => prev + 1)}
-            disabled={isLoading}
-            className="self-start rounded-xl bg-[rgb(var(--moing-primary))] px-4 py-2 text-sm font-semibold text-white shadow-md shadow-purple-900/20 transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-70 sm:self-auto"
+          <Link
+            href="/"
+            className="inline-flex min-h-11 shrink-0 items-center justify-center self-start rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50 sm:self-auto"
           >
-            {isLoading ? '불러오는 중...' : '새로고침'}
-          </button>
+            사이트로 돌아가기
+          </Link>
         </div>
 
+        <AdminStatusStrip
+          health={health}
+          healthError={healthError}
+          statsGeneratedAt={data?.meta?.generatedAt}
+          timeZoneLabel={timeZoneLabel}
+          visitorBasisLabel={visitorBasisLabel}
+          schemaVersion={data?.meta?.schemaVersion}
+        />
+
+        <MobileSectionNav />
 
         {/* Error banner */}
         {error && (
@@ -935,13 +1155,14 @@ export default function AnalyticsPage() {
         )}
 
         {/* Date picker */}
-        <section className="rounded-2xl border border-purple-200/70 bg-white/85 p-5 shadow-md shadow-purple-900/10 backdrop-blur">
-          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:gap-4">
+        <section className="admin-toolbar p-4 lg:sticky lg:top-3 lg:z-10" aria-busy={isLoading}>
+          <div className="flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-end lg:gap-4">
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-gray-500">시작일</label>
+              <label htmlFor="analytics-from" className="text-xs font-medium text-slate-500">시작일</label>
               <input
+                id="analytics-from"
                 type="date"
-                className="w-full rounded-lg border border-purple-200 bg-white px-3 py-2 text-sm sm:w-auto"
+                className="min-h-11 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm lg:w-auto"
                 value={from}
                 onChange={(e) => {
                   const value = e.target.value;
@@ -952,10 +1173,11 @@ export default function AnalyticsPage() {
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-gray-500">종료일</label>
+              <label htmlFor="analytics-to" className="text-xs font-medium text-slate-500">종료일</label>
               <input
+                id="analytics-to"
                 type="date"
-                className="w-full rounded-lg border border-purple-200 bg-white px-3 py-2 text-sm sm:w-auto"
+                className="min-h-11 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm lg:w-auto"
                 value={to}
                 onChange={(e) => {
                   const value = e.target.value;
@@ -979,10 +1201,10 @@ export default function AnalyticsPage() {
                     key={preset.label}
                     type="button"
                     onClick={() => handlePreset(preset.days)}
-                    className={`rounded-lg border px-3 py-2 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/70 focus-visible:ring-offset-2 focus-visible:ring-offset-white ${
+                    className={`min-h-11 rounded-lg border px-3 py-2 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/70 focus-visible:ring-offset-2 focus-visible:ring-offset-white ${
                       active
                         ? "border-purple-500 bg-purple-600 text-white"
-                        : "border-purple-200 bg-white text-purple-800 hover:bg-purple-50"
+                        : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
                     }`}
                   >
                     {preset.label}
@@ -990,35 +1212,32 @@ export default function AnalyticsPage() {
                 );
               })}
             </div>
+            <div className="flex min-w-0 flex-1 flex-col gap-1 text-xs text-slate-500 lg:items-end" aria-live="polite">
+              <span className="font-semibold text-slate-700">현재 범위 {fromLabel} ~ {toLabel}</span>
+              <span>최대 조회 {data?.range?.maxRangeDays ?? 366}일 · 생성 {formatDateTimeLabel(data?.meta?.generatedAt)}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setReloadToken((prev) => prev + 1)}
+              disabled={isLoading}
+              className="min-h-11 rounded-xl bg-[rgb(var(--moing-primary))] px-4 py-2 text-sm font-semibold text-white shadow-md shadow-purple-900/20 transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              {isLoading ? "불러오는 중..." : "새로고침"}
+            </button>
           </div>
         </section>
 
         {/* Stats cards */}
-        <section className="grid gap-4 grid-cols-2 sm:grid-cols-3 xl:grid-cols-6">
-          {stats.map((stat) => (
-            <div key={stat.label} className="rounded-2xl border border-purple-200/70 bg-white/85 p-4 shadow-md shadow-purple-900/10 backdrop-blur">
-              <div className="flex items-center gap-3">
-                <div className="rounded-full p-2" style={{ backgroundColor: `${stat.color}15` }}>
-                  <svg className="h-5 w-5" style={{ color: stat.color }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
-                    {stat.icon}
-                  </svg>
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs font-medium text-gray-500">{stat.label}</p>
-                  <p className="mt-1 text-xl font-bold" style={{ color: stat.color }}>
-                    {typeof stat.value === "number" ? stat.value.toLocaleString() : stat.value}
-                  </p>
-                </div>
-              </div>
-            </div>
-          ))}
+        <section id="summary" className="grid scroll-mt-24 gap-5">
+          <KpiGroup title="핵심 지표" items={primaryStats} />
+          <KpiGroup title="진단 지표" items={secondaryStats} />
         </section>
 
         {/* Trend chart + Period summary */}
-        <section className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
-          <article className="min-w-0 self-start overflow-hidden rounded-2xl border border-purple-200/70 bg-white/85 p-4 shadow-md shadow-purple-900/10 backdrop-blur sm:p-6">
+        <section id="trend" className="grid scroll-mt-24 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
+          <article className="admin-panel min-w-0 self-start overflow-hidden p-4 sm:p-6">
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-bold text-purple-950">일별 트렌드</h2>
+              <h2 className="text-lg font-bold text-slate-950">일별 트렌드</h2>
             </div>
             <TrendChart daily={daily} />
             {daily.length > 0 && (
@@ -1060,8 +1279,8 @@ export default function AnalyticsPage() {
         {/* Composition & Section Views */}
         <section className="grid gap-4 lg:grid-cols-2">
           {/* Event composition donut */}
-          <article className="rounded-2xl border border-purple-200/70 bg-white/85 p-6 shadow-md shadow-purple-900/10 backdrop-blur">
-            <h2 className="text-lg font-bold text-purple-950">이벤트 구성</h2>
+          <article className="admin-panel p-6">
+            <h2 className="text-lg font-bold text-slate-950">이벤트 구성</h2>
             <div className="mt-5 grid grid-cols-1 items-center gap-5 sm:grid-cols-[180px_1fr]">
               <div className="relative mx-auto h-40 w-40 rounded-full" style={{ background: donutBackground }}>
                 <div className="absolute inset-5 flex items-center justify-center rounded-full bg-white text-center">
@@ -1089,8 +1308,8 @@ export default function AnalyticsPage() {
           </article>
 
           {/* Section views */}
-          <article className="rounded-2xl border border-purple-200/70 bg-white/85 p-6 shadow-md shadow-purple-900/10 backdrop-blur">
-            <h2 className="text-lg font-bold text-purple-950">섹션별 조회</h2>
+          <article className="admin-panel p-6">
+            <h2 className="text-lg font-bold text-slate-950">섹션별 조회</h2>
             <div className="mt-4 space-y-3">
               {sectionViews.length ? (
                 sectionViews.slice(0, 10).map((entry) => {
@@ -1114,17 +1333,15 @@ export default function AnalyticsPage() {
                     </div>
                   );
                 })
-              ) : (
-                <p className="text-sm text-gray-500">섹션 조회 데이터가 없습니다.</p>
-              )}
+              ) : <EmptyState kind="sections" />}
             </div>
           </article>
         </section>
 
         {/* Behavior metrics */}
-        <section className="grid gap-4 lg:grid-cols-3">
-          <article className="rounded-2xl border border-purple-200/70 bg-white/85 p-6 shadow-md shadow-purple-900/10 backdrop-blur">
-            <h2 className="mb-1 text-lg font-bold text-purple-950">스크롤 깊이</h2>
+        <section id="behavior" className="grid scroll-mt-24 gap-4 lg:grid-cols-3">
+          <article className="admin-panel p-6">
+            <h2 className="mb-1 text-lg font-bold text-slate-950">스크롤 깊이</h2>
             <p className="mb-4 text-xs text-purple-700/70">방문자 기준 도달률 · 총 {totalScrollHits.toLocaleString()}회 이벤트</p>
             {scrollDepth.length ? (
               <div className="space-y-3">
@@ -1148,13 +1365,11 @@ export default function AnalyticsPage() {
                   );
                 })}
               </div>
-            ) : (
-              <p className="text-sm text-purple-700/70">스크롤 깊이 데이터가 없습니다.</p>
-            )}
+            ) : <EmptyState kind="scroll" />}
           </article>
 
-          <article className="rounded-2xl border border-purple-200/70 bg-white/85 p-6 shadow-md shadow-purple-900/10 backdrop-blur">
-            <h2 className="mb-1 text-lg font-bold text-purple-950">체류 시간</h2>
+          <article className="admin-panel p-6">
+            <h2 className="mb-1 text-lg font-bold text-slate-950">체류 시간</h2>
             <p className="mb-4 text-xs text-purple-700/70">페이지 이탈 이벤트 기준</p>
             <div className="grid grid-cols-2 gap-2">
               {[
@@ -1173,8 +1388,8 @@ export default function AnalyticsPage() {
             </div>
           </article>
 
-          <article className="rounded-2xl border border-purple-200/70 bg-white/85 p-6 shadow-md shadow-purple-900/10 backdrop-blur">
-            <h2 className="mb-1 text-lg font-bold text-purple-950">디바이스 카테고리</h2>
+          <article className="admin-panel p-6">
+            <h2 className="mb-1 text-lg font-bold text-slate-950">디바이스 카테고리</h2>
             <p className="mb-4 text-xs text-purple-700/70">고유 방문자 기준 비중</p>
             {deviceCategories.length ? (
               <div className="space-y-3">
@@ -1195,17 +1410,15 @@ export default function AnalyticsPage() {
                   </div>
                 ))}
               </div>
-            ) : (
-              <p className="text-sm text-purple-700/70">디바이스 분류 데이터가 없습니다.</p>
-            )}
+            ) : <EmptyState kind="device" />}
           </article>
         </section>
 
         {/* Bottom 3 lists */}
-        <section className="grid gap-4 lg:grid-cols-2 xl:grid-cols-4">
+        <section id="details" className="grid scroll-mt-24 gap-4 lg:grid-cols-2 xl:grid-cols-4">
           {/* Interactions */}
-          <article className="rounded-2xl border border-purple-200/70 bg-white/85 p-6 shadow-md shadow-purple-900/10 backdrop-blur">
-            <h2 className="mb-1 text-lg font-bold text-purple-950">상호작용 TOP 12</h2>
+          <article className="admin-panel p-6">
+            <h2 className="mb-1 text-lg font-bold text-slate-950">상호작용 TOP 12</h2>
             <p className="mb-4 text-xs text-purple-700/70">메뉴/콘텐츠 클릭 통합 순위</p>
             {topInteractions.length ? (
               <div className="divide-y divide-gray-100">
@@ -1234,14 +1447,12 @@ export default function AnalyticsPage() {
                   );
                 })}
               </div>
-            ) : (
-              <p className="text-sm text-gray-500">상호작용 데이터가 없습니다.</p>
-            )}
+            ) : <EmptyState kind="interactions" />}
           </article>
 
           {/* Menu Clicks */}
-          <article className="rounded-2xl border border-purple-200/70 bg-white/85 p-6 shadow-md shadow-purple-900/10 backdrop-blur">
-            <h2 className="mb-1 text-lg font-bold text-purple-950">메뉴 클릭 TOP 10</h2>
+          <article className="admin-panel p-6">
+            <h2 className="mb-1 text-lg font-bold text-slate-950">메뉴 클릭 TOP 10</h2>
             <p className="mb-4 text-xs text-purple-700/70">전체 메뉴 클릭 대비 비중</p>
             {topMenuClicks.length ? (
               <div className="divide-y divide-gray-100">
@@ -1267,14 +1478,12 @@ export default function AnalyticsPage() {
                   </div>
                 )); })()}
               </div>
-            ) : (
-              <p className="text-sm text-gray-500">메뉴 클릭 데이터가 없습니다.</p>
-            )}
+            ) : <EmptyState kind="menuClicks" />}
           </article>
 
           {/* Top Paths */}
-          <article className="rounded-2xl border border-purple-200/70 bg-white/85 p-6 shadow-md shadow-purple-900/10 backdrop-blur">
-            <h2 className="mb-1 text-lg font-bold text-purple-950">페이지 경로 TOP 10</h2>
+          <article className="admin-panel p-6">
+            <h2 className="mb-1 text-lg font-bold text-slate-950">페이지 경로 TOP 10</h2>
             <p className="mb-4 text-xs text-purple-700/70">전체 페이지뷰 대비 비중</p>
             {topPaths.length ? (
               <div className="divide-y divide-gray-100">
@@ -1298,14 +1507,12 @@ export default function AnalyticsPage() {
                   </div>
                 )); })()}
               </div>
-            ) : (
-              <p className="text-sm text-gray-500">페이지 경로 데이터가 없습니다.</p>
-            )}
+            ) : <EmptyState kind="paths" />}
           </article>
 
           {/* Top Referrers */}
-          <article className="rounded-2xl border border-purple-200/70 bg-white/85 p-6 shadow-md shadow-purple-900/10 backdrop-blur">
-            <h2 className="mb-1 text-lg font-bold text-purple-950">유입 Referrer TOP 10</h2>
+          <article className="admin-panel p-6">
+            <h2 className="mb-1 text-lg font-bold text-slate-950">유입 Referrer TOP 10</h2>
             <p className="mb-4 text-xs text-purple-700/70">Referrer TOP 합계 대비 비중</p>
             {topReferrers.length ? (
               <div className="divide-y divide-gray-100">
@@ -1329,9 +1536,7 @@ export default function AnalyticsPage() {
                   </div>
                 )); })()}
               </div>
-            ) : (
-              <p className="text-sm text-gray-500">referrer 데이터가 없습니다.</p>
-            )}
+            ) : <EmptyState kind="referrers" />}
           </article>
         </section>
       </div>

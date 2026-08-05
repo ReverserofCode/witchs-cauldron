@@ -3,6 +3,11 @@ import type { BroadcastSession } from "./types";
 const DEFAULT_MAX_WATCHED_SESSIONS = 500;
 
 export type BroadcastProgressFilter = "all" | "unwatched" | "new";
+export type BroadcastVisitStatus = "ready" | "missing_api_key" | "unavailable";
+
+export function shouldRecordBroadcastVisit(status: BroadcastVisitStatus): boolean {
+  return status === "ready";
+}
 
 function normalizeLimit(limit: number): number {
   if (!Number.isFinite(limit)) return DEFAULT_MAX_WATCHED_SESSIONS;

@@ -13,7 +13,8 @@
 		"dev:install:host": "npm install",
 		"capture:screens": "node scripts/capture-screenshots.mjs",
 		"smoke:admin": "node scripts/smoke-admin-analytics.mjs",
-		"analytics:profile": "node scripts/analytics-maintenance.mjs profile"
+		"analytics:profile": "node scripts/analytics-maintenance.mjs profile",
+		"analytics:scrub-ip": "node scripts/analytics-maintenance.mjs scrub-ip"
 	},
 	"dependencies": {
 		"next": "16.3.0",

@@ -4,10 +4,11 @@ import path from "node:path";
 import { Readable } from "node:stream";
 import { NextRequest, NextResponse } from "next/server";
 
+import { getClipOpenFlags, resolveClipPath } from "../../lib/clips/storage";
+
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-const CLIPS_DIR = path.join(process.cwd(), "public", "clips");
 const VIDEO_CONTENT_TYPES: Record<string, string> = {
   ".mp4": "video/mp4",
   ".webm": "video/webm",
@@ -18,18 +19,6 @@ const VIDEO_CONTENT_TYPES: Record<string, string> = {
 type RouteContext = {
   params: Promise<{ filename: string[] }>;
 };
-
-function resolveClipPath(filenameParts: string[]): string | null {
-  const requestedPath = filenameParts.join("/");
-  const resolvedPath = path.resolve(CLIPS_DIR, requestedPath);
-  const clipsRoot = path.resolve(CLIPS_DIR);
-
-  if (!resolvedPath.startsWith(`${clipsRoot}${path.sep}`)) {
-    return null;
-  }
-
-  return resolvedPath;
-}
 
 function parseRange(rangeHeader: string | null, fileSize: number) {
   if (!rangeHeader) return null;
@@ -63,11 +52,17 @@ function parseRange(rangeHeader: string | null, fileSize: number) {
 
 async function serveClip(req: NextRequest, { params }: RouteContext, headOnly = false) {
   const { filename } = await params;
-  const clipPath = resolveClipPath(filename);
+  const resolution = resolveClipPath(filename);
 
-  if (!clipPath) {
+  if (resolution.status === "invalid") {
     return NextResponse.json({ error: "Invalid clip path" }, { status: 400 });
   }
+
+  if (resolution.status === "not-found") {
+    return NextResponse.json({ error: "Clip not found" }, { status: 404 });
+  }
+
+  const clipPath = resolution.path;
 
   const extension = path.extname(clipPath).toLowerCase();
   const contentType = VIDEO_CONTENT_TYPES[extension];
@@ -75,19 +70,39 @@ async function serveClip(req: NextRequest, { params }: RouteContext, headOnly = 
     return NextResponse.json({ error: "Unsupported clip type" }, { status: 415 });
   }
 
+  let fileDescriptor: number | null = null;
   let stat: Stats;
   try {
-    stat = fs.statSync(clipPath);
+    fileDescriptor = fs.openSync(clipPath, getClipOpenFlags(fs.constants));
+    stat = fs.fstatSync(fileDescriptor);
+
+    const realRoot = fs.realpathSync(resolution.root);
+    const realClipPath = fs.realpathSync(clipPath);
+    const relativePath = path.relative(realRoot, realClipPath);
+    const resolvedStat = fs.statSync(realClipPath);
+    const isWithinRoot =
+      Boolean(relativePath) &&
+      relativePath !== ".." &&
+      !relativePath.startsWith(`..${path.sep}`) &&
+      !path.isAbsolute(relativePath);
+    const isSameFile = resolvedStat.dev === stat.dev && resolvedStat.ino === stat.ino;
+
+    if (!isWithinRoot || !isSameFile) {
+      throw new Error("Clip changed during secure open");
+    }
   } catch {
+    if (fileDescriptor !== null) fs.closeSync(fileDescriptor);
     return NextResponse.json({ error: "Clip not found" }, { status: 404 });
   }
 
   if (!stat.isFile()) {
+    fs.closeSync(fileDescriptor);
     return NextResponse.json({ error: "Clip not found" }, { status: 404 });
   }
 
   const range = parseRange(req.headers.get("range"), stat.size);
   if (range === "invalid") {
+    fs.closeSync(fileDescriptor);
     return new NextResponse(null, {
       status: 416,
       headers: {
@@ -112,10 +127,13 @@ async function serveClip(req: NextRequest, { params }: RouteContext, headOnly = 
     };
 
     if (headOnly) {
+      fs.closeSync(fileDescriptor);
       return new NextResponse(null, { status: 206, headers });
     }
 
     const stream = fs.createReadStream(clipPath, {
+      fd: fileDescriptor,
+      autoClose: true,
       start: range.start,
       end: range.end,
     });
@@ -132,10 +150,16 @@ async function serveClip(req: NextRequest, { params }: RouteContext, headOnly = 
   };
 
   if (headOnly) {
+    fs.closeSync(fileDescriptor);
     return new NextResponse(null, { status: 200, headers });
   }
 
-  return new NextResponse(Readable.toWeb(fs.createReadStream(clipPath)) as ReadableStream, {
+  const stream = fs.createReadStream(clipPath, {
+    fd: fileDescriptor,
+    autoClose: true,
+  });
+
+  return new NextResponse(Readable.toWeb(stream) as ReadableStream, {
     status: 200,
     headers,
   });

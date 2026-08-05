@@ -23,12 +23,6 @@ const eslintConfig = [
     },
   },
   {
-    files: ["app/lib/analytics/contract.ts"],
-    rules: {
-      "prefer-const": "warn",
-    },
-  },
-  {
     files: ["healthcheck.js"],
     rules: {
       "@typescript-eslint/no-require-imports": "off",

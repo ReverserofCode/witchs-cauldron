@@ -5,10 +5,6 @@ on:
     - cron: "*/15 * * * *"
   workflow_dispatch:
     inputs:
-      base_url:
-        description: "Production base URL"
-        required: false
-        default: "https://moingfans.com"
       recovery_enabled:
         description: "Attempt SSH container recovery when health checks fail"
         required: false
@@ -16,22 +12,27 @@ on:
 
 concurrency:
   group: uptime-monitor
-  cancel-in-progress: true
+  cancel-in-progress: false
+
+permissions: {}
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
 jobs:
   monitor:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 12
+    outputs:
+      recovery_required: ${{ steps.public_health.outcome == 'failure' && inputs.recovery_enabled != 'false' }}
 
     steps:
       - name: Check public health
         id: public_health
         continue-on-error: true
         env:
-          BASE_URL: ${{ github.event.inputs.base_url || vars.UPTIME_MONITOR_BASE_URL || 'https://moingfans.com' }}
+          BASE_URL: ${{ vars.UPTIME_MONITOR_BASE_URL || 'https://moingfans.com' }}
           EXPECT_CLIP_AUTO_COLLECT_ENABLED: ${{ vars.EXPECT_CLIP_AUTO_COLLECT_ENABLED || 'false' }}
           COLLECT_API_KEY: ${{ secrets.COLLECT_API_KEY || secrets.CLIP_REFRESH_API_KEY }}
         run: |
@@ -79,17 +80,27 @@ jobs:
 
           check_url "${BASE_URL}/"
 
+  recover:
+    needs: monitor
+    if: github.ref == 'refs/heads/main' && needs.monitor.outputs.recovery_required == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    environment: production
+    concurrency:
+      group: production-operations
+      cancel-in-progress: false
+
+    steps:
       - name: Recover production containers
-        if: steps.public_health.outcome == 'failure' && github.event.inputs.recovery_enabled != 'false'
-        uses: appleboy/ssh-action@v1.0.3
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USERNAME }}
           password: ${{ secrets.DESK_SSH_PASSWORD || secrets.SSH_PASSWORD }}
           port: ${{ secrets.SSH_PORT }}
+          fingerprint: ${{ secrets.SSH_HOST_FINGERPRINT }}
           timeout: 60s
           command_timeout: 8m
-          script_stop: false
           script: |
             set -euo pipefail
             cd ${{ secrets.DEPLOY_PATH }}
@@ -167,10 +178,16 @@ jobs:
 
             compose ps
 
+  verify:
+    needs: [monitor, recover]
+    if: always() && github.ref == 'refs/heads/main' && needs.monitor.result != 'skipped'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
       - name: Verify after recovery
-        if: always()
         env:
-          BASE_URL: ${{ github.event.inputs.base_url || vars.UPTIME_MONITOR_BASE_URL || 'https://moingfans.com' }}
+          BASE_URL: ${{ vars.UPTIME_MONITOR_BASE_URL || 'https://moingfans.com' }}
         run: |
           set -euo pipefail
 

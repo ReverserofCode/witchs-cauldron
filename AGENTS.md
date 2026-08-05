@@ -386,7 +386,7 @@ curl http://localhost:8000/api/clips
 
 - **파일명**: `clip_{clip_id}_{title}.mp4`
 - **저장 위치**: Backend → `/app/shared/clips`
-- **Frontend 접근**: `/clips/clip_xxx.mp4` (public/clips)
+- **Frontend 접근**: `/media/clips/clip_xxx.mp4` (공유 볼륨 우선, 이미지 내 정적 클립 fallback). 기존 `/clips/*`도 같은 스트림으로 rewrite
 
 ---
 

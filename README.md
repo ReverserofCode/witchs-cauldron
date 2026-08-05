@@ -109,7 +109,8 @@ witchs-cauldron/
 │   │   │   ├── youTubePlayer/   # YouTube 영상
 │   │   │   ├── youtubeShorts/   # YouTube Shorts
 │   │   │   └── analytics/       # 방문자/클릭 분석 API
-│   │   ├── clips/[...filename]/ # 수집 클립 동적 스트리밍 (Range 지원)
+│   │   ├── clips/[...filename]/ # 클립 스트림 구현 및 기존 URL 호환
+│   │   ├── media/clips/[...filename]/ # canonical 클립 스트리밍 (Range 지원)
 │   │   ├── broadcasts/           # 최근 방송 단위 따라잡기 허브
 │   │   ├── admin/analytics/     # 운영자 분석 대시보드
 │   │   ├── components/
@@ -336,8 +337,8 @@ CLIP_AUTO_COLLECT_ORDER_TYPE=RECENT
 ### 치지직 클립 렌더링
 
 - 운영 서버에서 Backend가 치지직 클립을 수집해 Docker `shared_clips` 볼륨에 저장
-- Frontend는 같은 볼륨을 `/app/public/clips`로 읽고, `ClipsSection`에서 최신 10개만 표시
-- `/clips/[...filename]` 동적 라우트가 MP4 파일을 직접 스트리밍하며 `Range` 요청을 지원
+- Frontend는 같은 볼륨을 `/app/shared/clips`에 읽기 전용으로 마운트하고, `ClipsSection`에서 최신 10개만 표시
+- `/media/clips/[...filename]` 동적 라우트가 공유 볼륨을 우선해 MP4 파일을 직접 스트리밍하며 `Range` 요청을 지원. 기존 `/clips/*` 요청은 `beforeFiles` rewrite로 같은 핸들러에 연결
 - 한글/공백 파일명 안전 로드를 위해 파일명 URL 인코딩과 `?v=<mtime>` 캐시 버스터 적용
 - Next standalone 정적 `public` 캐시에 의존하지 않음. 서버 시작 후 새로 생성된 클립도 재배포 없이 재생 가능
 
@@ -391,7 +392,7 @@ curl http://localhost:8000/api/clips
 - 클립당 약 30~60초 소요
 - 최소 1GB RAM 권장 (Selenium)
 - 파일명: `clip_{clip_id}_{title}.mp4`
-- 저장: Backend `/app/shared/clips` → Frontend `/clips/` (공유 볼륨)
+- 저장: Backend `/app/shared/clips` → Frontend `/app/shared/clips:ro` (공유 볼륨), 공개 URL `/media/clips/*`
 - HLS/TS 후보는 `ffmpeg -c copy -movflags +faststart`로 브라우저 재생 가능한 MP4 컨테이너로 remux
 - 기존에 TS 세그먼트가 `.mp4` 확장자로 잘못 저장된 경우 `ftyp` 헤더 검사 후 제거하고 재수집
 - 수집 결과가 0건이고 오류가 있으면 작업을 `failed`로 표시해 실패 원인을 API 응답에 노출
@@ -500,6 +501,8 @@ python ShortForm.py --max-clips 10 --order POPULAR --filter ALL \
 
 Backend validation은 `backend/requirements.txt`를 설치한 뒤 `backend/app` 전체 컴파일과 `app.main` import를 수행합니다. 배포 후 헬스체크는 프론트엔드 URL과 backend 컨테이너 내부 `http://localhost:8000/api/health`를 모두 확인합니다.
 
+배포 스크립트는 새 이미지를 빌드하기 전에 현재 실행 중인 frontend/backend 이미지 ID를 rollback tag로 보존합니다. 새 배포의 헬스체크가 실패하면 보존한 이미지를 `latest`로 복구해 컨테이너를 다시 만들고 헬스체크를 재실행합니다. 기존 실행 이미지가 없어 안전한 rollback을 준비할 수 없으면 배포를 시작하지 않습니다.
+
 ### GitHub Secrets
 
 | Secret | 설명 |
@@ -509,7 +512,10 @@ Backend validation은 `backend/requirements.txt`를 설치한 뒤 `backend/app` 
 | `SSH_PASSWORD` | SSH 비밀번호 |
 | `DESK_SSH_PASSWORD` | 배포 비밀번호 대체 fallback (`SSH_PASSWORD`가 비어 있을 때 사용) |
 | `SSH_PORT` | SSH 포트 |
+| `SSH_HOST_FINGERPRINT` | 별도 채널로 확인한 운영 서버 host key의 SHA256 fingerprint |
 | `DEPLOY_PATH` | 서버 프로젝트 경로 |
+
+운영 SSH secret은 GitHub의 `production` environment에 저장합니다. 이 environment는 `main` branch만 허용하고 required reviewer를 설정해야 합니다. CD, rebuild, analytics maintenance, uptime recovery는 동일한 `production-operations` concurrency group을 사용하므로 운영 변경이 동시에 실행되지 않습니다.
 
 ### 직접 SSH 접속용 비밀번호 파일
 
@@ -544,7 +550,9 @@ $env:WITCHS_SSH_KNOWN_HOSTS = "$env:USERPROFILE\.ssh\known_hosts"
 
 - `.github/workflows/ci.yml` - PR 검증
 - `.github/workflows/cd.yml` - 자동 배포
-- `.github/workflows/rebuild.yml` - 수동 전체 재빌드 및 볼륨 초기화
+- `.github/workflows/rebuild.yml` - 수동 상태 점검 또는 데이터 볼륨을 보존하는 애플리케이션 재빌드 (`profile`이 기본값)
+- `.github/workflows/analytics-maintenance.yml` - 승인 후 실행하는 운영 분석 DB 유지보수
+- `.github/workflows/uptime-monitor.yml` - 공개 상태 확인 및 승인된 SSH 복구
 - 작업 디렉터리: `frontend/`
 - 배포 스크립트: `frontend/deploy.sh --clean`
 
@@ -573,7 +581,7 @@ chmod +x frontend/deploy.sh frontend/manage.sh
 ./frontend/deploy.sh --clean
 ```
 
-- GitHub Actions CD를 쓰는 경우 `ADMIN_BASIC_AUTH_USERNAME`, `ADMIN_BASIC_AUTH_PASSWORD` 를 repo secrets로도 등록하면 서버 `.env` 에 자동 반영됩니다.
+- GitHub Actions CD를 쓰는 경우 `ADMIN_BASIC_AUTH_USERNAME`, `ADMIN_BASIC_AUTH_PASSWORD`를 `production` environment secrets로 등록하면 서버 `.env`에 자동 반영됩니다.
 - 프로덕션에서 두 값이 비어 있으면 `/admin/*` 와 `/api/analytics/stats` 는 503으로 차단됩니다.
 
 ### 관리 스크립트 (manage.sh)
@@ -674,7 +682,7 @@ WantedBy=multi-user.target
 | YouTube API 오류 | `YOUTUBE_API_KEY` 확인/교체 |
 | 클립 수집 실패 | `/api/health`로 Selenium 상태 확인, 메모리 확인 (최소 1GB) |
 | 수집 작업이 완료됐지만 클립이 0개 | `/api/clips/jobs/{job_id}`의 `error` 확인. 미디어 URL/다운로드 실패가 숨겨지지 않고 노출되어야 함 |
-| 수집된 클립이 404 | Frontend `/clips/[...filename]` 동적 라우트 배포 여부, `shared_clips` 볼륨 마운트 확인 |
+| 수집된 클립이 404 | Frontend `/media/clips/[...filename]` 동적 라우트 배포 여부, `SHARED_CLIPS_DIR`와 `shared_clips` 볼륨 마운트 확인 |
 | 수집된 클립이 재생되지 않음 | `curl -H "Range: bytes=0-31" <clip-url>` 결과가 `206`, `video/mp4`, `ftyp` 헤더인지 확인. `0x47`로 시작하면 TS 조각이므로 재수집 필요 |
 | Analytics DB 연결 실패 | `ANALYTICS_DATABASE_URL` 확인, `docker compose logs analytics-db` |
 | 디스크 부족 | `docker system prune -a` |
@@ -924,7 +932,7 @@ curl http://localhost:3000/api/clips/jobs/<job_id>
 curl http://localhost:3000/api/clips/automation
 
 # 클립 Range/MP4 헤더 확인
-curl -I -H "Range: bytes=0-31" "http://localhost:3000/clips/<filename>.mp4"
+curl -I -H "Range: bytes=0-31" "http://localhost:3000/media/clips/<filename>.mp4"
 ```
 
 정상 조건:
@@ -973,7 +981,7 @@ curl -I -H "Range: bytes=0-31" "http://localhost:3000/clips/<filename>.mp4"
 - 치지직 클립 수집 상한을 10개로 고정
 - Backend 수집 작업 실패 상태 보고 개선 (`0 collected + errors`를 실패로 노출)
 - 운영 Docker `shared_clips` 볼륨 권한 보정 (`docker-entrypoint.sh`)
-- Next standalone 환경에서 새 클립이 404가 되지 않도록 `/clips/[...filename]` 동적 스트리밍 라우트 추가
+- Next standalone 환경에서 새 클립이 404가 되지 않도록 `/media/clips/[...filename]` 동적 스트리밍 라우트와 `/clips/*` 호환 rewrite 추가
 - HLS/TS 클립을 브라우저 재생 가능한 MP4로 remux하고, 잘못 저장된 TS 기반 `.mp4`를 재수집하도록 보정
 - 운영 검증: CD 성공, 최신 수집 job 10개 완료, 10개 클립 모두 `206`/`video/mp4`/`ftyp` 확인, Chrome 재생 확인
 
