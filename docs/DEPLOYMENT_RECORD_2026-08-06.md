@@ -6,6 +6,8 @@
 
 | 항목 | 결과 |
 | --- | --- |
+| 운영 URL | [https://moingfans.com](https://moingfans.com) |
+| 배포 일자 | `2026-08-06 (KST)` |
 | 대상 커밋 | `61540545527a5edff73610cea45ecb03e578c846` |
 | GitHub Actions 실행 | [CD run `31046763294`](https://github.com/ReverserofCode/witchs-cauldron/actions/runs/31046763294) |
 | 최종 결과 | attempt 2 성공, `build-and-test` 및 `deploy` job 성공 |
@@ -34,17 +36,23 @@
 
 ## 배포 타임라인 (Deployment Timeline)
 
-1. 로컬과 원격 `main`의 분기를 확인했습니다.
-2. 커밋 `6154054`를 push하여 CD를 시작했습니다.
-3. attempt 1에서는 build가 성공했지만 애플리케이션 교체 전에 SSH host key의 fingerprint mismatch가 발생했습니다.
-4. 서버의 ED25519, ECDSA P-256, RSA host key를 비교했습니다.
-5. `drone-ssh` 1.8.2가 ED25519보다 ECDSA P-256을 먼저 선택함을 확인했습니다.
-6. environment secret을 수정하고 실패한 job을 다시 실행했습니다.
-7. attempt 2에서 checkout, image snapshot, clean build, 교체, health check, Analytics 검증을 완료했습니다.
+1. 커밋 `6154054`를 push한 뒤 `origin/main`이 대상 SHA `61540545527a5edff73610cea45ecb03e578c846`와 일치함을 확인했고 CD를 시작했습니다.
+2. attempt 1에서는 build가 성공했지만 애플리케이션 교체 전에 SSH host key의 fingerprint mismatch가 발생했습니다.
+3. 서버의 ED25519, ECDSA P-256, RSA host key를 비교했습니다.
+4. `drone-ssh` 1.8.2가 ED25519보다 ECDSA P-256을 먼저 선택함을 확인했습니다.
+5. environment secret을 수정하고 실패한 job을 다시 실행했습니다.
+6. attempt 2에서 checkout, image snapshot, clean build, 교체, health check, Analytics 검증을 완료했습니다.
 
 ## 원인과 해결 (Root Cause and Resolution)
 
 첫 번째로 저장한 fingerprint는 ED25519 key에는 유효했지만, Go SSH client가 선택한 ECDSA key와 일치하지 않았습니다. 일치하는 ECDSA P-256 SHA256 fingerprint를 저장하여 해결했으며, 비밀번호나 key material은 이 기록에 남기지 않았습니다.
+
+### 신뢰 가능한 SSH host key 확인 절차
+
+1. 서버 console 또는 별도로 인증된 trusted channel에서 public host key와 key type을 먼저 확인합니다. 검증 대상 SSH 연결에서 얻은 `ssh-keyscan` 결과만 신뢰 근거로 사용하지 않습니다.
+2. `ssh-keyscan`을 사용했다면 수집된 public key와 key type을 독립적으로 확인한 값과 대조합니다.
+3. 독립적으로 확인된 public key의 fingerprint를 계산해 비교한 뒤에만 GitHub `production` environment의 `SSH_HOST_FINGERPRINT` secret을 갱신합니다.
+4. fingerprint 원문, private key, 비밀번호 및 다른 secret 값은 문서나 명령 이력에 남기지 않습니다.
 
 ## 최종 배포 결과 (Final Deployment Result)
 
@@ -75,17 +83,36 @@
 
 ## 재현 명령 (Reproduction Commands)
 
-아래 명령은 공개 run ID와 repository name만 사용하거나, 운영 환경에서 secret을 노출하지 않는 상태 코드 확인을 위한 예시입니다.
+아래 명령은 공개 run ID와 repository name만 사용하거나, 운영 환경에서 secret을 노출하지 않고 HTTP 상태와 응답을 확인합니다. HTTP 예시는 Bash, `curl`, `jq`가 필요합니다. 임시 파일은 실행 종료 시 지정된 임시 디렉터리와 함께 제거됩니다.
 
 ```bash
 gh run view 31046763294 --repo ReverserofCode/witchs-cauldron
-gh run view 31046763294 --repo ReverserofCode/witchs-cauldron --log-failed
+gh run view 31046763294 --repo ReverserofCode/witchs-cauldron --attempt 1 --log-failed
+gh run view 31046763294 --repo ReverserofCode/witchs-cauldron --attempt 2 --exit-status
 
-curl -i https://<production-host>/api/health
-curl -i https://<production-host>/broadcasts
-curl -i https://<production-host>/api/clips/catalog
-curl -I https://<production-host>/media/clips/<clip-file>
-curl -i -H "Range: bytes=0-1023" https://<production-host>/media/clips/<clip-file>
-curl -i https://<production-host>/sitemap.xml
-curl -i https://<production-host>/admin/analytics
+BASE_URL="https://moingfans.com"
+tmp_dir="$(mktemp -d)" || exit 1
+trap 'rm -rf -- "$tmp_dir"' EXIT
+catalog_headers="$tmp_dir/catalog.headers"
+catalog_body="$tmp_dir/catalog.json"
+
+curl -sS -D - -o /dev/null "$BASE_URL/"
+curl -sS -i "$BASE_URL/api/health"
+curl -sS -D - -o /dev/null "$BASE_URL/broadcasts"
+curl -sS -i "$BASE_URL/sitemap.xml"
+curl -sS -D - -o /dev/null "$BASE_URL/admin/analytics"
+
+curl -sS -D "$catalog_headers" -o "$catalog_body" -w 'catalog status: %{http_code}\n' "$BASE_URL/api/clips/catalog"
+etag="$(awk 'tolower($1) == "etag:" { sub(/^[^:]*:[[:space:]]*/, ""); sub(/\r$/, ""); print; exit }' "$catalog_headers")"
+test -n "$etag"
+curl -sS -D - -o /dev/null -H "If-None-Match: $etag" "$BASE_URL/api/clips/catalog"
+
+clip_src="$(jq -er '.clips[0].src' "$catalog_body")"
+case "$clip_src" in
+  /media/clips/*) ;;
+  *) printf 'Unexpected clip src: %s\n' "$clip_src" >&2; exit 1 ;;
+esac
+clip_url="${BASE_URL}${clip_src}"
+curl -sS -I "$clip_url"
+curl -sS -D - -o /dev/null -H "Range: bytes=0-1023" "$clip_url"
 ```
