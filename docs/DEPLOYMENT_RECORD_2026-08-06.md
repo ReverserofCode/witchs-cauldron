@@ -51,7 +51,7 @@
 - 서버는 `6154054`를 checkout했습니다.
 - frontend와 backend health check가 통과했습니다.
 - 인증된 Analytics stats 검증이 통과했습니다.
-- 주 deploy step은 성공했고 retry step은 건너뛰었으며 rollback은 실행되지 않았습니다.
+- 주 deploy step은 성공했고 retry step은 건너뛰었으며 rollback은 준비되었으나 실행되지 않았습니다.
 
 ## 배포 후 스모크 결과 (Post-Deployment Smoke Results)
 
@@ -83,7 +83,7 @@ gh run view 31046763294 --repo ReverserofCode/witchs-cauldron --log-failed
 
 curl -i https://<production-host>/api/health
 curl -i https://<production-host>/broadcasts
-curl -i https://<production-host>/api/clips
+curl -i https://<production-host>/api/clips/catalog
 curl -I https://<production-host>/media/clips/<clip-file>
 curl -i -H "Range: bytes=0-1023" https://<production-host>/media/clips/<clip-file>
 curl -i https://<production-host>/sitemap.xml
