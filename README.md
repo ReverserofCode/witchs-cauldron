@@ -560,6 +560,12 @@ $env:WITCHS_SSH_KNOWN_HOSTS = "$env:USERPROFILE\.ssh\known_hosts"
 
 ## 배포 가이드
 
+### 최근 운영 배포 기록
+
+- [2026-08-06 운영 배포 기록](docs/DEPLOYMENT_RECORD_2026-08-06.md) — 커밋 `6154054`, GitHub Actions CD run `31046763294`
+- 현재 `production` environment는 `main` 배포만 허용하며 required reviewer는 설정하지 않았다. 따라서 `main` 직접 push는 검증 후 자동 배포된다.
+- GitHub의 `COLLECT_API_KEY` / `CLIP_REFRESH_API_KEY`는 미설정 상태이며, 2026-08-06 배포에서는 서버의 기존 `.env` 값을 보존했다.
+
 ### 사전 요구사항
 
 - Ubuntu 18.04+, 최소 2GB RAM, 10GB 디스크
