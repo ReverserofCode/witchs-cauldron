@@ -1075,10 +1075,10 @@ Expected: worktree clean and HEAD is a fast-forward of origin/main.
 - [ ] **Step 2: 작업 브랜치를 push하고 PR을 만든다**
 
 ~~~powershell
-git push -u origin codex/local-wip-20260712
-$existing = gh pr list --repo ReverserofCode/witchs-cauldron --head codex/local-wip-20260712 --base main --state open --json url | ConvertFrom-Json
+git push -u origin codex/summer-atelier-promotion-20260810
+$existing = gh pr list --repo ReverserofCode/witchs-cauldron --head codex/summer-atelier-promotion-20260810 --base main --state open --json url | ConvertFrom-Json
 if ($existing.Count -eq 0) {
-  gh pr create --repo ReverserofCode/witchs-cauldron --base main --head codex/local-wip-20260712 --title "Add summer atelier merch promotion" --body "Adds the date-gated global banner and home promotion card, campaign countdown, Analytics labels, tests, and operations documentation."
+  gh pr create --repo ReverserofCode/witchs-cauldron --base main --head codex/summer-atelier-promotion-20260810 --title "Add summer atelier merch promotion" --body "Adds the date-gated global banner and home promotion card, campaign countdown, Analytics labels, tests, and operations documentation."
 }
 ~~~
 
@@ -1087,9 +1087,9 @@ Expected: remote feature branch exists and one open PR targets main.
 - [ ] **Step 3: PR CI를 완료까지 감시하고 merge한다**
 
 ~~~powershell
-gh pr checks codex/local-wip-20260712 --repo ReverserofCode/witchs-cauldron --watch
+gh pr checks codex/summer-atelier-promotion-20260810 --repo ReverserofCode/witchs-cauldron --watch
 if ($LASTEXITCODE -ne 0) { throw 'PR checks failed' }
-gh pr merge codex/local-wip-20260712 --repo ReverserofCode/witchs-cauldron --merge --delete-branch=false
+gh pr merge codex/summer-atelier-promotion-20260810 --repo ReverserofCode/witchs-cauldron --merge --delete-branch=false
 git fetch origin main
 git merge --ff-only origin/main
 ~~~
@@ -1220,7 +1220,7 @@ git commit -m "Document summer merch promotion deployment [skip ci]"
 - [ ] **Step 6: 문서 커밋을 브랜치와 main에 동기화한다**
 
 ~~~powershell
-git push origin HEAD:codex/local-wip-20260712
+git push origin HEAD:codex/summer-atelier-promotion-20260810
 git push origin HEAD:main
 $head = git rev-parse HEAD
 $remoteMain = (git ls-remote origin refs/heads/main).Split([char]9)[0]
