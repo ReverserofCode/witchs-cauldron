@@ -53,6 +53,23 @@ async function main() {
     assert.equal(await bannerLink.getAttribute("target"), "_blank");
     assert.match(await bannerLink.getAttribute("rel"), /noopener/);
     assert.match(await bannerLink.getAttribute("rel"), /noreferrer/);
+    assert.equal(await bannerLink.getAttribute("data-analytics-menu"), "true");
+    assert.equal(
+      await bannerLink.getAttribute("data-analytics-id"),
+      "moing-summer-atelier-2026:banner"
+    );
+    assert.equal(
+      await bannerLink.getAttribute("data-analytics-label"),
+      "팬텀픽에서 보기"
+    );
+    assert.equal(
+      await bannerLink.getAttribute("data-analytics-location"),
+      "merch_promotion_banner"
+    );
+    assert.equal(
+      await bannerLink.getAttribute("data-analytics-type"),
+      "promotion_cta"
+    );
 
     await banner
       .getByRole("button", { name: "여름의 공방 굿즈 홍보 배너 닫기" })
