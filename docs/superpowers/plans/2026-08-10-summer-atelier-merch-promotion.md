@@ -40,7 +40,7 @@
 - `frontend/app/components/promotions/index.ts`: 홍보 컴포넌트 공개 export
 - `frontend/scripts/smoke-merch-promotion.mjs`: 고정 브라우저 시각으로 활성·종료·관리자 제외·세션 닫기·링크·상품 문구 검증
 - `docs/SUMMER_ATELIER_PROMOTION.md`: 근거, 운영 방법, 변경 절차, 검증, 종료 후 처리
-- `docs/DEPLOYMENT_RECORD_2026-08-10_SUMMER_ATELIER_PROMOTION.md`: 실제 배포 SHA/run/스모크 결과와 참고사항
+- `docs/DEPLOYMENT_RECORD_${deploymentDate}_SUMMER_ATELIER_PROMOTION.md`: Task 6의 성공한 CD `createdAt`을 Asia/Seoul의 `YYYY-MM-DD`로 변환한 날짜를 사용하며, 실제 배포 SHA/run/스모크 결과와 참고사항을 기록
 
 ### 수정 파일
 
@@ -1145,11 +1145,11 @@ CD의 인증된 Analytics stats 검증이 성공했는지 run log에서 확인�
 ### Task 7: 실제 배포 결과 문서화와 최종 동기화
 
 **Files:**
-- Create: `docs/DEPLOYMENT_RECORD_2026-08-10_SUMMER_ATELIER_PROMOTION.md`
+- Create: `docs/DEPLOYMENT_RECORD_${deploymentDate}_SUMMER_ATELIER_PROMOTION.md` (`deploymentDate`는 Task 6의 성공한 CD run `createdAt`을 Asia/Seoul로 변환해 도출)
 - Modify: `docs/SUMMER_ATELIER_PROMOTION.md`
 
 **Interfaces:**
-- Consumes: Task 6에서 관측한 정확한 merge SHA, CD run URL/ID, production smoke 결과
+- Consumes: Task 6에서 관측한 정확한 merge SHA, 성공한 CD run URL/ID/`createdAt`, production smoke 결과
 - Produces: 재현 가능한 배포 기록과 최종 clean/pushed repository state
 
 - [ ] **Step 1: 실제 관측값을 수집한다**
@@ -1159,14 +1159,42 @@ $featureSha = git rev-parse origin/main
 $runs = gh run list --repo ReverserofCode/witchs-cauldron --workflow CD --branch main --event push --limit 10 --json databaseId,headSha,conclusion,url,createdAt | ConvertFrom-Json
 $featureRun = $runs | Where-Object { $_.headSha -eq $featureSha -and $_.conclusion -eq 'success' } | Select-Object -First 1
 if (-not $featureRun) { throw 'Successful feature deployment run evidence is missing' }
-$featureRun | Select-Object databaseId,headSha,conclusion,url,createdAt | Format-List
+$seoulTimeZoneId = if ($IsWindows) { 'Korea Standard Time' } else { 'Asia/Seoul' }
+$seoulTimeZone = [TimeZoneInfo]::FindSystemTimeZoneById($seoulTimeZoneId)
+$successfulCdCreatedAt = [DateTimeOffset]::Parse(
+  $featureRun.createdAt,
+  [Globalization.CultureInfo]::InvariantCulture
+)
+$successfulCdCreatedAtKst = [TimeZoneInfo]::ConvertTime($successfulCdCreatedAt, $seoulTimeZone)
+$deploymentTimestampKst = $successfulCdCreatedAtKst.ToString(
+  'o',
+  [Globalization.CultureInfo]::InvariantCulture
+)
+$deploymentDate = $successfulCdCreatedAtKst.ToString(
+  'yyyy-MM-dd',
+  [Globalization.CultureInfo]::InvariantCulture
+)
+$deploymentRecordName = "DEPLOYMENT_RECORD_${deploymentDate}_SUMMER_ATELIER_PROMOTION.md"
+$recordPath = "docs/$deploymentRecordName"
+[pscustomobject]@{
+  databaseId = $featureRun.databaseId
+  headSha = $featureRun.headSha
+  conclusion = $featureRun.conclusion
+  url = $featureRun.url
+  createdAt = $featureRun.createdAt
+  createdAtAsiaSeoul = $deploymentTimestampKst
+  deploymentDate = $deploymentDate
+  recordPath = $recordPath
+} | Format-List
 ~~~
+
+`$featureRun.createdAt`이 배포 날짜와 시각의 유일한 기준이다. 현재 날짜, 기능 작성일, 설계·조사일을 대신 사용하지 않는다. Step 2~5는 같은 PowerShell 세션에서 위 `$deploymentTimestampKst`, `$deploymentDate`, `$deploymentRecordName`, `$recordPath`를 그대로 사용하며, 새 세션이라면 Step 1을 다시 실행해 같은 성공 run에서 재도출한다.
 
 - [ ] **Step 2: 날짜별 배포 기록을 작성한다**
 
-`docs/DEPLOYMENT_RECORD_2026-08-10_SUMMER_ATELIER_PROMOTION.md`에 다음을 실제 관측값으로 기록한다.
+`$recordPath`에 다음을 실제 관측값으로 기록한다. 파일명 날짜, 본문 배포 날짜, 운영 가이드 링크는 모두 같은 `$deploymentDate`를 사용하고, 본문에는 관측된 성공 run의 `$featureRun.createdAt`을 Asia/Seoul로 변환한 전체 `$deploymentTimestampKst`를 반드시 기록한다.
 
-- 운영 URL과 2026-08-10 KST 배포 일자
+- 운영 URL, `$deploymentDate` KST 배포 일자, `$deploymentTimestampKst` 성공 배포 시각
 - 전체 merge SHA와 짧은 SHA
 - 실제 GitHub Actions CD run ID 및 링크
 - 포함 범위: 시간 모델, 전역 배너, 홈 카드, Analytics 라벨, 운영 문서
@@ -1182,22 +1210,30 @@ $featureRun | Select-Object databaseId,headSha,conclusion,url,createdAt | Format
 
 `docs/SUMMER_ATELIER_PROMOTION.md` 끝에 `## 배포 결과` 섹션을 추가하고 다음을 기록한다.
 
-- 기능 배포 성공 일자 2026-08-10 KST
-- 배포 기록 상대 링크 `DEPLOYMENT_RECORD_2026-08-10_SUMMER_ATELIER_PROMOTION.md`
+- 기능 배포 성공 일자 `$deploymentDate` KST와 관측된 성공 배포 시각 `$deploymentTimestampKst`
+- 배포 기록 상대 링크 `$deploymentRecordName`
 - Task 6에서 확인한 실제 merge SHA와 CD run 링크
 - 판매 종료 후 자동 숨김 시각 `2026-09-01 00:00:00+09:00`
 
 - [ ] **Step 4: 문서 증거·미완성 표식·secret 검사를 실행한다**
 
 ~~~powershell
-$record = Get-Content -LiteralPath 'docs/DEPLOYMENT_RECORD_2026-08-10_SUMMER_ATELIER_PROMOTION.md' -Raw
+$record = Get-Content -LiteralPath $recordPath -Raw
+$guide = Get-Content -LiteralPath 'docs/SUMMER_ATELIER_PROMOTION.md' -Raw
 foreach ($required in @(
   'https://moingfans.com',
   '2026-09-01 00:00:00+09:00',
   'smoke:promotion',
-  'GitHub Actions'
+  'GitHub Actions',
+  $deploymentDate,
+  $deploymentTimestampKst
 )) {
   if (-not $record.Contains($required)) { throw "Missing deployment evidence: $required" }
+}
+foreach ($requiredGuideValue in @($deploymentRecordName, $deploymentDate, $deploymentTimestampKst)) {
+  if (-not $guide.Contains($requiredGuideValue)) {
+    throw "Runbook deployment link/date does not match successful CD evidence: $requiredGuideValue"
+  }
 }
 $unfinishedMarkers = @('<실제', ('TO' + 'DO'), ('TB' + 'D'), ('PLACE' + 'HOLDER'))
 foreach ($marker in $unfinishedMarkers) {
@@ -1212,7 +1248,7 @@ git diff --check
 - [ ] **Step 5: 배포 기록을 documentation-only 커밋으로 만든다**
 
 ~~~powershell
-git add -- docs/DEPLOYMENT_RECORD_2026-08-10_SUMMER_ATELIER_PROMOTION.md docs/SUMMER_ATELIER_PROMOTION.md
+git add -- $recordPath docs/SUMMER_ATELIER_PROMOTION.md
 git diff --cached --check
 git commit -m "Document summer merch promotion deployment [skip ci]"
 ~~~
