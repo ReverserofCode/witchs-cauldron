@@ -162,16 +162,61 @@ async function main() {
     const startBoundaryContext = await browser.newContext();
     const startBoundaryPage = await startBoundaryContext.newPage();
     const startMs = Date.parse("2026-08-05T19:00:00+09:00");
-    await startBoundaryPage.clock.install({ time: startMs - 5 * 60_000 });
+    const leadMs = 123_456;
+    const initialMs = startMs - leadMs;
+    await startBoundaryPage.addInitScript(({ initialMs, leadMs }) => {
+      const NativeDate = Date;
+      const nativeSetTimeout = window.setTimeout.bind(window);
+      const nativeClearTimeout = window.clearTimeout.bind(window);
+      let nowMs = initialMs;
+      let advancedSecondEffect = false;
+      const records = [];
+      class MutableDate extends NativeDate {
+        constructor(...args) { super(...(args.length ? args : [nowMs])); }
+        static now() { return nowMs; }
+      }
+      MutableDate.parse = NativeDate.parse;
+      MutableDate.UTC = NativeDate.UTC;
+      globalThis.Date = MutableDate;
+      window.setTimeout = (callback, delay = 0, ...args) => {
+        const createdAt = nowMs;
+        if (createdAt >= initialMs && createdAt <= initialMs + 100 && delay >= leadMs - 100 && delay <= leadMs) {
+          const token = records.length + 1;
+          const record = { token, nativeId: null, callback, args, createdAt, delay, dueAt: createdAt + delay };
+          record.nativeId = nativeSetTimeout(() => {}, delay);
+          records.push(record);
+          if (!advancedSecondEffect) { advancedSecondEffect = true; nowMs += 100; }
+          return record.nativeId;
+        }
+        return nativeSetTimeout(callback, delay, ...args);
+      };
+      window.clearTimeout = (id) => {
+        const record = records.find((item) => item.nativeId === id);
+        if (record) nativeClearTimeout(record.nativeId);
+        else nativeClearTimeout(id);
+      };
+      globalThis.__promotionBoundaryProbe = {
+        records: () => records.map(({ token, createdAt, delay, dueAt }) => ({ token, createdAt, delay, dueAt })),
+        advanceTo: (targetMs) => {
+          nowMs = targetMs;
+          for (const record of records.splice(0)) {
+            if (record.dueAt <= nowMs) { nativeClearTimeout(record.nativeId); record.callback(...record.args); }
+            else records.push(record);
+          }
+        },
+      };
+    }, { initialMs, leadMs });
     await goto(startBoundaryPage, "/");
-    await startBoundaryPage.clock.pauseAt(startMs - 1_100);
-    await startBoundaryPage.clock.runFor(100);
+    await startBoundaryPage.waitForFunction(() => globalThis.__promotionBoundaryProbe.records().length === 2);
+    const records = await startBoundaryPage.evaluate(() => globalThis.__promotionBoundaryProbe.records());
+    assert.deepEqual(records.map((record) => record.dueAt), [startMs, startMs]);
+    assert.deepEqual(records.map((record) => [record.createdAt, record.delay]), [[initialMs, leadMs], [initialMs + 100, leadMs - 100]]);
     assert.equal(await startBoundaryPage.locator('[data-promotion-surface="banner"]').count(), 0);
     assert.equal(await startBoundaryPage.locator('[data-promotion-surface="card"]').count(), 0);
-    await startBoundaryPage.clock.runFor(999);
+    await startBoundaryPage.evaluate((targetMs) => globalThis.__promotionBoundaryProbe.advanceTo(targetMs), startMs - 1);
     assert.equal(await startBoundaryPage.locator('[data-promotion-surface="banner"]').count(), 0);
     assert.equal(await startBoundaryPage.locator('[data-promotion-surface="card"]').count(), 0);
-    await startBoundaryPage.clock.runFor(1);
+    await startBoundaryPage.evaluate((targetMs) => globalThis.__promotionBoundaryProbe.advanceTo(targetMs), startMs);
     await startBoundaryPage.locator('[data-promotion-surface="banner"]').waitFor({ state: "visible", timeout: 3_000 });
     await startBoundaryPage.locator('[data-promotion-surface="card"]').waitFor({ state: "visible", timeout: 3_000 });
     await startBoundaryContext.close();
