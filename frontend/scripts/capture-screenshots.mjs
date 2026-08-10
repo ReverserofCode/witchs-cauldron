@@ -23,42 +23,44 @@ async function main() {
     args: ['--no-sandbox', '--disable-dev-shm-usage'],
   });
 
-  const adminUsername = process.env.SNAP_ADMIN_USERNAME || process.env.ADMIN_BASIC_AUTH_USERNAME;
-  const adminPassword = process.env.SNAP_ADMIN_PASSWORD || process.env.ADMIN_BASIC_AUTH_PASSWORD;
+  try {
+    const adminUsername = process.env.SNAP_ADMIN_USERNAME || process.env.ADMIN_BASIC_AUTH_USERNAME;
+    const adminPassword = process.env.SNAP_ADMIN_PASSWORD || process.env.ADMIN_BASIC_AUTH_PASSWORD;
 
-  for (const t of targets) {
-    const context = await browser.newContext({
-      viewport: { width: t.width, height: t.height },
-      ...(adminUsername && adminPassword
-        ? { httpCredentials: { username: adminUsername, password: adminPassword } }
-        : {}),
-    });
+    for (const t of targets) {
+      const context = await browser.newContext({
+        viewport: { width: t.width, height: t.height },
+        ...(adminUsername && adminPassword
+          ? { httpCredentials: { username: adminUsername, password: adminPassword } }
+          : {}),
+      });
 
-    try {
-      const page = await context.newPage();
-      const actualViewport = page.viewportSize();
-      if (
-        actualViewport?.width !== t.width ||
-        actualViewport?.height !== t.height
-      ) {
-        throw new Error(
-          `Viewport mismatch for ${t.name}: expected ${t.width}x${t.height}, got ${actualViewport?.width ?? "unknown"}x${actualViewport?.height ?? "unknown"}`
-        );
+      try {
+        const page = await context.newPage();
+        const actualViewport = page.viewportSize();
+        if (
+          actualViewport?.width !== t.width ||
+          actualViewport?.height !== t.height
+        ) {
+          throw new Error(
+            `Viewport mismatch for ${t.name}: expected ${t.width}x${t.height}, got ${actualViewport?.width ?? "unknown"}x${actualViewport?.height ?? "unknown"}`
+          );
+        }
+        const full = new URL(t.url, baseUrl).toString();
+        await page.goto(full, { waitUntil: 'networkidle', timeout: 45_000 });
+        await page.waitForTimeout(500);
+
+        const file = path.join(outDir, `${ts}-${t.name}.png`);
+        await page.screenshot({ path: file, fullPage: true });
+        console.log(file);
+        await page.close();
+      } finally {
+        await context.close();
       }
-      const full = new URL(t.url, baseUrl).toString();
-      await page.goto(full, { waitUntil: 'networkidle', timeout: 45_000 });
-      await page.waitForTimeout(500);
-
-      const file = path.join(outDir, `${ts}-${t.name}.png`);
-      await page.screenshot({ path: file, fullPage: true });
-      console.log(file);
-      await page.close();
-    } finally {
-      await context.close();
     }
+  } finally {
+    await browser.close();
   }
-
-  await browser.close();
 }
 
 main().catch((e) => {
