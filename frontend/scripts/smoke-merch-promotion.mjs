@@ -191,8 +191,8 @@ async function main() {
         return nativeSetTimeout(callback, delay, ...args);
       };
       window.clearTimeout = (id) => {
-        const record = records.find((item) => item.nativeId === id);
-        if (record) nativeClearTimeout(record.nativeId);
+        const index = records.findIndex((item) => item.nativeId === id);
+        if (index >= 0) nativeClearTimeout(records.splice(index, 1)[0].nativeId);
         else nativeClearTimeout(id);
       };
       globalThis.__promotionBoundaryProbe = {
@@ -211,6 +211,17 @@ async function main() {
     const records = await startBoundaryPage.evaluate(() => globalThis.__promotionBoundaryProbe.records());
     assert.deepEqual(records.map((record) => record.dueAt), [startMs, startMs]);
     assert.deepEqual(records.map((record) => [record.createdAt, record.delay]), [[initialMs, leadMs], [initialMs + 100, leadMs - 100]]);
+    assert.equal(
+      await startBoundaryPage.evaluate((delay) => {
+        const id = window.setTimeout(() => {}, delay);
+        window.clearTimeout(id);
+        return globalThis.__promotionBoundaryProbe.records().length;
+      }, leadMs),
+      2
+    );
+    assert.equal(await startBoundaryPage.locator('[data-promotion-surface="banner"]').count(), 0);
+    assert.equal(await startBoundaryPage.locator('[data-promotion-surface="card"]').count(), 0);
+    await startBoundaryPage.evaluate((targetMs) => globalThis.__promotionBoundaryProbe.advanceTo(targetMs), startMs - 1_000);
     assert.equal(await startBoundaryPage.locator('[data-promotion-surface="banner"]').count(), 0);
     assert.equal(await startBoundaryPage.locator('[data-promotion-surface="card"]').count(), 0);
     await startBoundaryPage.evaluate((targetMs) => globalThis.__promotionBoundaryProbe.advanceTo(targetMs), startMs - 1);
