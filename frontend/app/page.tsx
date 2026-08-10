@@ -18,6 +18,7 @@ import {
 import { SectionTracker } from '@/app/components/analytics/SectionTracker'
 import { ScrollReveal } from '@/app/components/animations'
 import { FanArtGallery } from '@/app/components/gallery'
+import { MerchPromotionCard } from '@/app/components/promotions'
 import { loadFanArtImages } from '@/app/lib/fanart'
 import { getBirthdayBannerCopy, isBirthdayToday } from '@/app/lib/birthday'
 
@@ -194,6 +195,8 @@ export default function Page(): ReactElement {
               </div>
               </SectionCard>
             </LiveStatusProvider>
+
+            <MerchPromotionCard />
 
             {showBirthdayBanner && birthdayBannerCopy && (
               <SectionCard

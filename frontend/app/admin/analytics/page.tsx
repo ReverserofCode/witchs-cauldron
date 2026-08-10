@@ -235,6 +235,7 @@ function formatInteractionLabel(entry: InteractionSummary) {
 }
 
 const SECTION_LABELS: Record<string, string> = {
+  "promotion-summer-atelier": "여름의 공방 굿즈 홍보",
   "featured-videos": "주요 영상",
   "youtube-hub": "YouTube 허브",
   "clips-section": "숏폼 하이라이트",
@@ -281,6 +282,8 @@ const EVENT_TYPE_COLORS: Record<string, string> = {
 };
 
 const LOCATION_LABELS: Record<string, string> = {
+  merch_promotion_banner: "굿즈 전역 배너",
+  merch_promotion_card: "굿즈 홈 카드",
   header: "헤더",
   header_mobile: "모바일 헤더",
   footer_community: "푸터 커뮤니티",
