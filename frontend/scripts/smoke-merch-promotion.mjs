@@ -161,11 +161,17 @@ async function main() {
 
     const startBoundaryContext = await browser.newContext();
     const startBoundaryPage = await startBoundaryContext.newPage();
-    await startBoundaryPage.clock.install({ time: Date.parse("2026-08-05T18:59:59+09:00") });
+    const startMs = Date.parse("2026-08-05T19:00:00+09:00");
+    await startBoundaryPage.clock.install({ time: startMs - 5 * 60_000 });
     await goto(startBoundaryPage, "/");
+    await startBoundaryPage.clock.pauseAt(startMs - 1_100);
+    await startBoundaryPage.clock.runFor(100);
     assert.equal(await startBoundaryPage.locator('[data-promotion-surface="banner"]').count(), 0);
     assert.equal(await startBoundaryPage.locator('[data-promotion-surface="card"]').count(), 0);
-    await startBoundaryPage.clock.fastForward(1_000);
+    await startBoundaryPage.clock.runFor(999);
+    assert.equal(await startBoundaryPage.locator('[data-promotion-surface="banner"]').count(), 0);
+    assert.equal(await startBoundaryPage.locator('[data-promotion-surface="card"]').count(), 0);
+    await startBoundaryPage.clock.runFor(1);
     await startBoundaryPage.locator('[data-promotion-surface="banner"]').waitFor({ state: "visible", timeout: 3_000 });
     await startBoundaryPage.locator('[data-promotion-surface="card"]').waitFor({ state: "visible", timeout: 3_000 });
     await startBoundaryContext.close();

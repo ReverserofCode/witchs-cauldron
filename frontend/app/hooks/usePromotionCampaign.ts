@@ -27,7 +27,7 @@ export function usePromotionCampaign(
 
   useEffect(() => {
     if (nowMs === null) return;
-    const delay = getNextPromotionWakeDelay(campaign, nowMs);
+    const delay = getNextPromotionWakeDelay(campaign, Date.now());
     if (delay === null) return;
     const timer = window.setTimeout(() => setNowMs(Date.now()), delay);
     return () => window.clearTimeout(timer);
