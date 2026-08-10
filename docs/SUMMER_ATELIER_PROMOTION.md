@@ -137,11 +137,11 @@ Remove-Item Env:SMOKE_BASE_URL
 배포 후에는 공개 경로와 인증된 읽기 전용 `/admin/analytics`를 비파괴로 확인하고, 인증 정보는 명령줄이나 문서에 기록하지 않습니다. 브라우저 smoke 중 발생하는 모든 합성 `/api/analytics/track` 요청은 컨텍스트별 로컬 HTTP 204 응답으로 차단됩니다.
 
 ```powershell
-$health = Invoke-RestMethod -Uri 'https://moingfans.com/api/health' -TimeoutSec 30
-if (-not $health.ok) { throw 'Frontend health is not ok' }
-$home = Invoke-WebRequest -Uri 'https://moingfans.com/' -UseBasicParsing -TimeoutSec 30
-$broadcasts = Invoke-WebRequest -Uri 'https://moingfans.com/broadcasts' -UseBasicParsing -TimeoutSec 30
-if ($home.StatusCode -ne 200 -or $broadcasts.StatusCode -ne 200) { throw 'Public route smoke failed' }
+$healthResponse = Invoke-RestMethod -Uri 'https://moingfans.com/api/health' -TimeoutSec 30
+if (-not $healthResponse.ok) { throw 'Frontend health is not ok' }
+$homeResponse = Invoke-WebRequest -Uri 'https://moingfans.com/' -UseBasicParsing -TimeoutSec 30
+$broadcastsResponse = Invoke-WebRequest -Uri 'https://moingfans.com/broadcasts' -UseBasicParsing -TimeoutSec 30
+if ($homeResponse.StatusCode -ne 200 -or $broadcastsResponse.StatusCode -ne 200) { throw 'Public route smoke failed' }
 
 Set-Location frontend
 $env:SMOKE_BASE_URL = 'https://moingfans.com'
@@ -157,3 +157,10 @@ Remove-Item Env:SMOKE_BASE_URL
 - JavaScript가 비활성화되면 정확한 시간 경계를 우선하여 프로모션을 표시하지 않습니다.
 - 판매처 장애, 재고, 가격·배송 정책 변경은 사이트가 자동 감지하지 않습니다. 팬텀픽 조건을 확인한 뒤 명시적 코드 변경과 재배포로 반영합니다.
 - 판매 종료 직후 자동 숨김을 확인합니다. 재사용 계획이 없으면 별도 변경으로 layout/page 연결과 캠페인 전용 컴포넌트를 제거하되, 배포 기록과 Analytics 과거 라벨은 보존합니다.
+
+## 배포 결과
+
+- 배포 성공 일자: 2026-08-11 (KST). CD run 생성 시각은 `2026-08-11T08:00:57+09:00`이며, 완료 시각은 `2026-08-11T08:04:48+09:00`입니다.
+- main merge SHA: `1bb8609014503d333e1b61ea2154cca28a016b31` (`1bb8609`). PR은 [#3](https://github.com/ReverserofCode/witchs-cauldron/pull/3), CD는 [GitHub Actions run 31440665421](https://github.com/ReverserofCode/witchs-cauldron/actions/runs/31440665421)에서 확인할 수 있습니다.
+- 상세한 과정·검증·운영 참고사항은 [2026-08-11 배포 기록](DEPLOYMENT_RECORD_2026-08-11_SUMMER_ATELIER_PROMOTION.md)에 남겼습니다.
+- 캠페인은 `2026-09-01 00:00:00+09:00`부터 자동으로 숨겨집니다.
