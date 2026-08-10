@@ -170,7 +170,7 @@ async function main() {
       const nativeClearTimeout = window.clearTimeout.bind(window);
       let nowMs = initialMs;
       let advancedSecondEffect = false;
-      const records = [];
+      const records = new Map();
       class MutableDate extends NativeDate {
         constructor(...args) { super(...(args.length ? args : [nowMs])); }
         static now() { return nowMs; }
@@ -181,27 +181,30 @@ async function main() {
       window.setTimeout = (callback, delay = 0, ...args) => {
         const createdAt = nowMs;
         if (createdAt >= initialMs && createdAt <= initialMs + 100 && delay >= leadMs - 100 && delay <= leadMs) {
-          const token = records.length + 1;
-          const record = { token, nativeId: null, callback, args, createdAt, delay, dueAt: createdAt + delay };
+          const token = records.size + 1;
+          const record = { token, nativeId: null, callback, args, createdAt, delay, dueAt: createdAt + delay, cancelled: false };
           record.nativeId = nativeSetTimeout(() => {}, delay);
-          records.push(record);
+          records.set(record.nativeId, record);
           if (!advancedSecondEffect) { advancedSecondEffect = true; nowMs += 100; }
           return record.nativeId;
         }
         return nativeSetTimeout(callback, delay, ...args);
       };
       window.clearTimeout = (id) => {
-        const index = records.findIndex((item) => item.nativeId === id);
-        if (index >= 0) nativeClearTimeout(records.splice(index, 1)[0].nativeId);
+        const record = records.get(id);
+        if (record) { record.cancelled = true; records.delete(id); nativeClearTimeout(record.nativeId); }
         else nativeClearTimeout(id);
       };
       globalThis.__promotionBoundaryProbe = {
-        records: () => records.map(({ token, createdAt, delay, dueAt }) => ({ token, createdAt, delay, dueAt })),
+        records: () => [...records.values()].filter((record) => !record.cancelled).map(({ token, createdAt, delay, dueAt }) => ({ token, createdAt, delay, dueAt })),
         advanceTo: (targetMs) => {
           nowMs = targetMs;
-          for (const record of records.splice(0)) {
-            if (record.dueAt <= nowMs) { nativeClearTimeout(record.nativeId); record.callback(...record.args); }
-            else records.push(record);
+          for (const record of [...records.values()]) {
+            if (!record.cancelled && record.dueAt <= nowMs) {
+              records.delete(record.nativeId);
+              nativeClearTimeout(record.nativeId);
+              if (!record.cancelled) record.callback(...record.args);
+            }
           }
         },
       };
@@ -221,6 +224,12 @@ async function main() {
     );
     assert.equal(await startBoundaryPage.locator('[data-promotion-surface="banner"]').count(), 0);
     assert.equal(await startBoundaryPage.locator('[data-promotion-surface="card"]').count(), 0);
+    await startBoundaryPage.evaluate((delay) => {
+      globalThis.__promotionCancellationProbe = [];
+      let secondId;
+      window.setTimeout(() => { globalThis.__promotionCancellationProbe.push("canceler"); window.clearTimeout(secondId); }, delay);
+      secondId = window.setTimeout(() => globalThis.__promotionCancellationProbe.push("second"), delay);
+    }, leadMs - 100);
     await startBoundaryPage.evaluate((targetMs) => globalThis.__promotionBoundaryProbe.advanceTo(targetMs), startMs - 1_000);
     assert.equal(await startBoundaryPage.locator('[data-promotion-surface="banner"]').count(), 0);
     assert.equal(await startBoundaryPage.locator('[data-promotion-surface="card"]').count(), 0);
@@ -228,6 +237,7 @@ async function main() {
     assert.equal(await startBoundaryPage.locator('[data-promotion-surface="banner"]').count(), 0);
     assert.equal(await startBoundaryPage.locator('[data-promotion-surface="card"]').count(), 0);
     await startBoundaryPage.evaluate((targetMs) => globalThis.__promotionBoundaryProbe.advanceTo(targetMs), startMs);
+    assert.deepEqual(await startBoundaryPage.evaluate(() => globalThis.__promotionCancellationProbe), ["canceler"]);
     await startBoundaryPage.locator('[data-promotion-surface="banner"]').waitFor({ state: "visible", timeout: 3_000 });
     await startBoundaryPage.locator('[data-promotion-surface="card"]').waitFor({ state: "visible", timeout: 3_000 });
     await startBoundaryContext.close();
