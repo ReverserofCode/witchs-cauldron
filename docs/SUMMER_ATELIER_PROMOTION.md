@@ -96,7 +96,7 @@ npm run build
 
 기본 smoke는 Playwright가 관리하는 Chromium을 사용합니다. 먼저 로컬 서버를 실행한 뒤 별도 터미널에서 실행합니다.
 프로모션 smoke와 스크린샷 캡처는 합성 방문이 운영 분석에 섞이지 않도록 모든 `/api/analytics/track` 요청을 브라우저 컨텍스트에서 로컬 HTTP 204로 차단합니다.
-관리자 검증은 인증된 실제 대시보드만 통과하도록 완전한 자격 증명 쌍을 요구합니다. smoke는 `SMOKE_ADMIN_USERNAME`/`SMOKE_ADMIN_PASSWORD`, 캡처는 `SNAP_ADMIN_USERNAME`/`SNAP_ADMIN_PASSWORD`를 우선하며, 둘 다 `ADMIN_BASIC_AUTH_USERNAME`/`ADMIN_BASIC_AUTH_PASSWORD`를 fallback으로 사용합니다. 서버에도 일치하는 `ADMIN_BASIC_AUTH_*` 값을 안전한 로컬 환경 변수로 제공해야 하며 실제 값은 명령 기록이나 문서에 남기지 않습니다.
+관리자 검증은 인증된 실제 대시보드만 통과하도록 완전한 자격 증명 쌍을 요구합니다. smoke의 `SMOKE_ADMIN_USERNAME`/`SMOKE_ADMIN_PASSWORD` 또는 캡처의 `SNAP_ADMIN_USERNAME`/`SNAP_ADMIN_PASSWORD` 중 하나라도 설정했다면 해당 기본 쌍을 둘 다 비어 있지 않게 제공해야 합니다. 기본 쌍의 두 변수가 모두 미설정일 때만 완전한 `ADMIN_BASIC_AUTH_USERNAME`/`ADMIN_BASIC_AUTH_PASSWORD` 쌍을 fallback으로 사용합니다. 서버에도 일치하는 `ADMIN_BASIC_AUTH_*` 값을 안전한 로컬 환경 변수로 제공해야 하며 실제 값은 명령 기록이나 문서에 남기지 않습니다.
 
 ```powershell
 # 터미널 1
@@ -134,7 +134,7 @@ Remove-Item Env:SMOKE_BASE_URL
 
 ### 프로덕션 smoke와 증거
 
-배포 후에는 공개 경로만 비파괴로 확인하고, 인증 정보는 명령줄이나 문서에 기록하지 않습니다.
+배포 후에는 공개 경로와 인증된 읽기 전용 `/admin/analytics`를 비파괴로 확인하고, 인증 정보는 명령줄이나 문서에 기록하지 않습니다. 브라우저 smoke 중 발생하는 모든 합성 `/api/analytics/track` 요청은 컨텍스트별 로컬 HTTP 204 응답으로 차단됩니다.
 
 ```powershell
 $health = Invoke-RestMethod -Uri 'https://moingfans.com/api/health' -TimeoutSec 30
@@ -149,7 +149,7 @@ npm run smoke:promotion
 Remove-Item Env:SMOKE_BASE_URL
 ```
 
-배포 기록에는 health의 `ok=true`, 홈·`/broadcasts`의 HTTP 200, `merch promotion smoke ok` 출력, 확인 시각과 배포 commit SHA를 남깁니다. 활성 기간에는 배너/카드/CTA와 `/admin` 배너 제외를 확인하고, 종료 후에는 자동 미노출을 기록합니다. 신규 프론트엔드 오류와 CD 결과도 함께 점검합니다.
+배포 기록에는 health의 `ok=true`, 홈·`/broadcasts`의 HTTP 200, 인증된 읽기 전용 `/admin/analytics`의 실제 `Analytics Dashboard` 확인, `merch promotion smoke ok` 출력, 확인 시각과 배포 commit SHA를 남깁니다. 활성 기간에는 배너/카드/CTA와 관리자 경로 배너 제외를 확인하고, 종료 후에는 자동 미노출을 기록합니다. 신규 프론트엔드 오류와 CD 결과도 함께 점검합니다.
 
 ## 참고사항 (Notes)
 

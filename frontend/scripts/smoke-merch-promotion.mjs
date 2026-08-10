@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 import assert from "node:assert/strict";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
 
 const baseUrl = process.env.SMOKE_BASE_URL || "http://127.0.0.1:3000";
@@ -7,21 +9,38 @@ const canonicalStoreUrl =
   "https://fantompick.com/category/%EB%AA%A8%EC%9E%89/110/";
 const activeNow = "2026-08-10T12:00:00+09:00";
 const endedNow = "2026-09-01T00:00:00+09:00";
-let analyticsInterceptCount = 0;
+const analyticsInterceptCounts = new WeakMap();
 
-function requireAdminCredentials() {
-  const username = process.env.SMOKE_ADMIN_USERNAME || process.env.ADMIN_BASIC_AUTH_USERNAME;
-  const secret = process.env.SMOKE_ADMIN_PASSWORD || process.env.ADMIN_BASIC_AUTH_PASSWORD;
-  if (!username || !secret) {
-    throw new Error("Complete SMOKE_ADMIN_USERNAME/SMOKE_ADMIN_PASSWORD (or ADMIN_BASIC_AUTH_*) credentials are required");
+export function resolveAdminCredentials(env = process.env) {
+  const primaryUsername = env.SMOKE_ADMIN_USERNAME;
+  const primaryPassword = env.SMOKE_ADMIN_PASSWORD;
+  if (primaryUsername !== undefined || primaryPassword !== undefined) {
+    if (!primaryUsername?.trim() || !primaryPassword?.trim()) {
+      throw new Error(
+        "SMOKE_ADMIN_USERNAME and SMOKE_ADMIN_PASSWORD must both be non-empty when either is set"
+      );
+    }
+    return { username: primaryUsername, password: primaryPassword };
   }
-  return { username, password: secret };
+
+  const fallbackUsername = env.ADMIN_BASIC_AUTH_USERNAME;
+  const fallbackPassword = env.ADMIN_BASIC_AUTH_PASSWORD;
+  if (!fallbackUsername?.trim() || !fallbackPassword?.trim()) {
+    throw new Error(
+      "Complete non-empty SMOKE_ADMIN_USERNAME/SMOKE_ADMIN_PASSWORD or ADMIN_BASIC_AUTH_USERNAME/ADMIN_BASIC_AUTH_PASSWORD credentials are required"
+    );
+  }
+  return { username: fallbackUsername, password: fallbackPassword };
 }
 
 async function createSmokeContext(browser, options = {}) {
   const context = await browser.newContext(options);
+  analyticsInterceptCounts.set(context, 0);
   await context.route("**/api/analytics/track", async (route) => {
-    analyticsInterceptCount += 1;
+    analyticsInterceptCounts.set(
+      context,
+      (analyticsInterceptCounts.get(context) ?? 0) + 1
+    );
     await route.fulfill({ status: 204, body: "" });
   });
   return context;
@@ -47,14 +66,35 @@ async function createClockContext(browser, nowIso, options = {}) {
 }
 
 async function goto(page, pathname) {
-  return page.goto(new URL(pathname, baseUrl).toString(), {
+  const response = await page.goto(new URL(pathname, baseUrl).toString(), {
     waitUntil: "domcontentloaded",
     timeout: 45_000,
   });
+  const context = page.context();
+  const beforeProbe = analyticsInterceptCounts.get(context);
+  assert.notEqual(
+    beforeProbe,
+    undefined,
+    "Analytics interception must be registered for the current browser context"
+  );
+  const probeStatus = await page.evaluate(async () => {
+    const probeResponse = await fetch("/api/analytics/track", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: "{}",
+    });
+    return probeResponse.status;
+  });
+  assert.equal(probeStatus, 204);
+  assert.ok(
+    analyticsInterceptCounts.get(context) > beforeProbe,
+    "The current browser context must intercept the analytics probe"
+  );
+  return response;
 }
 
 async function main() {
-  const adminCredentials = requireAdminCredentials();
+  const adminCredentials = resolveAdminCredentials();
   const browser = await chromium.launch({
     headless: true,
     executablePath: process.env.CHROMIUM_PATH || undefined,
@@ -172,9 +212,14 @@ async function main() {
     });
     assert.ok(mobileCopyMetrics.height <= mobileCopyMetrics.lineHeight * 2 + 1);
     assert.equal(await mobilePage.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
-    for (const control of [mobileBanner.locator("a"), mobileBanner.locator("button")]) {
+    for (const [label, control] of [
+      ["promotion CTA", mobileBanner.locator("a")],
+      ["promotion close button", mobileBanner.locator("button")],
+    ]) {
       const box = await control.boundingBox();
-      assert.ok(box && box.height >= 44);
+      assert.ok(box, `${label} must have a measurable hit target`);
+      assert.ok(box.width >= 44, `${label} width must be at least 44px`);
+      assert.ok(box.height >= 44, `${label} height must be at least 44px`);
     }
     await mobileContext.close();
 
@@ -318,7 +363,6 @@ async function main() {
     assert.equal(await endBoundaryPage.locator('[data-promotion-surface="banner"]').count(), 0);
     assert.equal(await endBoundaryPage.locator('[data-promotion-surface="card"]').count(), 0);
     await endBoundaryContext.close();
-    assert.ok(analyticsInterceptCount > 0, "Expected at least one analytics tracking request to be intercepted");
   } finally {
     await browser.close();
   }
@@ -326,7 +370,12 @@ async function main() {
   console.log("merch promotion smoke ok");
 }
 
-main().catch((error) => {
-  console.error("[smoke-merch-promotion] failed:", error);
-  process.exit(1);
-});
+if (
+  process.argv[1] &&
+  path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
+) {
+  main().catch((error) => {
+    console.error("[smoke-merch-promotion] failed:", error);
+    process.exit(1);
+  });
+}

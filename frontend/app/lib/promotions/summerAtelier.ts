@@ -124,8 +124,11 @@ export function getPromotionSchedulingDelay(
 ): number | null {
   const snapshotMs = toNowMs(snapshotNow);
   const schedulingMs = toNowMs(schedulingNow);
+  if (!Number.isFinite(snapshotMs) || !Number.isFinite(schedulingMs)) {
+    return null;
+  }
   const snapshotDelay = getNextPromotionWakeDelay(campaign, snapshotMs);
-  if (snapshotDelay === null || !Number.isFinite(schedulingMs)) return null;
+  if (snapshotDelay === null) return null;
 
   const wakeAt = snapshotMs + snapshotDelay;
   return Math.min(MAX_TIMEOUT_MS, Math.max(0, wakeAt - schedulingMs));

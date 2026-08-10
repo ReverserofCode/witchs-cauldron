@@ -97,6 +97,28 @@ describe("summer atelier promotion", () => {
     expect(getPromotionSchedulingDelay(invalid, startMs - 1, startMs + 100)).toBeNull();
   });
 
+  it("rejects invalid scheduling timestamps", () => {
+    const startMs = Date.parse(SUMMER_ATELIER_CAMPAIGN.startAt);
+    expect(
+      getPromotionSchedulingDelay(SUMMER_ATELIER_CAMPAIGN, Number.NaN, startMs)
+    ).toBeNull();
+    expect(
+      getPromotionSchedulingDelay(SUMMER_ATELIER_CAMPAIGN, startMs, Number.NaN)
+    ).toBeNull();
+  });
+
+  it("caps far-future scheduling waits", () => {
+    const farFuture = {
+      ...SUMMER_ATELIER_CAMPAIGN,
+      startAt: "2100-01-01T00:00:00+09:00",
+      endAtExclusive: "2100-02-01T00:00:00+09:00",
+    } satisfies PromotionCampaign;
+    const snapshotMs = Date.parse("2026-08-05T00:00:00+09:00");
+    expect(
+      getPromotionSchedulingDelay(farFuture, snapshotMs, snapshotMs)
+    ).toBe(2_147_483_647);
+  });
+
   it("rejects invalid or reversed campaign windows", () => {
     const invalid = {
       ...SUMMER_ATELIER_CAMPAIGN,
