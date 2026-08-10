@@ -21,7 +21,8 @@ export function usePromotionCampaign(
   const [nowMs, setNowMs] = useState<number | null>(null);
 
   useEffect(() => {
-    setNowMs(Date.now());
+    const timer = window.setTimeout(() => setNowMs(Date.now()), 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   useEffect(() => {

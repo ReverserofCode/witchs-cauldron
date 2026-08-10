@@ -15,13 +15,16 @@ export function MerchPromotionBanner() {
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
-    try {
-      setDismissed(sessionStorage.getItem(PROMOTION_DISMISSAL_KEY) === "1");
-    } catch {
-      setDismissed(false);
-    } finally {
-      setDismissalReady(true);
-    }
+    const timer = window.setTimeout(() => {
+      try {
+        setDismissed(sessionStorage.getItem(PROMOTION_DISMISSAL_KEY) === "1");
+      } catch {
+        setDismissed(false);
+      } finally {
+        setDismissalReady(true);
+      }
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   function dismiss() {
