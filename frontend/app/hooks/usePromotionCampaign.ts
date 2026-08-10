@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 import {
   SUMMER_ATELIER_CAMPAIGN,
   formatPromotionCountdown,
-  getNextPromotionWakeDelay,
   getPromotionPhase,
+  getPromotionSchedulingDelay,
   type PromotionCampaign,
   type PromotionPhase,
 } from "@/app/lib/promotions/summerAtelier";
@@ -27,7 +27,7 @@ export function usePromotionCampaign(
 
   useEffect(() => {
     if (nowMs === null) return;
-    const delay = getNextPromotionWakeDelay(campaign, Date.now());
+    const delay = getPromotionSchedulingDelay(campaign, nowMs, Date.now());
     if (delay === null) return;
     const timer = window.setTimeout(() => setNowMs(Date.now()), delay);
     return () => window.clearTimeout(timer);

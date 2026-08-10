@@ -14,8 +14,29 @@ const targets = [
   { name: 'analytics-desktop', url: '/admin/analytics', width: 1440, height: 900 },
 ];
 
+function requireAdminCredentials() {
+  const username = process.env.SNAP_ADMIN_USERNAME || process.env.ADMIN_BASIC_AUTH_USERNAME;
+  const secret = process.env.SNAP_ADMIN_PASSWORD || process.env.ADMIN_BASIC_AUTH_PASSWORD;
+  if (!username || !secret) {
+    throw new Error('Complete SNAP_ADMIN_USERNAME/SNAP_ADMIN_PASSWORD (or ADMIN_BASIC_AUTH_*) credentials are required');
+  }
+  return { username, password: secret };
+}
+
+async function createCaptureContext(browser, target, adminCredentials) {
+  const context = await browser.newContext({
+    viewport: { width: target.width, height: target.height },
+    ...(target.url.startsWith('/admin') ? { httpCredentials: adminCredentials } : {}),
+  });
+  await context.route('**/api/analytics/track', (route) =>
+    route.fulfill({ status: 204, body: '' })
+  );
+  return context;
+}
+
 async function main() {
   await fs.mkdir(outDir, { recursive: true });
+  requireAdminCredentials();
 
   const browser = await chromium.launch({
     headless: true,
@@ -28,11 +49,9 @@ async function main() {
     const adminPassword = process.env.SNAP_ADMIN_PASSWORD || process.env.ADMIN_BASIC_AUTH_PASSWORD;
 
     for (const t of targets) {
-      const context = await browser.newContext({
-        viewport: { width: t.width, height: t.height },
-        ...(adminUsername && adminPassword
-          ? { httpCredentials: { username: adminUsername, password: adminPassword } }
-          : {}),
+      const context = await createCaptureContext(browser, t, {
+        username: adminUsername,
+        password: adminPassword,
       });
 
       try {
@@ -47,7 +66,16 @@ async function main() {
           );
         }
         const full = new URL(t.url, baseUrl).toString();
-        await page.goto(full, { waitUntil: 'networkidle', timeout: 45_000 });
+        const response = await page.goto(full, { waitUntil: 'networkidle', timeout: 45_000 });
+        if (!response?.ok()) {
+          throw new Error(`${t.name} returned HTTP ${response?.status() ?? 'unknown'}`);
+        }
+        if (t.url.startsWith('/admin')) {
+          await page.getByRole('heading', { name: 'Analytics Dashboard', exact: true }).waitFor({ state: 'visible' });
+          if (await page.locator('[data-promotion-surface="banner"]').count()) {
+            throw new Error('Promotion banner rendered on authenticated admin capture');
+          }
+        }
         await page.waitForTimeout(500);
 
         const file = path.join(outDir, `${ts}-${t.name}.png`);

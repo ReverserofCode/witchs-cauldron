@@ -95,6 +95,8 @@ npm run build
 ```
 
 기본 smoke는 Playwright가 관리하는 Chromium을 사용합니다. 먼저 로컬 서버를 실행한 뒤 별도 터미널에서 실행합니다.
+프로모션 smoke와 스크린샷 캡처는 합성 방문이 운영 분석에 섞이지 않도록 모든 `/api/analytics/track` 요청을 브라우저 컨텍스트에서 로컬 HTTP 204로 차단합니다.
+관리자 검증은 인증된 실제 대시보드만 통과하도록 완전한 자격 증명 쌍을 요구합니다. smoke는 `SMOKE_ADMIN_USERNAME`/`SMOKE_ADMIN_PASSWORD`, 캡처는 `SNAP_ADMIN_USERNAME`/`SNAP_ADMIN_PASSWORD`를 우선하며, 둘 다 `ADMIN_BASIC_AUTH_USERNAME`/`ADMIN_BASIC_AUTH_PASSWORD`를 fallback으로 사용합니다. 서버에도 일치하는 `ADMIN_BASIC_AUTH_*` 값을 안전한 로컬 환경 변수로 제공해야 하며 실제 값은 명령 기록이나 문서에 남기지 않습니다.
 
 ```powershell
 # 터미널 1
@@ -111,8 +113,12 @@ npm run smoke:promotion
 ```powershell
 Set-Location frontend
 $env:CHROMIUM_PATH = 'C:\Program Files\Google\Chrome\Application\chrome.exe'
+[Environment]::SetEnvironmentVariable('SMOKE_ADMIN_USERNAME', $env:ADMIN_BASIC_AUTH_USERNAME)
+[Environment]::SetEnvironmentVariable('SMOKE_ADMIN_PASSWORD', $env:ADMIN_BASIC_AUTH_PASSWORD)
 npm run smoke:promotion
 Remove-Item Env:CHROMIUM_PATH
+Remove-Item Env:SMOKE_ADMIN_USERNAME
+Remove-Item Env:SMOKE_ADMIN_PASSWORD
 ```
 
 기본 `127.0.0.1:3000` 대신 다른 로컬 포트 또는 호스트를 검증할 때는 `SMOKE_BASE_URL`을 사용합니다. 개발 서버의 dev-resource host 제약을 피하려면 `localhost` URL을 사용합니다.
@@ -124,7 +130,7 @@ npm run smoke:promotion
 Remove-Item Env:SMOKE_BASE_URL
 ```
 
-성공하면 `merch promotion smoke ok`가 출력됩니다. 이 smoke는 활성 시각의 배너·카드·상품 요약·canonical CTA·Analytics 속성, 배너 세션 닫기, 관리자 제외, 종료 시 배너·카드 미노출을 확인합니다.
+성공하면 `merch promotion smoke ok`가 출력됩니다. 이 smoke는 활성 시각의 배너·카드·상품 요약·canonical CTA·Analytics 속성, 합성 Analytics 요청 차단, 배너 세션 닫기, 인증된 `/admin/analytics` 대시보드와 관리자 배너 제외, 종료 시 배너·카드 미노출을 확인합니다. 스크린샷 캡처도 인증된 관리자 대시보드 제목과 배너 미노출을 확인한 뒤 이미지를 저장합니다.
 
 ### 프로덕션 smoke와 증거
 

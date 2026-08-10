@@ -116,3 +116,17 @@ export function getNextPromotionWakeDelay(
       : Math.min(window.endMs - nowMs, MINUTE_MS - (nowMs % MINUTE_MS));
   return Math.max(1, Math.min(targetDelay, MAX_TIMEOUT_MS));
 }
+
+export function getPromotionSchedulingDelay(
+  campaign: PromotionCampaign,
+  snapshotNow: Date | number,
+  schedulingNow: Date | number
+): number | null {
+  const snapshotMs = toNowMs(snapshotNow);
+  const schedulingMs = toNowMs(schedulingNow);
+  const snapshotDelay = getNextPromotionWakeDelay(campaign, snapshotMs);
+  if (snapshotDelay === null || !Number.isFinite(schedulingMs)) return null;
+
+  const wakeAt = snapshotMs + snapshotDelay;
+  return Math.min(MAX_TIMEOUT_MS, Math.max(0, wakeAt - schedulingMs));
+}

@@ -52,42 +52,47 @@ export function MerchPromotionBanner() {
       data-promotion-surface="banner"
       className="border-y border-sky-200/70 bg-gradient-to-r from-sky-100 via-white to-purple-100 text-purple-950 shadow-sm"
     >
-      <div className="mx-auto flex min-h-12 w-full max-w-6xl items-center gap-2 px-3 py-2 sm:px-6 lg:px-8">
-        <p className="min-w-0 flex-1 text-xs font-semibold leading-5 sm:text-sm">
+      <div className="mx-auto flex min-h-12 w-full max-w-6xl flex-wrap items-center gap-2 px-3 py-2 sm:flex-nowrap sm:px-6 lg:px-8">
+        <p className="w-full min-w-0 text-xs font-semibold leading-5 sm:w-auto sm:flex-1 sm:text-sm">
           <span className="mr-1.5 rounded-full bg-purple-700 px-2 py-0.5 text-[10px] font-bold text-white">
             기간 한정
           </span>
-          모잉 여름의 공방 굿즈 예약 판매 중 · {SUMMER_ATELIER_CAMPAIGN.deadlineShort}
+          <span className="sm:hidden">여름의 공방 굿즈 · {SUMMER_ATELIER_CAMPAIGN.deadlineShort}</span>
+          <span className="hidden sm:inline">
+            모잉 여름의 공방 굿즈 예약 판매 중 · {SUMMER_ATELIER_CAMPAIGN.deadlineShort}
+          </span>
         </p>
-        <span
-          role="timer"
-          aria-live="off"
-          className="shrink-0 text-[10px] font-medium sm:text-xs"
-        >
-          {runtime.countdownLabel}
-        </span>
-        <a
-          href={SUMMER_ATELIER_CAMPAIGN.storeUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex min-h-11 shrink-0 items-center rounded-full bg-purple-700 px-3 text-xs font-bold text-white transition hover:bg-purple-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/70 focus-visible:ring-offset-2 sm:px-4 sm:text-sm"
-          data-analytics-menu="true"
-          data-analytics-id={SUMMER_ATELIER_CAMPAIGN.id + ":banner"}
-          data-analytics-label="팬텀픽에서 보기"
-          data-analytics-location="merch_promotion_banner"
-          data-analytics-type="promotion_cta"
-        >
-          팬텀픽에서 보기
-          <span className="sr-only"> 새 탭에서 열림</span>
-        </a>
-        <button
-          type="button"
-          onClick={dismiss}
-          aria-label="여름의 공방 굿즈 홍보 배너 닫기"
-          className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-xl text-purple-900 transition hover:bg-white/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/70 focus-visible:ring-offset-2"
-        >
-          <span aria-hidden>×</span>
-        </button>
+        <div className="flex w-full items-center justify-end gap-2 sm:w-auto">
+          <span
+            role="timer"
+            aria-live="off"
+            className="mr-auto shrink-0 text-[10px] font-medium sm:mr-0 sm:text-xs"
+          >
+            {runtime.countdownLabel}
+          </span>
+          <a
+            href={SUMMER_ATELIER_CAMPAIGN.storeUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex min-h-11 shrink-0 items-center rounded-full bg-purple-700 px-3 text-xs font-bold text-white transition hover:bg-purple-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/70 focus-visible:ring-offset-2 sm:px-4 sm:text-sm"
+            data-analytics-menu="true"
+            data-analytics-id={SUMMER_ATELIER_CAMPAIGN.id + ":banner"}
+            data-analytics-label="팬텀픽에서 보기"
+            data-analytics-location="merch_promotion_banner"
+            data-analytics-type="promotion_cta"
+          >
+            팬텀픽에서 보기
+            <span className="sr-only"> 새 탭에서 열림</span>
+          </a>
+          <button
+            type="button"
+            onClick={dismiss}
+            aria-label="여름의 공방 굿즈 홍보 배너 닫기"
+            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-xl text-purple-900 transition hover:bg-white/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/70 focus-visible:ring-offset-2"
+          >
+            <span aria-hidden>×</span>
+          </button>
+        </div>
       </div>
     </aside>
   );

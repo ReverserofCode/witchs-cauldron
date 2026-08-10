@@ -7,9 +7,28 @@ const canonicalStoreUrl =
   "https://fantompick.com/category/%EB%AA%A8%EC%9E%89/110/";
 const activeNow = "2026-08-10T12:00:00+09:00";
 const endedNow = "2026-09-01T00:00:00+09:00";
+let analyticsInterceptCount = 0;
 
-async function createClockContext(browser, nowIso) {
-  const context = await browser.newContext();
+function requireAdminCredentials() {
+  const username = process.env.SMOKE_ADMIN_USERNAME || process.env.ADMIN_BASIC_AUTH_USERNAME;
+  const secret = process.env.SMOKE_ADMIN_PASSWORD || process.env.ADMIN_BASIC_AUTH_PASSWORD;
+  if (!username || !secret) {
+    throw new Error("Complete SMOKE_ADMIN_USERNAME/SMOKE_ADMIN_PASSWORD (or ADMIN_BASIC_AUTH_*) credentials are required");
+  }
+  return { username, password: secret };
+}
+
+async function createSmokeContext(browser, options = {}) {
+  const context = await browser.newContext(options);
+  await context.route("**/api/analytics/track", async (route) => {
+    analyticsInterceptCount += 1;
+    await route.fulfill({ status: 204, body: "" });
+  });
+  return context;
+}
+
+async function createClockContext(browser, nowIso, options = {}) {
+  const context = await createSmokeContext(browser, options);
   await context.addInitScript((fixedNow) => {
     const OriginalDate = Date;
     class FixedDate extends OriginalDate {
@@ -28,13 +47,14 @@ async function createClockContext(browser, nowIso) {
 }
 
 async function goto(page, pathname) {
-  await page.goto(new URL(pathname, baseUrl).toString(), {
+  return page.goto(new URL(pathname, baseUrl).toString(), {
     waitUntil: "domcontentloaded",
     timeout: 45_000,
   });
 }
 
 async function main() {
+  const adminCredentials = requireAdminCredentials();
   const browser = await chromium.launch({
     headless: true,
     executablePath: process.env.CHROMIUM_PATH || undefined,
@@ -101,6 +121,10 @@ async function main() {
     const cardLink = card.getByRole("link", { name: "팬텀픽에서 굿즈 보기 새 탭에서 열림" });
     assert.equal(await cardLink.count(), 1);
     assert.equal(await cardLink.getAttribute("href"), canonicalStoreUrl);
+    assert.equal(await cardLink.getAttribute("target"), "_blank");
+    assert.match(await cardLink.getAttribute("rel"), /noopener/);
+    assert.match(await cardLink.getAttribute("rel"), /noreferrer/);
+    assert.equal(await cardLink.getAttribute("data-analytics-menu"), "true");
     assert.equal(
       await cardLink.getAttribute("data-analytics-id"),
       "moing-summer-atelier-2026:card"
@@ -108,6 +132,14 @@ async function main() {
     assert.equal(
       await cardLink.getAttribute("data-analytics-location"),
       "merch_promotion_card"
+    );
+    assert.equal(
+      await cardLink.getAttribute("data-analytics-label"),
+      "팬텀픽에서 굿즈 보기"
+    );
+    assert.equal(
+      await cardLink.getAttribute("data-analytics-type"),
+      "promotion_cta"
     );
     assert.equal(
       await bannerLink.getAttribute("data-analytics-location"),
@@ -127,23 +159,56 @@ async function main() {
     );
     await activeContext.close();
 
+    const mobileContext = await createClockContext(browser, activeNow, {
+      viewport: { width: 390, height: 844 },
+    });
+    const mobilePage = await mobileContext.newPage();
+    await goto(mobilePage, "/");
+    const mobileBanner = mobilePage.locator('[data-promotion-surface="banner"]');
+    await mobileBanner.waitFor({ state: "visible", timeout: 10_000 });
+    const mobileCopyMetrics = await mobileBanner.locator("p").evaluate((element) => {
+      const lineHeight = Number.parseFloat(getComputedStyle(element).lineHeight);
+      return { height: element.getBoundingClientRect().height, lineHeight };
+    });
+    assert.ok(mobileCopyMetrics.height <= mobileCopyMetrics.lineHeight * 2 + 1);
+    assert.equal(await mobilePage.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+    for (const control of [mobileBanner.locator("a"), mobileBanner.locator("button")]) {
+      const box = await control.boundingBox();
+      assert.ok(box && box.height >= 44);
+    }
+    await mobileContext.close();
+
     const routeContext = await createClockContext(browser, activeNow);
     const routePage = await routeContext.newPage();
     await goto(routePage, "/broadcasts");
     await routePage
       .locator('[data-promotion-surface="banner"]')
       .waitFor({ state: "visible", timeout: 3_000 });
-    await goto(routePage, "/admin");
-    await routePage.waitForTimeout(300);
-    assert.equal(
-      await routePage.locator('[data-promotion-surface="banner"]').count(),
-      0
-    );
     await goto(routePage, "/administrator");
     await routePage
       .locator('[data-promotion-surface="banner"]')
       .waitFor({ state: "visible" });
     await routeContext.close();
+
+    const adminContext = await createSmokeContext(browser, {
+      httpCredentials: adminCredentials,
+    });
+    await adminContext.addInitScript((fixedNow) => {
+      const OriginalDate = Date;
+      class FixedDate extends OriginalDate {
+        constructor(...args) { super(...(args.length ? args : [fixedNow])); }
+        static now() { return fixedNow; }
+      }
+      FixedDate.parse = OriginalDate.parse;
+      FixedDate.UTC = OriginalDate.UTC;
+      globalThis.Date = FixedDate;
+    }, Date.parse(activeNow));
+    const adminPage = await adminContext.newPage();
+    const adminResponse = await goto(adminPage, "/admin/analytics");
+    assert.ok(adminResponse?.ok(), `Authenticated admin returned HTTP ${adminResponse?.status() ?? "unknown"}`);
+    await adminPage.getByRole("heading", { name: "Analytics Dashboard", exact: true }).waitFor({ state: "visible" });
+    assert.equal(await adminPage.locator('[data-promotion-surface="banner"]').count(), 0);
+    await adminContext.close();
 
     const endedContext = await createClockContext(browser, endedNow);
     const endedPage = await endedContext.newPage();
@@ -159,7 +224,7 @@ async function main() {
     );
     await endedContext.close();
 
-    const startBoundaryContext = await browser.newContext();
+    const startBoundaryContext = await createSmokeContext(browser);
     const startBoundaryPage = await startBoundaryContext.newPage();
     const startMs = Date.parse("2026-08-05T19:00:00+09:00");
     const leadMs = 123_456;
@@ -242,7 +307,7 @@ async function main() {
     await startBoundaryPage.locator('[data-promotion-surface="card"]').waitFor({ state: "visible", timeout: 3_000 });
     await startBoundaryContext.close();
 
-    const endBoundaryContext = await browser.newContext();
+    const endBoundaryContext = await createSmokeContext(browser);
     const endBoundaryPage = await endBoundaryContext.newPage();
     await endBoundaryPage.clock.install({ time: Date.parse("2026-08-31T23:59:59+09:00") });
     await goto(endBoundaryPage, "/");
@@ -253,6 +318,7 @@ async function main() {
     assert.equal(await endBoundaryPage.locator('[data-promotion-surface="banner"]').count(), 0);
     assert.equal(await endBoundaryPage.locator('[data-promotion-surface="card"]').count(), 0);
     await endBoundaryContext.close();
+    assert.ok(analyticsInterceptCount > 0, "Expected at least one analytics tracking request to be intercepted");
   } finally {
     await browser.close();
   }

@@ -4,6 +4,7 @@ import {
   formatPromotionCountdown,
   getNextPromotionWakeDelay,
   getPromotionPhase,
+  getPromotionSchedulingDelay,
   getPromotionWindow,
   type PromotionCampaign,
 } from "./summerAtelier";
@@ -81,6 +82,19 @@ describe("summer atelier promotion", () => {
       getNextPromotionWakeDelay(SUMMER_ATELIER_CAMPAIGN, endMs - 10_000)
     ).toBe(10_000);
     expect(getNextPromotionWakeDelay(SUMMER_ATELIER_CAMPAIGN, endMs)).toBeNull();
+  });
+
+  it("anchors effect scheduling to the render snapshot's absolute wake", () => {
+    const startMs = Date.parse(SUMMER_ATELIER_CAMPAIGN.startAt);
+    const endMs = Date.parse(SUMMER_ATELIER_CAMPAIGN.endAtExclusive);
+
+    expect(getPromotionSchedulingDelay(SUMMER_ATELIER_CAMPAIGN, startMs - 1, startMs + 100)).toBe(0);
+    expect(getPromotionSchedulingDelay(SUMMER_ATELIER_CAMPAIGN, endMs - 1, endMs + 100)).toBe(0);
+    expect(getPromotionSchedulingDelay(SUMMER_ATELIER_CAMPAIGN, startMs - 1_000, startMs - 100)).toBe(100);
+    expect(getPromotionSchedulingDelay(SUMMER_ATELIER_CAMPAIGN, endMs, endMs + 100)).toBeNull();
+
+    const invalid = { ...SUMMER_ATELIER_CAMPAIGN, startAt: "invalid" } satisfies PromotionCampaign;
+    expect(getPromotionSchedulingDelay(invalid, startMs - 1, startMs + 100)).toBeNull();
   });
 
   it("rejects invalid or reversed campaign windows", () => {
