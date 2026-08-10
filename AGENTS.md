@@ -477,6 +477,7 @@ RootLayout
 
 ## 최근 변경
 
+- **모잉 「여름의 공방」 기간 한정 굿즈 홍보** - 2026-08-31 23:59까지 전역 띠배너와 홈 상세 카드 자동 노출, 마감 카운트다운·세션 닫기·Analytics 추적 추가. 운영 기준은 [굿즈 홍보 운영 가이드](docs/SUMMER_ATELIER_PROMOTION.md) 참조
 - **YouTube Shorts 최신 영상 미반영 수정** - Shorts 필터링 기준 65초→185초 (YouTube 2024.10 3분 정책 반영), YouTube API fetch 캐시 `revalidate:60`→`no-store`로 변경, `MAX_LOOKAHEAD` 50→100 확대
 - **프로젝트 전반 디자인 개선** - 모바일 햄버거 메뉴 추가(Header), Footer 강화(커뮤니티/사이트 링크), 일정 그리드 반응형(`grid-cols-2 md:grid-cols-4`), 컬러 토큰 정리(중복 제거, `--moing-bg` 추가)
 - **Analytics 대시보드 전면 리디자인** - 커스텀 SVG 차트를 ResizeObserver 기반 인터랙티브 차트로 교체, 호버 툴팁/데이터 포인트 추가, 메트릭별 고유 색상 체계(Blue/Violet/Rose/Emerald/Amber), 기간 요약 사이드 패널(`PeriodSummary`) 추가
