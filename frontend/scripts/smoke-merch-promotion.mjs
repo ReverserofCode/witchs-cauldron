@@ -71,6 +71,38 @@ async function main() {
       "promotion_cta"
     );
 
+    const card = activePage.locator('[data-promotion-surface="card"]');
+    await card.waitFor({ state: "visible", timeout: 10_000 });
+    const cardText = await card.innerText();
+    for (const expectedText of [
+      "여름의 공방 풀세트",
+      "77,000원",
+      "친필 사인 투명 포토카드",
+      "여름의 공방 장패드",
+      "비키니 모잉 아크릴 스탠드",
+      "비키니 모잉 캔뱃지",
+      "여름의 공방 포토카드 세트",
+      "10월 7일부터 순차 출고 예정",
+    ]) {
+      assert.match(cardText, new RegExp(expectedText));
+    }
+
+    const cardLink = card.getByRole("link", { name: "팬텀픽에서 굿즈 보기" });
+    assert.equal(await cardLink.getAttribute("href"), canonicalStoreUrl);
+    assert.equal(
+      await cardLink.getAttribute("data-analytics-id"),
+      "moing-summer-atelier-2026:card"
+    );
+    assert.equal(
+      await cardLink.getAttribute("data-analytics-location"),
+      "merch_promotion_card"
+    );
+    assert.equal(
+      await bannerLink.getAttribute("data-analytics-location"),
+      "merch_promotion_banner"
+    );
+    assert.equal(await activePage.locator("#promotion-summer-atelier").count(), 1);
+
     await banner
       .getByRole("button", { name: "여름의 공방 굿즈 홍보 배너 닫기" })
       .click();
@@ -103,6 +135,10 @@ async function main() {
     await endedPage.waitForTimeout(500);
     assert.equal(
       await endedPage.locator('[data-promotion-surface="banner"]').count(),
+      0
+    );
+    assert.equal(
+      await endedPage.locator('[data-promotion-surface="card"]').count(),
       0
     );
     await endedContext.close();
