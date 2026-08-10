@@ -72,6 +72,16 @@ describe("summer atelier promotion", () => {
     expect(formatPromotionCountdown(SUMMER_ATELIER_CAMPAIGN, endMs)).toBeNull();
   });
 
+  it("formats the final-minute threshold", () => {
+    const endMs = Date.parse(SUMMER_ATELIER_CAMPAIGN.endAtExclusive);
+    expect(
+      formatPromotionCountdown(SUMMER_ATELIER_CAMPAIGN, endMs - 60_000)
+    ).toBe("마감까지 1분");
+    expect(
+      formatPromotionCountdown(SUMMER_ATELIER_CAMPAIGN, endMs - 59_999)
+    ).toBe("곧 마감");
+  });
+
   it("wakes at the next relevant minute or campaign boundary", () => {
     const startMs = Date.parse(SUMMER_ATELIER_CAMPAIGN.startAt);
     const endMs = Date.parse(SUMMER_ATELIER_CAMPAIGN.endAtExclusive);
@@ -82,6 +92,37 @@ describe("summer atelier promotion", () => {
       getNextPromotionWakeDelay(SUMMER_ATELIER_CAMPAIGN, endMs - 10_000)
     ).toBe(10_000);
     expect(getNextPromotionWakeDelay(SUMMER_ATELIER_CAMPAIGN, endMs)).toBeNull();
+  });
+
+  it("wakes just after floor-countdown label thresholds", () => {
+    const endMs = Date.parse(SUMMER_ATELIER_CAMPAIGN.endAtExclusive);
+    expect(
+      getNextPromotionWakeDelay(SUMMER_ATELIER_CAMPAIGN, endMs - 60_001)
+    ).toBe(2);
+    expect(
+      getNextPromotionWakeDelay(SUMMER_ATELIER_CAMPAIGN, endMs - 60_000)
+    ).toBe(1);
+    expect(
+      getNextPromotionWakeDelay(SUMMER_ATELIER_CAMPAIGN, endMs - 59_999)
+    ).toBe(59_999);
+  });
+
+  it("keeps the final-minute wake anchored across a delayed effect", () => {
+    const endMs = Date.parse(SUMMER_ATELIER_CAMPAIGN.endAtExclusive);
+    expect(
+      getPromotionSchedulingDelay(
+        SUMMER_ATELIER_CAMPAIGN,
+        endMs - 60_001,
+        endMs - 60_000
+      )
+    ).toBe(1);
+    expect(
+      getPromotionSchedulingDelay(
+        SUMMER_ATELIER_CAMPAIGN,
+        endMs - 60_000,
+        endMs - 59_900
+      )
+    ).toBe(0);
   });
 
   it("anchors effect scheduling to the render snapshot's absolute wake", () => {

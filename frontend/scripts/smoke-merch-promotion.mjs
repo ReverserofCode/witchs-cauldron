@@ -354,14 +354,38 @@ async function main() {
 
     const endBoundaryContext = await createSmokeContext(browser);
     const endBoundaryPage = await endBoundaryContext.newPage();
-    await endBoundaryPage.clock.install({ time: Date.parse("2026-08-31T23:59:59+09:00") });
+    const endMs = Date.parse("2026-09-01T00:00:00+09:00");
+    await endBoundaryPage.clock.install({ time: endMs - 5 * 60_000 });
     await goto(endBoundaryPage, "/");
-    await endBoundaryPage.locator('[data-promotion-surface="banner"]').waitFor({ state: "visible", timeout: 3_000 });
-    await endBoundaryPage.locator('[data-promotion-surface="card"]').waitFor({ state: "visible", timeout: 3_000 });
-    await endBoundaryPage.clock.fastForward(1_000);
+    const endBanner = endBoundaryPage.locator('[data-promotion-surface="banner"]');
+    const endCard = endBoundaryPage.locator('[data-promotion-surface="card"]');
+    await endBanner.waitFor({ state: "visible", timeout: 3_000 });
+    await endCard.waitFor({ state: "visible", timeout: 3_000 });
+    await endBoundaryPage.clock.pauseAt(endMs - 60_000);
+    const finalMinuteTimers = endBoundaryPage.locator('[role="timer"]');
+    await finalMinuteTimers.filter({ hasText: "마감까지 1분" }).first().waitFor({
+      state: "visible",
+      timeout: 3_000,
+    });
+    assert.equal(await finalMinuteTimers.count(), 2);
+    assert.deepEqual(
+      (await finalMinuteTimers.allTextContents()).map((label) => label.trim()),
+      ["마감까지 1분", "마감까지 1분"]
+    );
+    await endBoundaryPage.clock.fastForward(1);
     await endBoundaryPage.waitForTimeout(0);
-    assert.equal(await endBoundaryPage.locator('[data-promotion-surface="banner"]').count(), 0);
-    assert.equal(await endBoundaryPage.locator('[data-promotion-surface="card"]').count(), 0);
+    await finalMinuteTimers.filter({ hasText: "곧 마감" }).first().waitFor({
+      state: "visible",
+      timeout: 3_000,
+    });
+    assert.deepEqual(
+      (await finalMinuteTimers.allTextContents()).map((label) => label.trim()),
+      ["곧 마감", "곧 마감"]
+    );
+    await endBoundaryPage.clock.fastForward(59_999);
+    await endBoundaryPage.waitForTimeout(0);
+    assert.equal(await endBanner.count(), 0);
+    assert.equal(await endCard.count(), 0);
     await endBoundaryContext.close();
   } finally {
     await browser.close();

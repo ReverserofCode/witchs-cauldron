@@ -113,7 +113,10 @@ export function getNextPromotionWakeDelay(
   const targetDelay =
     nowMs < window.startMs
       ? window.startMs - nowMs
-      : Math.min(window.endMs - nowMs, MINUTE_MS - (nowMs % MINUTE_MS));
+      : Math.min(
+          window.endMs - nowMs,
+          ((window.endMs - nowMs) % MINUTE_MS) + 1
+        );
   return Math.max(1, Math.min(targetDelay, MAX_TIMEOUT_MS));
 }
 
