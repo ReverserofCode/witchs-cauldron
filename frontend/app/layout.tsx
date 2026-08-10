@@ -9,6 +9,7 @@ import './globals.css'
 import { Noto_Sans_KR } from 'next/font/google'
 import { Header, Footer } from '@/app/components/layout'
 import AnalyticsProvider from '@/app/components/analytics/AnalyticsProvider'
+import { MerchPromotionBanner } from '@/app/components/promotions'
 
 const notoSansKr = Noto_Sans_KR({
   subsets: ['latin'],
@@ -138,6 +139,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
           <AnalyticsProvider />
         </Suspense>
         <Header />
+        <MerchPromotionBanner />
         <main className="flex flex-col flex-1">
           {children}
         </main>

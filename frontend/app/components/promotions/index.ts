@@ -1,0 +1,1 @@
+export { MerchPromotionBanner } from "./MerchPromotionBanner";

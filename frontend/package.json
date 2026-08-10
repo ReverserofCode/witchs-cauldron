@@ -13,6 +13,7 @@
 		"dev:install:host": "npm install",
 		"capture:screens": "node scripts/capture-screenshots.mjs",
 		"smoke:admin": "node scripts/smoke-admin-analytics.mjs",
+		"smoke:promotion": "node scripts/smoke-merch-promotion.mjs",
 		"analytics:profile": "node scripts/analytics-maintenance.mjs profile",
 		"analytics:scrub-ip": "node scripts/analytics-maintenance.mjs scrub-ip"
 	},
