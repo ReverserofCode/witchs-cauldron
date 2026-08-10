@@ -11,6 +11,9 @@ export interface PromotionCampaign {
   readonly startAt: string;
   readonly endAtExclusive: string;
   readonly shippingFrom: string;
+  readonly deadlineShort: string;
+  readonly deadlineLong: string;
+  readonly shippingDisplay: string;
   readonly products: readonly PromotionProduct[];
 }
 
@@ -32,6 +35,9 @@ export const SUMMER_ATELIER_CAMPAIGN = {
   startAt: "2026-08-05T19:00:00+09:00",
   endAtExclusive: "2026-09-01T00:00:00+09:00",
   shippingFrom: "2026-10-07",
+  deadlineShort: "8월 31일 23:59 마감",
+  deadlineLong: "2026년 8월 31일 23:59 마감",
+  shippingDisplay: "10월 7일부터 순차 출고 예정",
   products: [
     {
       name: "여름의 공방 풀세트",

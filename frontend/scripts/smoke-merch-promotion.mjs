@@ -48,7 +48,14 @@ async function main() {
 
     const banner = activePage.locator('[data-promotion-surface="banner"]');
     await banner.waitFor({ state: "visible", timeout: 10_000 });
+    const bannerTimer = banner.locator('[role="timer"]');
+    assert.equal(await bannerTimer.count(), 1);
+    assert.equal(await bannerTimer.getAttribute("aria-live"), "off");
     const bannerLink = banner.locator("a");
+    assert.equal(
+      await banner.getByRole("link", { name: "팬텀픽에서 보기 새 탭에서 열림" }).count(),
+      1
+    );
     assert.equal(await bannerLink.getAttribute("href"), canonicalStoreUrl);
     assert.equal(await bannerLink.getAttribute("target"), "_blank");
     assert.match(await bannerLink.getAttribute("rel"), /noopener/);
@@ -77,17 +84,22 @@ async function main() {
     for (const expectedText of [
       "여름의 공방 풀세트",
       "77,000원",
-      "친필 사인 투명 포토카드",
+      "친필 사인 투명 포토카드 1장 증정",
       "여름의 공방 장패드",
+      "30,000원",
       "비키니 모잉 아크릴 스탠드",
+      "35,000원",
       "비키니 모잉 캔뱃지",
+      "7,500원",
       "여름의 공방 포토카드 세트",
+      "7,000원",
       "10월 7일부터 순차 출고 예정",
     ]) {
       assert.match(cardText, new RegExp(expectedText));
     }
 
-    const cardLink = card.getByRole("link", { name: "팬텀픽에서 굿즈 보기" });
+    const cardLink = card.getByRole("link", { name: "팬텀픽에서 굿즈 보기 새 탭에서 열림" });
+    assert.equal(await cardLink.count(), 1);
     assert.equal(await cardLink.getAttribute("href"), canonicalStoreUrl);
     assert.equal(
       await cardLink.getAttribute("data-analytics-id"),
@@ -120,13 +132,17 @@ async function main() {
     await goto(routePage, "/broadcasts");
     await routePage
       .locator('[data-promotion-surface="banner"]')
-      .waitFor({ state: "visible" });
+      .waitFor({ state: "visible", timeout: 3_000 });
     await goto(routePage, "/admin");
     await routePage.waitForTimeout(300);
     assert.equal(
       await routePage.locator('[data-promotion-surface="banner"]').count(),
       0
     );
+    await goto(routePage, "/administrator");
+    await routePage
+      .locator('[data-promotion-surface="banner"]')
+      .waitFor({ state: "visible" });
     await routeContext.close();
 
     const endedContext = await createClockContext(browser, endedNow);
@@ -142,6 +158,29 @@ async function main() {
       0
     );
     await endedContext.close();
+
+    const startBoundaryContext = await browser.newContext();
+    const startBoundaryPage = await startBoundaryContext.newPage();
+    await startBoundaryPage.clock.install({ time: Date.parse("2026-08-05T18:59:59+09:00") });
+    await goto(startBoundaryPage, "/");
+    assert.equal(await startBoundaryPage.locator('[data-promotion-surface="banner"]').count(), 0);
+    assert.equal(await startBoundaryPage.locator('[data-promotion-surface="card"]').count(), 0);
+    await startBoundaryPage.clock.fastForward(1_000);
+    await startBoundaryPage.locator('[data-promotion-surface="banner"]').waitFor({ state: "visible", timeout: 3_000 });
+    await startBoundaryPage.locator('[data-promotion-surface="card"]').waitFor({ state: "visible", timeout: 3_000 });
+    await startBoundaryContext.close();
+
+    const endBoundaryContext = await browser.newContext();
+    const endBoundaryPage = await endBoundaryContext.newPage();
+    await endBoundaryPage.clock.install({ time: Date.parse("2026-08-31T23:59:59+09:00") });
+    await goto(endBoundaryPage, "/");
+    await endBoundaryPage.locator('[data-promotion-surface="banner"]').waitFor({ state: "visible", timeout: 3_000 });
+    await endBoundaryPage.locator('[data-promotion-surface="card"]').waitFor({ state: "visible", timeout: 3_000 });
+    await endBoundaryPage.clock.fastForward(1_000);
+    await endBoundaryPage.waitForTimeout(0);
+    assert.equal(await endBoundaryPage.locator('[data-promotion-surface="banner"]').count(), 0);
+    assert.equal(await endBoundaryPage.locator('[data-promotion-surface="card"]').count(), 0);
+    await endBoundaryContext.close();
   } finally {
     await browser.close();
   }

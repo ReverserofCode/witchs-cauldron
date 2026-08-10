@@ -15,7 +15,7 @@ export function MerchPromotionCard() {
         as="div"
         eyebrow="Limited Pre-order"
         title={SUMMER_ATELIER_CAMPAIGN.title}
-        description="8월 31일 23:59까지 팬텀픽에서 주문제작 예약 판매합니다."
+        description={SUMMER_ATELIER_CAMPAIGN.deadlineShort + "까지 팬텀픽에서 주문제작 예약 판매합니다."}
         className="border-sky-200/80 bg-[radial-gradient(circle_at_12%_18%,rgba(255,255,255,0.95),transparent_24%),radial-gradient(circle_at_88%_12%,rgba(216,180,254,0.55),transparent_27%),linear-gradient(135deg,rgba(224,242,254,0.96),rgba(255,255,255,0.94)_48%,rgba(243,232,255,0.94))] shadow-[0_18px_44px_rgba(30,64,175,0.12)]"
       >
         <div
@@ -32,7 +32,7 @@ export function MerchPromotionCard() {
                 {runtime.countdownLabel}
               </p>
               <p className="mt-2 text-sm font-semibold text-purple-900/80">
-                2026년 8월 31일 23:59 마감
+                {SUMMER_ATELIER_CAMPAIGN.deadlineLong}
               </p>
             </div>
 
@@ -55,6 +55,7 @@ export function MerchPromotionCard() {
               data-analytics-type="promotion_cta"
             >
               팬텀픽에서 굿즈 보기
+              <span className="sr-only"> 새 탭에서 열림</span>
             </a>
           </div>
 
@@ -74,7 +75,7 @@ export function MerchPromotionCard() {
               ))}
             </ul>
             <div className="rounded-2xl border border-purple-200/60 bg-white/65 px-3 py-3 text-xs leading-5 text-purple-950/75">
-              <p className="font-bold text-purple-950">10월 7일부터 순차 출고 예정</p>
+              <p className="font-bold text-purple-950">{SUMMER_ATELIER_CAMPAIGN.shippingDisplay}</p>
               <p>가격·판매 상태·배송 조건은 팬텀픽에서 최종 확인해 주세요.</p>
             </div>
           </div>

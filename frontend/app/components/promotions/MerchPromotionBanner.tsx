@@ -37,7 +37,7 @@ export function MerchPromotionBanner() {
   }
 
   if (
-    pathname.startsWith("/admin") ||
+    (pathname === "/admin" || pathname.startsWith("/admin/")) ||
     !dismissalReady ||
     dismissed ||
     runtime?.phase !== "active"
@@ -57,9 +57,13 @@ export function MerchPromotionBanner() {
           <span className="mr-1.5 rounded-full bg-purple-700 px-2 py-0.5 text-[10px] font-bold text-white">
             기간 한정
           </span>
-          모잉 여름의 공방 굿즈 예약 판매 중 · 8월 31일 23:59 마감
+          모잉 여름의 공방 굿즈 예약 판매 중 · {SUMMER_ATELIER_CAMPAIGN.deadlineShort}
         </p>
-        <span aria-live="polite" className="shrink-0 text-[10px] font-medium sm:text-xs">
+        <span
+          role="timer"
+          aria-live="off"
+          className="shrink-0 text-[10px] font-medium sm:text-xs"
+        >
           {runtime.countdownLabel}
         </span>
         <a
@@ -74,6 +78,7 @@ export function MerchPromotionBanner() {
           data-analytics-type="promotion_cta"
         >
           팬텀픽에서 보기
+          <span className="sr-only"> 새 탭에서 열림</span>
         </a>
         <button
           type="button"

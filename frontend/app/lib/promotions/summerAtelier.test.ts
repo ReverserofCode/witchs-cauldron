@@ -15,10 +15,16 @@ describe("summer atelier promotion", () => {
       "https://fantompick.com/category/%EB%AA%A8%EC%9E%89/110/"
     );
     expect(SUMMER_ATELIER_CAMPAIGN.products).toHaveLength(5);
-    expect(SUMMER_ATELIER_CAMPAIGN.products[0]).toMatchObject({
-      name: "여름의 공방 풀세트",
-      price: "77,000원",
-    });
+    expect(SUMMER_ATELIER_CAMPAIGN.products).toEqual([
+      expect.objectContaining({ name: "여름의 공방 풀세트", price: "77,000원", note: "친필 사인 투명 포토카드 1장 증정" }),
+      expect.objectContaining({ name: "여름의 공방 장패드", price: "30,000원" }),
+      expect.objectContaining({ name: "비키니 모잉 아크릴 스탠드", price: "35,000원" }),
+      expect.objectContaining({ name: "비키니 모잉 캔뱃지", price: "7,500원" }),
+      expect.objectContaining({ name: "여름의 공방 포토카드 세트", price: "7,000원" }),
+    ]);
+    expect(SUMMER_ATELIER_CAMPAIGN.deadlineShort).toBe("8월 31일 23:59 마감");
+    expect(SUMMER_ATELIER_CAMPAIGN.deadlineLong).toBe("2026년 8월 31일 23:59 마감");
+    expect(SUMMER_ATELIER_CAMPAIGN.shippingDisplay).toBe("10월 7일부터 순차 출고 예정");
   });
 
   it("uses an inclusive start and exclusive end", () => {
