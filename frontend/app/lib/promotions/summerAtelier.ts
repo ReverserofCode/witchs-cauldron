@@ -1,7 +1,9 @@
 export interface PromotionProduct {
+  readonly id: string;
   readonly name: string;
   readonly price: string;
   readonly note?: string;
+  readonly detailUrl: string;
 }
 
 export interface PromotionCampaign {
@@ -40,14 +42,41 @@ export const SUMMER_ATELIER_CAMPAIGN = {
   shippingDisplay: "10월 7일부터 순차 출고 예정",
   products: [
     {
+      id: "full-set",
       name: "여름의 공방 풀세트",
       price: "77,000원",
       note: "친필 사인 투명 포토카드 1장 증정",
+      detailUrl:
+        "https://fantompick.com/product/%EB%AA%A8%EC%9E%89-%EC%97%AC%EB%A6%84%EC%9D%98-%EA%B3%B5%EB%B0%A9-%ED%92%80%EC%84%B8%ED%8A%B8/375/",
     },
-    { name: "여름의 공방 장패드", price: "30,000원" },
-    { name: "비키니 모잉 아크릴 스탠드", price: "35,000원" },
-    { name: "비키니 모잉 캔뱃지", price: "7,500원" },
-    { name: "여름의 공방 포토카드 세트", price: "7,000원" },
+    {
+      id: "desk-mat",
+      name: "여름의 공방 장패드",
+      price: "30,000원",
+      detailUrl:
+        "https://fantompick.com/product/%EB%AA%A8%EC%9E%89-%EC%97%AC%EB%A6%84%EC%9D%98-%EA%B3%B5%EB%B0%A9-%EC%9E%A5%ED%8C%A8%EB%93%9C/376/",
+    },
+    {
+      id: "acrylic-stand",
+      name: "비키니 모잉 아크릴 스탠드",
+      price: "35,000원",
+      detailUrl:
+        "https://fantompick.com/product/%EB%AA%A8%EC%9E%89-%EB%B9%84%ED%82%A4%EB%8B%88-%EB%AA%A8%EC%9E%89-%EC%95%84%ED%81%AC%EB%A6%B4-%EC%8A%A4%ED%83%A0%EB%93%9C/377/",
+    },
+    {
+      id: "can-badge",
+      name: "비키니 모잉 캔뱃지",
+      price: "7,500원",
+      detailUrl:
+        "https://fantompick.com/product/%EB%AA%A8%EC%9E%89-%EB%B9%84%ED%82%A4%EB%8B%88-%EB%AA%A8%EC%9E%89-%EC%BA%94%EB%B1%83%EC%A7%80/378/",
+    },
+    {
+      id: "photocard-set",
+      name: "여름의 공방 포토카드 세트",
+      price: "7,000원",
+      detailUrl:
+        "https://fantompick.com/product/%EB%AA%A8%EC%9E%89-%EC%97%AC%EB%A6%84%EC%9D%98-%EA%B3%B5%EB%B0%A9-%ED%8F%AC%ED%86%A0%EC%B9%B4%EB%93%9C-%EC%84%B8%ED%8A%B8/379/",
+    },
   ],
 } as const satisfies PromotionCampaign;
 
