@@ -184,3 +184,10 @@ Remove-Item Env:SMOKE_BASE_URL
 - main merge SHA: `1bb8609014503d333e1b61ea2154cca28a016b31` (`1bb8609`). PR은 [#3](https://github.com/ReverserofCode/witchs-cauldron/pull/3), CD는 [GitHub Actions run 31440665421](https://github.com/ReverserofCode/witchs-cauldron/actions/runs/31440665421)에서 확인할 수 있습니다.
 - 상세한 과정·검증·운영 참고사항은 [2026-08-11 배포 기록](DEPLOYMENT_RECORD_2026-08-11_SUMMER_ATELIER_PROMOTION.md)에 남겼습니다.
 - 캠페인은 `2026-09-01 00:00:00+09:00`부터 자동으로 숨겨집니다.
+
+### 후속 릴리스: FantomPick 공식 상품 상세 링크
+
+- 배포 성공 일자: 2026-08-11 (KST). CD run 생성/완료 시각은 각각 `2026-08-11T22:14:09+09:00` / `2026-08-11T22:17:42+09:00`입니다.
+- PR은 [#4](https://github.com/ReverserofCode/witchs-cauldron/pull/4), feature CI는 [run 31494997204](https://github.com/ReverserofCode/witchs-cauldron/actions/runs/31494997204), 정확한 merge CD는 [run 31495138618](https://github.com/ReverserofCode/witchs-cauldron/actions/runs/31495138618)입니다. main merge SHA는 `5c472fa34448f28bed22a0fcc701edbf146c5646`입니다.
+- 공식 상품 상세 링크 5개(375–379)는 이미지 복제나 hotlink 없이 배포됐습니다. 상세 검증·운영 HTTP·공개 브라우저 증거·인증된 운영 admin UI 미재검증 한계는 [후속 배포 기록](DEPLOYMENT_RECORD_2026-08-11_FANTOMPICK_PRODUCT_LINKS.md)에 남겼습니다.
+- 자동 종료 경계 `2026-09-01T00:00:00+09:00` 및 기존 PR #3 초기 캠페인 배포 이력은 변경하지 않았습니다.
