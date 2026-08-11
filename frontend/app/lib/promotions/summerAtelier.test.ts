@@ -15,17 +15,74 @@ describe("summer atelier promotion", () => {
     expect(SUMMER_ATELIER_CAMPAIGN.storeUrl).toBe(
       "https://fantompick.com/category/%EB%AA%A8%EC%9E%89/110/"
     );
-    expect(SUMMER_ATELIER_CAMPAIGN.products).toHaveLength(5);
-    expect(SUMMER_ATELIER_CAMPAIGN.products).toEqual([
-      expect.objectContaining({ name: "여름의 공방 풀세트", price: "77,000원", note: "친필 사인 투명 포토카드 1장 증정" }),
-      expect.objectContaining({ name: "여름의 공방 장패드", price: "30,000원" }),
-      expect.objectContaining({ name: "비키니 모잉 아크릴 스탠드", price: "35,000원" }),
-      expect.objectContaining({ name: "비키니 모잉 캔뱃지", price: "7,500원" }),
-      expect.objectContaining({ name: "여름의 공방 포토카드 세트", price: "7,000원" }),
-    ]);
+    const expectedProducts = [
+      {
+        id: "full-set",
+        name: "여름의 공방 풀세트",
+        price: "77,000원",
+        note: "친필 사인 투명 포토카드 1장 증정",
+        detailUrl:
+          "https://fantompick.com/product/%EB%AA%A8%EC%9E%89-%EC%97%AC%EB%A6%84%EC%9D%98-%EA%B3%B5%EB%B0%A9-%ED%92%80%EC%84%B8%ED%8A%B8/375/",
+      },
+      {
+        id: "desk-mat",
+        name: "여름의 공방 장패드",
+        price: "30,000원",
+        detailUrl:
+          "https://fantompick.com/product/%EB%AA%A8%EC%9E%89-%EC%97%AC%EB%A6%84%EC%9D%98-%EA%B3%B5%EB%B0%A9-%EC%9E%A5%ED%8C%A8%EB%93%9C/376/",
+      },
+      {
+        id: "acrylic-stand",
+        name: "비키니 모잉 아크릴 스탠드",
+        price: "35,000원",
+        detailUrl:
+          "https://fantompick.com/product/%EB%AA%A8%EC%9E%89-%EB%B9%84%ED%82%A4%EB%8B%88-%EB%AA%A8%EC%9E%89-%EC%95%84%ED%81%AC%EB%A6%B4-%EC%8A%A4%ED%83%A0%EB%93%9C/377/",
+      },
+      {
+        id: "can-badge",
+        name: "비키니 모잉 캔뱃지",
+        price: "7,500원",
+        detailUrl:
+          "https://fantompick.com/product/%EB%AA%A8%EC%9E%89-%EB%B9%84%ED%82%A4%EB%8B%88-%EB%AA%A8%EC%9E%89-%EC%BA%94%EB%B1%83%EC%A7%80/378/",
+      },
+      {
+        id: "photocard-set",
+        name: "여름의 공방 포토카드 세트",
+        price: "7,000원",
+        detailUrl:
+          "https://fantompick.com/product/%EB%AA%A8%EC%9E%89-%EC%97%AC%EB%A6%84%EC%9D%98-%EA%B3%B5%EB%B0%A9-%ED%8F%AC%ED%86%A0%EC%B9%B4%EB%93%9C-%EC%84%B8%ED%8A%B8/379/",
+      },
+    ] as const;
+
+    expect(SUMMER_ATELIER_CAMPAIGN.products).toEqual(expectedProducts);
     expect(SUMMER_ATELIER_CAMPAIGN.deadlineShort).toBe("8월 31일 23:59 마감");
     expect(SUMMER_ATELIER_CAMPAIGN.deadlineLong).toBe("2026년 8월 31일 23:59 마감");
     expect(SUMMER_ATELIER_CAMPAIGN.shippingDisplay).toBe("10월 7일부터 순차 출고 예정");
+  });
+
+  it("uses unique official FantomPick product detail URLs without image metadata", () => {
+    const products = SUMMER_ATELIER_CAMPAIGN.products;
+    expect(new Set(products.map(({ id }) => id)).size).toBe(products.length);
+    expect(new Set(products.map(({ detailUrl }) => detailUrl)).size).toBe(
+      products.length
+    );
+
+    const productNumbers = products.map(({ detailUrl }) => {
+      const url = new URL(detailUrl);
+      expect(url.protocol).toBe("https:");
+      expect(url.hostname).toBe("fantompick.com");
+      expect(url.search).toBe("");
+      expect(url.hash).toBe("");
+      expect(url.pathname).toMatch(/^\/product\/.+\/(37[5-9])\/$/);
+      expect(url.pathname).not.toMatch(/\/web\/(product|upload)\//);
+      return url.pathname.match(/\/(37[5-9])\/$/)?.[1];
+    });
+
+    expect(productNumbers).toEqual(["375", "376", "377", "378", "379"]);
+    for (const product of products) {
+      expect("imageSrc" in product).toBe(false);
+      expect("imageUrl" in product).toBe(false);
+    }
   });
 
   it("uses an inclusive start and exclusive end", () => {

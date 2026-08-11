@@ -7,6 +7,38 @@ import { chromium } from "playwright";
 const baseUrl = process.env.SMOKE_BASE_URL || "http://127.0.0.1:3000";
 const canonicalStoreUrl =
   "https://fantompick.com/category/%EB%AA%A8%EC%9E%89/110/";
+const officialProducts = Object.freeze([
+  Object.freeze({
+    id: "full-set",
+    name: "여름의 공방 풀세트",
+    detailUrl:
+      "https://fantompick.com/product/%EB%AA%A8%EC%9E%89-%EC%97%AC%EB%A6%84%EC%9D%98-%EA%B3%B5%EB%B0%A9-%ED%92%80%EC%84%B8%ED%8A%B8/375/",
+  }),
+  Object.freeze({
+    id: "desk-mat",
+    name: "여름의 공방 장패드",
+    detailUrl:
+      "https://fantompick.com/product/%EB%AA%A8%EC%9E%89-%EC%97%AC%EB%A6%84%EC%9D%98-%EA%B3%B5%EB%B0%A9-%EC%9E%A5%ED%8C%A8%EB%93%9C/376/",
+  }),
+  Object.freeze({
+    id: "acrylic-stand",
+    name: "비키니 모잉 아크릴 스탠드",
+    detailUrl:
+      "https://fantompick.com/product/%EB%AA%A8%EC%9E%89-%EB%B9%84%ED%82%A4%EB%8B%88-%EB%AA%A8%EC%9E%89-%EC%95%84%ED%81%AC%EB%A6%B4-%EC%8A%A4%ED%83%A0%EB%93%9C/377/",
+  }),
+  Object.freeze({
+    id: "can-badge",
+    name: "비키니 모잉 캔뱃지",
+    detailUrl:
+      "https://fantompick.com/product/%EB%AA%A8%EC%9E%89-%EB%B9%84%ED%82%A4%EB%8B%88-%EB%AA%A8%EC%9E%89-%EC%BA%94%EB%B1%83%EC%A7%80/378/",
+  }),
+  Object.freeze({
+    id: "photocard-set",
+    name: "여름의 공방 포토카드 세트",
+    detailUrl:
+      "https://fantompick.com/product/%EB%AA%A8%EC%9E%89-%EC%97%AC%EB%A6%84%EC%9D%98-%EA%B3%B5%EB%B0%A9-%ED%8F%AC%ED%86%A0%EC%B9%B4%EB%93%9C-%EC%84%B8%ED%8A%B8/379/",
+  }),
+]);
 const activeNow = "2026-08-10T12:00:00+09:00";
 const endedNow = "2026-09-01T00:00:00+09:00";
 const analyticsInterceptCounts = new WeakMap();
@@ -31,6 +63,25 @@ export function resolveAdminCredentials(env = process.env) {
     );
   }
   return { username: fallbackUsername, password: fallbackPassword };
+}
+
+export function assertExactWhitespaceTokens(value, requiredTokens, subject) {
+  const tokens = (value ?? "").trim().split(/\s+/).filter(Boolean);
+  for (const token of requiredTokens) {
+    assert.ok(
+      tokens.includes(token),
+      `${subject} must include the exact whitespace-delimited ${token} token (received ${JSON.stringify(value)})`
+    );
+  }
+}
+
+async function assertSecureNewTabRel(link, subject) {
+  assert.equal(await link.getAttribute("target"), "_blank");
+  assertExactWhitespaceTokens(
+    await link.getAttribute("rel"),
+    ["noopener", "noreferrer"],
+    subject
+  );
 }
 
 async function createSmokeContext(browser, options = {}) {
@@ -103,6 +154,13 @@ async function main() {
 
   try {
     const activeContext = await createClockContext(browser, activeNow);
+    const fantompickRuntimeRequests = [];
+    activeContext.on("request", (request) => {
+      const hostname = new URL(request.url()).hostname;
+      if (hostname === "fantompick.com" || hostname.endsWith(".fantompick.com")) {
+        fantompickRuntimeRequests.push(request.url());
+      }
+    });
     const activePage = await activeContext.newPage();
     await goto(activePage, "/");
 
@@ -117,9 +175,7 @@ async function main() {
       1
     );
     assert.equal(await bannerLink.getAttribute("href"), canonicalStoreUrl);
-    assert.equal(await bannerLink.getAttribute("target"), "_blank");
-    assert.match(await bannerLink.getAttribute("rel"), /noopener/);
-    assert.match(await bannerLink.getAttribute("rel"), /noreferrer/);
+    await assertSecureNewTabRel(bannerLink, "banner CTA rel");
     assert.equal(await bannerLink.getAttribute("data-analytics-menu"), "true");
     assert.equal(
       await bannerLink.getAttribute("data-analytics-id"),
@@ -158,12 +214,46 @@ async function main() {
       assert.match(cardText, new RegExp(expectedText));
     }
 
+    const productLinks = card.locator("[data-promotion-product-link]");
+    assert.equal(await productLinks.count(), officialProducts.length);
+
+    for (const product of officialProducts) {
+      const link = card.getByRole("link", {
+        name: `${product.name} 공식 이미지 보기, 새 탭에서 열림`,
+        exact: true,
+      });
+      assert.equal(await link.count(), 1);
+      assert.equal(await link.getAttribute("href"), product.detailUrl);
+      await assertSecureNewTabRel(link, `${product.name} product link rel`);
+      assert.equal(await link.getAttribute("data-promotion-product-link"), product.id);
+      assert.equal(await link.getAttribute("data-analytics-menu"), "true");
+      assert.equal(
+        await link.getAttribute("data-analytics-id"),
+        `moing-summer-atelier-2026:product:${product.id}`
+      );
+      assert.equal(
+        await link.getAttribute("data-analytics-label"),
+        `${product.name} 공식 이미지 보기`
+      );
+      assert.equal(
+        await link.getAttribute("data-analytics-location"),
+        "merch_promotion_product"
+      );
+      assert.equal(
+        await link.getAttribute("data-analytics-type"),
+        "promotion_product"
+      );
+    }
+
+    assert.match(cardText, /상품 이미지는 팬텀픽 공식 상세에서 확인해 주세요\./);
+    assert.equal(await card.locator('img[src*="fantompick.com"]').count(), 0);
+    assert.equal(await card.locator('[style*="fantompick.com"]').count(), 0);
+    assert.deepEqual(fantompickRuntimeRequests, []);
+
     const cardLink = card.getByRole("link", { name: "팬텀픽에서 굿즈 보기 새 탭에서 열림" });
     assert.equal(await cardLink.count(), 1);
     assert.equal(await cardLink.getAttribute("href"), canonicalStoreUrl);
-    assert.equal(await cardLink.getAttribute("target"), "_blank");
-    assert.match(await cardLink.getAttribute("rel"), /noopener/);
-    assert.match(await cardLink.getAttribute("rel"), /noreferrer/);
+    await assertSecureNewTabRel(cardLink, "category card CTA rel");
     assert.equal(await cardLink.getAttribute("data-analytics-menu"), "true");
     assert.equal(
       await cardLink.getAttribute("data-analytics-id"),
@@ -204,6 +294,19 @@ async function main() {
     });
     const mobilePage = await mobileContext.newPage();
     await goto(mobilePage, "/");
+    const mobileCard = mobilePage.locator('[data-promotion-surface="card"]');
+    await mobileCard.waitFor({ state: "visible", timeout: 10_000 });
+    assert.equal(
+      await mobileCard.locator("[data-promotion-product-link]").count(),
+      officialProducts.length
+    );
+
+    for (const link of await mobileCard.locator("[data-promotion-product-link]").all()) {
+      const box = await link.boundingBox();
+      assert.ok(box, "product link must have a measurable hit target");
+      assert.ok(box.height >= 44, "product link height must be at least 44px");
+    }
+
     const mobileBanner = mobilePage.locator('[data-promotion-surface="banner"]');
     await mobileBanner.waitFor({ state: "visible", timeout: 10_000 });
     const mobileCopyMetrics = await mobileBanner.locator("p").evaluate((element) => {

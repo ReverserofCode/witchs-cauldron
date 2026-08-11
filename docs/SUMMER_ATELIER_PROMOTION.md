@@ -1,7 +1,7 @@
 # 모잉 「여름의 공방」 굿즈 홍보 운영 가이드
 
 > ScopeTag: `frontend`
-> 최종 확인일: 2026-08-10
+> 최종 확인일: 2026-08-11
 
 ## 개요 (Overview)
 
@@ -36,6 +36,18 @@
 - 모잉 MD 합계 50,000원 이상은 무료 배송이며, 다른 크리에이터 상품과 합산할 수 없습니다.
 - 개별 상품만 구매하면 풀세트 구매 특전은 지급되지 않습니다.
 
+### 공식 상품 상세 연결
+
+각 `공식 이미지 보기`는 일치하는 팬텀픽 공식 상품 상세를 새 탭으로 엽니다. 프로젝트에는 공식 상세 페이지 URL만 저장하며, 이미지 파일이나 이미지 전송 URL은 저장하지 않습니다. 이미지 재사용 허가가 없는 동안 이미지는 복사하거나 핫링크하지 않으며, 사용자는 공식 상세 페이지에서만 이미지를 확인합니다.
+
+| 상품 번호 | 상품 | 공식 상세 URL |
+|---:|---|---|
+| 375 | 여름의 공방 풀세트 | <https://fantompick.com/product/%EB%AA%A8%EC%9E%89-%EC%97%AC%EB%A6%84%EC%9D%98-%EA%B3%B5%EB%B0%A9-%ED%92%80%EC%84%B8%ED%8A%B8/375/> |
+| 376 | 여름의 공방 장패드 | <https://fantompick.com/product/%EB%AA%A8%EC%9E%89-%EC%97%AC%EB%A6%84%EC%9D%98-%EA%B3%B5%EB%B0%A9-%EC%9E%A5%ED%8C%A8%EB%93%9C/376/> |
+| 377 | 비키니 모잉 아크릴 스탠드 | <https://fantompick.com/product/%EB%AA%A8%EC%9E%89-%EB%B9%84%ED%82%A4%EB%8B%88-%EB%AA%A8%EC%9E%89-%EC%95%84%ED%81%AC%EB%A6%B4-%EC%8A%A4%ED%83%A0%EB%93%9C/377/> |
+| 378 | 비키니 모잉 캔뱃지 | <https://fantompick.com/product/%EB%AA%A8%EC%9E%89-%EB%B9%84%ED%82%A4%EB%8B%88-%EB%AA%A8%EC%9E%89-%EC%BA%94%EB%B1%83%EC%A7%80/378/> |
+| 379 | 여름의 공방 포토카드 세트 | <https://fantompick.com/product/%EB%AA%A8%EC%9E%89-%EC%97%AC%EB%A6%84%EC%9D%98-%EA%B3%B5%EB%B0%A9-%ED%8F%AC%ED%86%A0%EC%B9%B4%EB%93%9C-%EC%84%B8%ED%8A%B8/379/> |
+
 ## 화면 동작과 변경 위치
 
 | 화면 | 동작 |
@@ -54,7 +66,7 @@
 | 브라우저 시간 처리 | `frontend/app/hooks/usePromotionCampaign.ts` |
 | 고정 시간 브라우저 검증 | `frontend/scripts/smoke-merch-promotion.mjs` |
 
-캠페인은 런타임 판매처 API, DB, 재고 store에 의존하지 않습니다. CTA는 추적 파라미터가 없는 canonical 카테고리 URL만 사용합니다. 공식 이미지의 재사용 권한을 확인하지 않았으므로 외부 이미지를 다운로드·핫링크·복제하지 않으며, 기존 프로젝트 자산과 CSS만 사용합니다.
+캠페인은 런타임 판매처 API, DB, 재고 store에 의존하지 않습니다. 기존 배너와 카테고리 카드 CTA는 추적 파라미터가 없는 canonical 카테고리 URL을 유지하며, 상품별 보조 링크는 매핑된 팬텀픽 공식 상세 URL만 사용합니다. 공식 이미지의 재사용 권한을 확인하지 않았으므로 외부 이미지를 다운로드·핫링크·복제하지 않으며, 기존 프로젝트 자산과 CSS만 사용합니다. `next.config.js`의 remote-image patterns는 이 정책 때문에 변경하지 않습니다.
 
 ## 안전한 수정 및 연장 절차
 
@@ -62,8 +74,9 @@
 2. `summerAtelier.ts`의 `startAt`과 `endAtExclusive`를 명시적 `+09:00` ISO 문자열로 수정합니다. 종료 시각은 반드시 배타 경계로 저장합니다.
 3. 가격, 정가, 특전, 배송비·무료 배송 조건, 출고 문구를 같은 커밋에서 함께 갱신합니다.
 4. `summerAtelier.test.ts`의 시작·종료 경계값과 `smoke-merch-promotion.mjs`의 고정 시각/기대 문구를 함께 갱신합니다.
-5. 아래 품질 게이트와 고정 브라우저 시각 smoke를 모두 실행합니다.
-6. 배포 후 공개 홈과 `/broadcasts`에서 노출을, `/admin`에서 배너 미노출을 확인합니다.
+5. 상품 상세 URL이 바뀌면 `summerAtelier.ts`의 다섯 매핑, 단위 기대값, 브라우저 smoke 기대값, 이 runbook을 반드시 같은 변경에서 함께 갱신합니다. 이미지 재사용 허가가 없는 동안에는 URL만 갱신하고 이미지를 추가하지 않습니다.
+6. 아래 품질 게이트와 고정 브라우저 시각 smoke를 모두 실행합니다.
+7. 배포 후 공개 홈과 `/broadcasts`에서 노출을, `/admin`에서 배너 미노출을 확인합니다.
 
 기간 연장은 위 절차로 새 `endAtExclusive`와 판매 문구를 함께 배포합니다. 이미 종료된 캠페인을 연장할 때도 브라우저가 종료 상태를 캐시하지 않으므로, 새 배포본의 날짜를 기준으로 다시 노출됩니다.
 
@@ -78,8 +91,14 @@
 | 배너 위치 | `merch_promotion_banner` |
 | 카드 위치 | `merch_promotion_card` |
 | 카드 섹션 | `promotion-summer-atelier` |
+| 상품 링크 ID | `moing-summer-atelier-2026:product:<product-id>` |
+| 상품 링크 label | `<상품명> 공식 이미지 보기` |
+| 상품 링크 location | `merch_promotion_product` |
+| 상품 링크 type | `promotion_product` |
 
 카드 섹션 노출은 활성 기간에만 기존 `SectionTracker` 정책으로 기록됩니다. 종료 뒤 코드 정리를 하더라도 Analytics의 과거 라벨과 배포 기록은 보존합니다.
+
+각 상품 링크는 `data-analytics-menu="true"`를 포함하고, 위의 정확한 product Analytics 계약으로 전송합니다. `<product-id>`는 `full-set`, `desk-mat`, `acrylic-stand`, `can-badge`, `photocard-set` 중 해당 상품 ID이며, ID는 항상 `moing-summer-atelier-2026:product:`로 시작해야 합니다.
 
 ## 검증 및 배포 점검
 
@@ -90,6 +109,7 @@
 ```powershell
 npm test
 npm run typecheck
+npx eslint app/components/promotions/MerchPromotionCard.tsx app/lib/promotions/summerAtelier.ts app/lib/promotions/summerAtelier.test.ts scripts/smoke-merch-promotion.mjs --max-warnings=0
 npm run lint
 npm run build
 ```
@@ -130,7 +150,7 @@ npm run smoke:promotion
 Remove-Item Env:SMOKE_BASE_URL
 ```
 
-성공하면 `merch promotion smoke ok`가 출력됩니다. 이 smoke는 활성 시각의 배너·카드·상품 요약·canonical CTA·Analytics 속성, 합성 Analytics 요청 차단, 배너 세션 닫기, 인증된 `/admin/analytics` 대시보드와 관리자 배너 제외, 종료 시 배너·카드 미노출을 확인합니다. 스크린샷 캡처도 인증된 관리자 대시보드 제목과 배너 미노출을 확인한 뒤 이미지를 저장합니다.
+성공하면 `merch promotion smoke ok`가 출력됩니다. 이 smoke는 활성 시각의 배너·카드·상품 요약·canonical CTA·Analytics 속성, 합성 Analytics 요청 차단, 배너 세션 닫기, 인증된 `/admin/analytics` 대시보드와 관리자 배너 제외, 종료 시 배너·카드 미노출을 확인합니다. 특히 정확히 다섯 개의 공식 상품 링크가 접근 가능한 이름으로 존재하는지, 각 링크의 `_blank`·`noopener noreferrer`·상품별 Analytics 계약, 모바일 44px 이상 높이와 가로 오버플로우 부재, FantomPick 이미지 요소·배경과 런타임 이미지 요청 부재를 검증합니다. 스크린샷 캡처도 인증된 관리자 대시보드 제목과 배너 미노출을 확인한 뒤 이미지를 저장합니다.
 
 ### 프로덕션 smoke와 증거
 
