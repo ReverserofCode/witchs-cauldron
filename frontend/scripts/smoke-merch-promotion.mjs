@@ -65,6 +65,25 @@ export function resolveAdminCredentials(env = process.env) {
   return { username: fallbackUsername, password: fallbackPassword };
 }
 
+export function assertExactWhitespaceTokens(value, requiredTokens, subject) {
+  const tokens = (value ?? "").trim().split(/\s+/).filter(Boolean);
+  for (const token of requiredTokens) {
+    assert.ok(
+      tokens.includes(token),
+      `${subject} must include the exact whitespace-delimited ${token} token (received ${JSON.stringify(value)})`
+    );
+  }
+}
+
+async function assertSecureNewTabRel(link, subject) {
+  assert.equal(await link.getAttribute("target"), "_blank");
+  assertExactWhitespaceTokens(
+    await link.getAttribute("rel"),
+    ["noopener", "noreferrer"],
+    subject
+  );
+}
+
 async function createSmokeContext(browser, options = {}) {
   const context = await browser.newContext(options);
   analyticsInterceptCounts.set(context, 0);
@@ -156,9 +175,7 @@ async function main() {
       1
     );
     assert.equal(await bannerLink.getAttribute("href"), canonicalStoreUrl);
-    assert.equal(await bannerLink.getAttribute("target"), "_blank");
-    assert.match(await bannerLink.getAttribute("rel"), /noopener/);
-    assert.match(await bannerLink.getAttribute("rel"), /noreferrer/);
+    await assertSecureNewTabRel(bannerLink, "banner CTA rel");
     assert.equal(await bannerLink.getAttribute("data-analytics-menu"), "true");
     assert.equal(
       await bannerLink.getAttribute("data-analytics-id"),
@@ -207,9 +224,7 @@ async function main() {
       });
       assert.equal(await link.count(), 1);
       assert.equal(await link.getAttribute("href"), product.detailUrl);
-      assert.equal(await link.getAttribute("target"), "_blank");
-      assert.match(await link.getAttribute("rel"), /noopener/);
-      assert.match(await link.getAttribute("rel"), /noreferrer/);
+      await assertSecureNewTabRel(link, `${product.name} product link rel`);
       assert.equal(await link.getAttribute("data-promotion-product-link"), product.id);
       assert.equal(await link.getAttribute("data-analytics-menu"), "true");
       assert.equal(
@@ -238,9 +253,7 @@ async function main() {
     const cardLink = card.getByRole("link", { name: "팬텀픽에서 굿즈 보기 새 탭에서 열림" });
     assert.equal(await cardLink.count(), 1);
     assert.equal(await cardLink.getAttribute("href"), canonicalStoreUrl);
-    assert.equal(await cardLink.getAttribute("target"), "_blank");
-    assert.match(await cardLink.getAttribute("rel"), /noopener/);
-    assert.match(await cardLink.getAttribute("rel"), /noreferrer/);
+    await assertSecureNewTabRel(cardLink, "category card CTA rel");
     assert.equal(await cardLink.getAttribute("data-analytics-menu"), "true");
     assert.equal(
       await cardLink.getAttribute("data-analytics-id"),

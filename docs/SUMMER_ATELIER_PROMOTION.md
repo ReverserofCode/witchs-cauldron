@@ -66,7 +66,7 @@
 | 브라우저 시간 처리 | `frontend/app/hooks/usePromotionCampaign.ts` |
 | 고정 시간 브라우저 검증 | `frontend/scripts/smoke-merch-promotion.mjs` |
 
-캠페인은 런타임 판매처 API, DB, 재고 store에 의존하지 않습니다. CTA는 추적 파라미터가 없는 canonical 카테고리 URL만 사용합니다. 공식 이미지의 재사용 권한을 확인하지 않았으므로 외부 이미지를 다운로드·핫링크·복제하지 않으며, 기존 프로젝트 자산과 CSS만 사용합니다. `next.config.js`의 remote-image patterns는 이 정책 때문에 변경하지 않습니다.
+캠페인은 런타임 판매처 API, DB, 재고 store에 의존하지 않습니다. 기존 배너와 카테고리 카드 CTA는 추적 파라미터가 없는 canonical 카테고리 URL을 유지하며, 상품별 보조 링크는 매핑된 팬텀픽 공식 상세 URL만 사용합니다. 공식 이미지의 재사용 권한을 확인하지 않았으므로 외부 이미지를 다운로드·핫링크·복제하지 않으며, 기존 프로젝트 자산과 CSS만 사용합니다. `next.config.js`의 remote-image patterns는 이 정책 때문에 변경하지 않습니다.
 
 ## 안전한 수정 및 연장 절차
 
