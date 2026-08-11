@@ -63,7 +63,7 @@ export function MerchPromotionCard() {
             <ul className="grid gap-2 sm:grid-cols-2">
               {SUMMER_ATELIER_CAMPAIGN.products.map((product) => (
                 <li
-                  key={product.name}
+                  key={product.id}
                   className="rounded-2xl border border-purple-200/60 bg-white/80 px-3 py-3"
                 >
                   <p className="break-keep text-sm font-bold text-purple-950">{product.name}</p>
@@ -71,12 +71,28 @@ export function MerchPromotionCard() {
                   {"note" in product && product.note && (
                     <p className="mt-1 text-xs leading-5 text-purple-900/70">{product.note}</p>
                   )}
+                  <a
+                    href={product.detailUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`${product.name} 공식 이미지 보기, 새 탭에서 열림`}
+                    className="mt-2 inline-flex min-h-11 items-center rounded-xl border border-purple-200 bg-white/80 px-3 py-2 text-xs font-bold text-purple-800 transition-colors hover:border-purple-300 hover:bg-purple-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/70 focus-visible:ring-offset-2"
+                    data-promotion-product-link={product.id}
+                    data-analytics-menu="true"
+                    data-analytics-id={`${SUMMER_ATELIER_CAMPAIGN.id}:product:${product.id}`}
+                    data-analytics-label={`${product.name} 공식 이미지 보기`}
+                    data-analytics-location="merch_promotion_product"
+                    data-analytics-type="promotion_product"
+                  >
+                    공식 이미지 보기
+                  </a>
                 </li>
               ))}
             </ul>
             <div className="rounded-2xl border border-purple-200/60 bg-white/65 px-3 py-3 text-xs leading-5 text-purple-950/75">
               <p className="font-bold text-purple-950">{SUMMER_ATELIER_CAMPAIGN.shippingDisplay}</p>
               <p>가격·판매 상태·배송 조건은 팬텀픽에서 최종 확인해 주세요.</p>
+              <p>상품 이미지는 팬텀픽 공식 상세에서 확인해 주세요.</p>
             </div>
           </div>
         </div>
