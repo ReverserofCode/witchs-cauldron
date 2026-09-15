@@ -135,5 +135,6 @@ jobs:
           curl -fsS http://127.0.0.1:3167/api/health
           curl -fsS http://127.0.0.1:3167/games/potion-timing > /dev/null
           curl -fsS http://127.0.0.1:3167/api/games/potion-timing/daily > /dev/null
-          curl -fsS http://127.0.0.1:3167/broadcasts > /dev/null
-          curl -fsS http://127.0.0.1:3167/api/youTubePlayer | python3 -c 'import json,sys; data=json.load(sys.stdin); assert data["error"] == "MISSING_API_KEY"; assert all(data[key] == [] for key in ["moing", "fullmoing", "moingFan"])'
+          test "$(curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:3167/broadcasts)" = '200'
+          test "$(curl -sS -o /tmp/potion-youtube.json -w '%{http_code}' http://127.0.0.1:3167/api/youTubePlayer)" = '200'
+          python3 -c 'import json; data=json.load(open("/tmp/potion-youtube.json")); assert data["error"] == "MISSING_API_KEY"; assert all(data[key] == [] for key in ["moing", "fullmoing", "moingFan"])'

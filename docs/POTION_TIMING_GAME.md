@@ -68,6 +68,8 @@ node scripts/smoke-potion-endpoints.mjs
 
 CI는 `potion_test` 폐기용 PostgreSQL16에서 DB 통합 테스트와 인증된 summary 응답을 검증한다. 별도 Docker 작업은 API 키 없이 이미지를 빌드하여 health, 게임, daily, `/broadcasts` 200 및 `/api/youTubePlayer`의 200/`MISSING_API_KEY` 응답을 확인한다. 운영 DB/인증정보를 이 테스트에 사용하지 않는다.
 
+중단 설정을 검증할 때만 소스 flag를 `false`로 바꿔 다시 빌드하고 loopback standalone 서버에서 `node scripts/smoke-potion-disabled.mjs`를 실행한다. 이 스크립트는 설정을 바꾸지 않으며 페이지/daily 404와 홈/메뉴/사이트맵 제거를 검증한다. 검증 후 의도한 출시 값으로 복구해 **다시 빌드**한다.
+
 게임/분석 smoke는 loopback에서만 실행하며 분석 POST를 가로채 실제 통계를 오염시키지 않는다. 분석 smoke는 실제 provider/client를 사용하는 React fixture이며 Next의 pathname 훅과 파일럿 활성 설정만 테스트용으로 대체한다. 실제 운영 데이터로 플레이 테스트나 삭제 테스트를 하지 않는다.
 
 실제 방문자 대상 사용성 평가와 재방문 효과 검증은 수행하지 않았다. 자동화된 기능 검증 결과와 사람의 사용성 검증을 구분한다. 배포 증거 및 남은 검토 사항은 [릴리스 기록](POTION_RELEASE_2026-09-15.md)에 기록한다.

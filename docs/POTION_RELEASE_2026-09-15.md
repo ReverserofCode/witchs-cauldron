@@ -34,7 +34,22 @@
 
 ## 검증·배포 결과
 
-최종 테스트 수, 코드 검토 결론, CI/PR/CD 링크, 배포 SHA, 운영 read-only 응답은 완료 후 이 절을 갱신한다. 운영 DB를 테스트용으로 사용하거나 실제 방문 집계를 합성 이벤트로 오염시키지 않는다.
+### 로컬 검증 (2026-09-15)
+
+- 전체 Vitest: 29 파일, **172 passed / 16 skipped**. skip은 폐기용 PostgreSQL 미연결로 보호된 DB 테스트이며 통과로 계산하지 않는다.
+- TypeScript 포함 production build 통과. 홈 ISR 300초, 게임 독립 정적 경로 유지.
+- ESLint: **0 errors / 기존 22 warnings**. 신규/수정 테스트 및 게임 파일의 범위 검사는 경고 없이 통과했다.
+- `npm audit --audit-level=low`: 취약점 0개.
+- 게임 조작/5라운드/키보드/중복 입력/일시정지/느린 모드/기록/저장 차단/날짜 경계/오류 smoke 통과.
+- 실제 React provider fixture의 집계 6개 시나리오 통과. 모든 관련 브라우저 컨텍스트는 일반/포션 분석 POST 모두를 가로채고 204 응답 및 가로채기 횟수 증가로 차단을 검증한다.
+- 홈/데스크톱·모바일 메뉴/뒤로가기/방송 모아보기, 굿즈 홍보, 관리자 화면 회귀 smoke 통과. 홈 hover/viewport에서 게임 전용 bundle과 daily API를 미리 요청하지 않음을 production manifest와 network 요청으로 확인했다.
+- production Basic Auth: 미인증 summary 401, 인증된 잘못된 범위 400. 실제 DB summary는 CI에서 검증한다.
+- 소스 flag `false`로 실제 빌드 후 홈/메뉴/사이트맵 제거와 페이지·daily 404 확인. `true` 복구 후 다시 production build 통과.
+- 코드 검토의 domain/UI/server/client 기술 지적 사항을 보완하고 범위 재검토했다. 유지보수·배포 검증 및 전체 브랜치 최종 검토는 진행 중이다.
+
+### CI 및 운영 배포
+
+CI/PR/CD 링크, 배포 SHA, 운영 read-only 응답은 완료 후 이 절을 갱신한다. 운영 DB를 테스트용으로 사용하거나 실제 방문 집계를 합성 이벤트로 오염시키지 않는다. 로컬 Node25와 달리 배포 기준 Node22/PostgreSQL16/Docker 검증은 CI 결과로 확정한다.
 
 ## 참고 사항
 
