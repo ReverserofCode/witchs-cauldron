@@ -112,6 +112,28 @@ describe("POST /api/analytics/potion/track", () => {
     await expect(invalid.json()).resolves.toEqual({ error: "invalid_payload" });
   });
 
+  it("maps a rejected body stream to a generic no-store response", async () => {
+    const { POST } = await import("./route");
+    const body = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        controller.error(new Error("stream includes sensitive transport details"));
+      },
+    });
+    const brokenRequest = new Request("http://localhost/api/analytics/potion/track", {
+      method: "POST",
+      headers: { origin: "https://moingfans.com" },
+      body,
+      duplex: "half",
+    } as RequestInit & { duplex: "half" });
+
+    const response = await POST(brokenRequest);
+
+    expect(response.status).toBe(503);
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    await expect(response.json()).resolves.toEqual({ error: "potion_request_unavailable" });
+    expect(getPotionPool).not.toHaveBeenCalled();
+  });
+
   it("returns the typed ingest result with no-store headers", async () => {
     const { POST } = await import("./route");
 

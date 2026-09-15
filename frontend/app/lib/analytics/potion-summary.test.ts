@@ -38,6 +38,33 @@ if (testDatabaseUrl && !isSafeTestDatabaseUrl(testDatabaseUrl)) {
 const describeDatabase = testDatabaseUrl ? describe : describe.skip;
 const NOW = Date.parse("2026-09-15T12:00:00.000Z");
 
+function parameterCheckingPool() {
+  const client = {
+    release: vi.fn(),
+    query: vi.fn(async (sql: string, values?: unknown[]) => {
+      if (!values) return { rows: [] };
+      const positions = [...sql.matchAll(/\$(\d+)/g)].map((match) => Number(match[1]));
+      const used = new Set(positions);
+      for (let position = 1; position <= values.length; position += 1) {
+        if (!used.has(position)) {
+          const error = new Error(`could not determine data type of parameter $${position}`);
+          Object.assign(error, { code: "42P18" });
+          throw error;
+        }
+      }
+      if (Math.max(0, ...positions) !== values.length) throw new Error("parameter_count_mismatch");
+      if (sql.includes("AS eligible,")) return { rows: [{ eligible: 0, site_returned: 0, game_returned: 0 }] };
+      if (sql.includes("AS immature")) return { rows: [{ immature: 0 }] };
+      if (sql.includes("AS replay_visitors")) return { rows: [{ replay_visitors: 0 }] };
+      if (sql.includes("AS eligible_runs")) {
+        return { rows: [{ eligible_runs: 0, completed_within_24h: 0, completed_late: 0 }] };
+      }
+      return { rows: [] };
+    }),
+  };
+  return { pool: { connect: vi.fn(async () => client) } as unknown as Pool, client };
+}
+
 describe("validateCohortRange", () => {
   it("round-trips real YYYY-MM-DD calendar dates including leap days", () => {
     expect(validateCohortRange("2024-02-29", "2024-03-01")).toEqual({ from: "2024-02-29", to: "2024-03-01" });
@@ -50,6 +77,16 @@ describe("validateCohortRange", () => {
     expect(validateCohortRange("2026-02-01", "2026-01-31")).toBeNull();
     expect(validateCohortRange("2026-01-01", "2026-02-14")).toEqual({ from: "2026-01-01", to: "2026-02-14" });
     expect(validateCohortRange("2026-01-01", "2026-02-15")).toBeNull();
+  });
+
+  it("binds a contiguous, query-owned parameter list for every summary statement", async () => {
+    const { pool, client } = parameterCheckingPool();
+
+    await expect(getPotionSummary(pool, "2026-09-01", "2026-09-08", NOW)).resolves.toMatchObject({
+      eligible: 0,
+      completion: { eligibleRuns: 0 },
+    });
+    expect(client.release).toHaveBeenCalledTimes(1);
   });
 });
 

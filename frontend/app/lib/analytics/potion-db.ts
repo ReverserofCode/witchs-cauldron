@@ -14,10 +14,25 @@ export type IngestResult =
 const DAY_MS = 86_400_000;
 const RETENTION_DAYS = 45;
 
-let potionPool: Pool | null = null;
-let potionPoolPromise: Promise<Pool> | null = null;
-const schemaReady = new WeakSet<Pool>();
-const schemaPromises = new WeakMap<Pool, Promise<void>>();
+type PotionDbState = {
+  pool: Pool | null;
+  poolPromise: Promise<Pool> | null;
+  schemaReady: WeakSet<Pool>;
+  schemaPromises: WeakMap<Pool, Promise<void>>;
+};
+
+const POTION_DB_STATE_SYMBOL = Symbol.for("witchs-cauldron.potion-db.state");
+
+function getPotionDbState() {
+  const root = globalThis as typeof globalThis & Record<symbol, PotionDbState | undefined>;
+  root[POTION_DB_STATE_SYMBOL] ??= {
+    pool: null,
+    poolPromise: null,
+    schemaReady: new WeakSet<Pool>(),
+    schemaPromises: new WeakMap<Pool, Promise<void>>(),
+  };
+  return root[POTION_DB_STATE_SYMBOL];
+}
 
 const SCHEMA_SQL = `
   CREATE TABLE IF NOT EXISTS potion_pilot_visitors (
@@ -67,6 +82,9 @@ async function createPotionPool() {
     max: 3,
     connectionTimeoutMillis: 3000,
   });
+  candidate.on("error", () => {
+    console.error("potion_database_idle_error");
+  });
   try {
     const client = await candidate.connect();
     client.release();
@@ -78,33 +96,35 @@ async function createPotionPool() {
 }
 
 export async function getPotionPool(): Promise<Pool> {
-  if (potionPool) return potionPool;
-  if (!potionPoolPromise) {
+  const state = getPotionDbState();
+  if (state.pool) return state.pool;
+  if (!state.poolPromise) {
     const pending = createPotionPool().then((created) => {
-      potionPool = created;
+      state.pool = created;
       return created;
     });
-    potionPoolPromise = pending;
+    state.poolPromise = pending;
     void pending.catch(() => {
-      if (potionPoolPromise === pending) potionPoolPromise = null;
+      if (state.poolPromise === pending) state.poolPromise = null;
     });
   }
-  return potionPoolPromise;
+  return state.poolPromise;
 }
 
 export async function ensurePotionSchema(pool: Pool): Promise<void> {
-  if (schemaReady.has(pool)) return;
-  const existing = schemaPromises.get(pool);
+  const state = getPotionDbState();
+  if (state.schemaReady.has(pool)) return;
+  const existing = state.schemaPromises.get(pool);
   if (existing) return existing;
 
   const pending = pool.query(SCHEMA_SQL).then(() => {
-    schemaReady.add(pool);
+    state.schemaReady.add(pool);
   });
-  schemaPromises.set(pool, pending);
+  state.schemaPromises.set(pool, pending);
   try {
     await pending;
   } finally {
-    if (schemaPromises.get(pool) === pending) schemaPromises.delete(pool);
+    if (state.schemaPromises.get(pool) === pending) state.schemaPromises.delete(pool);
   }
 }
 

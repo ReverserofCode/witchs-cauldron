@@ -19,6 +19,7 @@ export type AcceptedEvent = {
   ok: true;
   serverNowMs: number;
   expiresAtMs: number;
+  /** KST calendar day persisted for this event; idempotent retries retain the original day. */
   dayKst: string;
 };
 

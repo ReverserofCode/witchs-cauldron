@@ -93,7 +93,7 @@ const REPLAY_SQL = `
         FROM potion_pilot_visitors v
         JOIN potion_pilot_events e ON e.visitor_id = v.visitor_id
        WHERE v.first_day_kst BETWEEN $1::date AND $2::date
-         AND v.expires_at > $4::timestamptz
+         AND v.expires_at > $3::timestamptz
          AND e.event_type = 'game_start'
          AND e.day_kst = v.first_day_kst
        GROUP BY v.visitor_id
@@ -106,7 +106,7 @@ const MODE_SQL = `
     FROM potion_pilot_visitors v
     JOIN potion_pilot_events e ON e.visitor_id = v.visitor_id
    WHERE v.first_day_kst BETWEEN $1::date AND $2::date
-     AND v.expires_at > $4::timestamptz
+     AND v.expires_at > $3::timestamptz
      AND e.event_type = 'game_start'
    GROUP BY e.mode
 `;
@@ -117,9 +117,9 @@ const COMPLETION_SQL = `
       FROM potion_pilot_visitors v
       JOIN potion_pilot_events e ON e.visitor_id = v.visitor_id
      WHERE v.first_day_kst BETWEEN $1::date AND $2::date
-       AND v.expires_at > $4::timestamptz
+       AND v.expires_at > $3::timestamptz
        AND e.event_type = 'game_start'
-       AND e.occurred_at + interval '24 hours' <= $5::timestamptz
+       AND e.occurred_at + interval '24 hours' <= $4::timestamptz
   )
   SELECT COUNT(*)::int AS eligible_runs,
     COUNT(*) FILTER (WHERE EXISTS (
@@ -131,7 +131,7 @@ const COMPLETION_SQL = `
          AND complete.rule_version = eligible_runs.rule_version
          AND complete.occurred_at >= eligible_runs.occurred_at
          AND complete.occurred_at <= eligible_runs.occurred_at + interval '24 hours'
-         AND complete.occurred_at <= $5::timestamptz
+         AND complete.occurred_at <= $4::timestamptz
     ))::int AS completed_within_24h,
     COUNT(*) FILTER (WHERE EXISTS (
       SELECT 1 FROM potion_pilot_events complete
@@ -141,7 +141,7 @@ const COMPLETION_SQL = `
          AND complete.mode = eligible_runs.mode
          AND complete.rule_version = eligible_runs.rule_version
          AND complete.occurred_at > eligible_runs.occurred_at + interval '24 hours'
-         AND complete.occurred_at <= $5::timestamptz
+         AND complete.occurred_at <= $4::timestamptz
     ))::int AS completed_late
   FROM eligible_runs
 `;
@@ -155,16 +155,15 @@ export async function getPotionSummary(pool: Pool, from: string, to: string, now
   const observedThrough = getKstDateString(new Date(cutoffMs));
   const now = new Date(nowMs);
   const cutoff = new Date(cutoffMs);
-  const params = [from, to, observedThrough, now];
   const client = await pool.connect();
 
   try {
     await client.query("BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY");
-    const mature = await client.query(MATURE_SQL, params);
-    const immature = await client.query(IMMATURE_SQL, params);
-    const replay = await client.query(REPLAY_SQL, params);
-    const modes = await client.query(MODE_SQL, params);
-    const completion = await client.query(COMPLETION_SQL, [...params, cutoff]);
+    const mature = await client.query(MATURE_SQL, [from, to, observedThrough, now]);
+    const immature = await client.query(IMMATURE_SQL, [from, to, observedThrough, now]);
+    const replay = await client.query(REPLAY_SQL, [from, to, now]);
+    const modes = await client.query(MODE_SQL, [from, to, now]);
+    const completion = await client.query(COMPLETION_SQL, [from, to, now, cutoff]);
     await client.query("COMMIT");
 
     const matureRow = mature.rows[0] ?? {};

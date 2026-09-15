@@ -1,5 +1,6 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { Pool } from "pg";
+import { EventEmitter } from "node:events";
 
 import type { PilotWindow } from "./potion-config";
 import type { PotionPilotEvent } from "./potion-contract";
@@ -41,6 +42,12 @@ const IDS = {
   event4: "315069e2-2e3f-4f31-821d-34e2c1761db8",
 } as const;
 
+const POTION_DB_STATE_SYMBOL = Symbol.for("witchs-cauldron.potion-db.state");
+
+function clearGlobalPotionDbState() {
+  delete (globalThis as typeof globalThis & Record<symbol, unknown>)[POTION_DB_STATE_SYMBOL];
+}
+
 function gameEvent(overrides: Partial<PotionPilotEvent> = {}): PotionPilotEvent {
   return {
     schema_version: 1,
@@ -77,6 +84,15 @@ describe("potion schema initialization", () => {
 });
 
 describe("getPotionPool", () => {
+  beforeEach(clearGlobalPotionDbState);
+  afterEach(() => {
+    vi.doUnmock("pg");
+    vi.unstubAllEnvs();
+    vi.restoreAllMocks();
+    clearGlobalPotionDbState();
+    vi.resetModules();
+  });
+
   it("fails closed without an explicit database target", async () => {
     vi.resetModules();
     vi.stubEnv("ANALYTICS_DATABASE_URL", "");
@@ -84,7 +100,6 @@ describe("getPotionPool", () => {
     const { getPotionPool } = await import("./potion-db");
 
     await expect(getPotionPool()).rejects.toThrow("potion_database_not_configured");
-    vi.unstubAllEnvs();
   });
 
   it.runIf(Boolean(testDatabaseUrl))("uses a three-connection pool and recovers after a rejected creation promise", async () => {
@@ -98,7 +113,46 @@ describe("getPotionPool", () => {
     const recovered = await db.getPotionPool();
     expect(recovered.options.max).toBe(3);
     await recovered.end();
-    vi.unstubAllEnvs();
+  });
+
+  it("survives module reload with one pool/schema cache and handles idle errors without leaking details", async () => {
+    const instances: FakePool[] = [];
+    const log = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    class FakePool extends EventEmitter {
+      options = { max: 3 };
+      schemaQueries = 0;
+      constructor() {
+        super();
+        instances.push(this);
+      }
+      async connect() {
+        return { release() {} };
+      }
+      async query() {
+        this.schemaQueries += 1;
+        return { rows: [] };
+      }
+      async end() {}
+    }
+    vi.doMock("pg", () => ({ Pool: FakePool }));
+    vi.stubEnv("ANALYTICS_DATABASE_URL", "postgres://user:secret@127.0.0.1:5432/potion_test");
+
+    vi.resetModules();
+    const firstModule = await import("./potion-db");
+    const first = await firstModule.getPotionPool();
+    await firstModule.ensurePotionSchema(first);
+    expect(() => (first as unknown as FakePool).emit("error", new Error("database secret"))).not.toThrow();
+
+    vi.resetModules();
+    const reloadedModule = await import("./potion-db");
+    const reloaded = await reloadedModule.getPotionPool();
+    await reloadedModule.ensurePotionSchema(reloaded);
+
+    expect(reloaded).toBe(first);
+    expect(instances).toHaveLength(1);
+    expect((first as unknown as FakePool).schemaQueries).toBe(1);
+    expect(log).toHaveBeenCalledWith("potion_database_idle_error");
+
   });
 });
 
@@ -166,6 +220,30 @@ describeDatabase("potion event ingestion against PostgreSQL", () => {
     );
     expect(participant.rows[0]?.first_started_at.getTime()).toBe(NOW);
     expect(participant.rows[0]?.expires_at.getTime()).toBe(NOW + 45 * DAY_MS);
+  });
+
+  it("returns the persisted event day when the same event ID is retried after KST midnight", async () => {
+    const beforeMidnight = Date.parse("2026-09-15T14:59:00.000Z");
+    const afterMidnight = Date.parse("2026-09-15T15:01:00.000Z");
+    const crossMidnightWindow = {
+      enrollFromMs: beforeMidnight - DAY_MS,
+      enrollUntilMs: afterMidnight + DAY_MS,
+      observeUntilMs: afterMidnight + 2 * DAY_MS,
+    };
+
+    const first = await ingestPotionEvent(pool, gameEvent(), beforeMidnight, crossMidnightWindow);
+    const retried = await ingestPotionEvent(pool, gameEvent(), afterMidnight, crossMidnightWindow);
+
+    expect(first.status).toBe(200);
+    expect(retried).toEqual({
+      status: 200,
+      body: {
+        ok: true,
+        serverNowMs: afterMidnight,
+        expiresAtMs: beforeMidnight + 45 * DAY_MS,
+        dayKst: "2026-09-15",
+      },
+    });
   });
 
   it("does not enroll from complete, site activity, or a start after enrollment", async () => {

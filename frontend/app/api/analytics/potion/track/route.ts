@@ -71,7 +71,12 @@ export async function POST(request: Request) {
     return json({ error: "origin_forbidden" }, 403);
   }
 
-  const parsed = await readLimitedJson(request);
+  let parsed: Awaited<ReturnType<typeof readLimitedJson>>;
+  try {
+    parsed = await readLimitedJson(request);
+  } catch {
+    return json({ error: "potion_request_unavailable" }, 503);
+  }
   if (!parsed.ok) {
     return json({ error: parsed.tooLarge ? "payload_too_large" : "invalid_payload" }, parsed.tooLarge ? 413 : 400);
   }
