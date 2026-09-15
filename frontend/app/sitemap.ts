@@ -1,4 +1,5 @@
 import { MetadataRoute } from "next";
+import { POTION_GAME_ENABLED } from "./lib/games/potion-timing/config";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = "https://moingfans.com";
@@ -13,6 +14,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${baseUrl}/`, changeFrequency: "daily", priority: 1.0 },
     { url: `${baseUrl}/broadcasts`, changeFrequency: "daily", priority: 0.8 },
   ];
+
+  if (POTION_GAME_ENABLED) {
+    routes.push({ url: `${baseUrl}/games/potion-timing`, changeFrequency: "daily", priority: 0.6 });
+  }
 
   return routes.map((r) => ({
     url: r.url,

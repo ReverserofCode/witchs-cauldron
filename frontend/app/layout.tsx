@@ -9,6 +9,8 @@ import './globals.css'
 import { Noto_Sans_KR } from 'next/font/google'
 import { Header, Footer } from '@/app/components/layout'
 import AnalyticsProvider from '@/app/components/analytics/AnalyticsProvider'
+import { PotionRetentionProvider } from '@/app/components/analytics/PotionRetentionProvider'
+import { POTION_PILOT_WINDOW } from '@/app/lib/analytics/potion-config'
 import { MerchPromotionBanner } from '@/app/components/promotions'
 
 const notoSansKr = Noto_Sans_KR({
@@ -137,6 +139,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
         </Script>
         <Suspense fallback={null}>
           <AnalyticsProvider />
+          {POTION_PILOT_WINDOW && <PotionRetentionProvider />}
         </Suspense>
         <Header />
         <MerchPromotionBanner />

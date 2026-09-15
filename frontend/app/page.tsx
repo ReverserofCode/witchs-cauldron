@@ -19,6 +19,8 @@ import { SectionTracker } from '@/app/components/analytics/SectionTracker'
 import { ScrollReveal } from '@/app/components/animations'
 import { FanArtGallery } from '@/app/components/gallery'
 import { MerchPromotionCard } from '@/app/components/promotions'
+import GameEntryCard from '@/app/components/games/GameEntryCard'
+import { POTION_GAME_ENABLED } from '@/app/lib/games/potion-timing/config'
 import { loadFanArtImages } from '@/app/lib/fanart'
 import { getBirthdayBannerCopy, isBirthdayToday } from '@/app/lib/birthday'
 
@@ -197,6 +199,7 @@ export default function Page(): ReactElement {
             </LiveStatusProvider>
 
             <MerchPromotionCard />
+            {POTION_GAME_ENABLED && <GameEntryCard />}
 
             {showBirthdayBanner && birthdayBannerCopy && (
               <SectionCard

@@ -55,6 +55,27 @@ async function getPool() {
   throw new Error(`analytics_db_unreachable${detail ? `: ${detail}` : ""}`);
 }
 
+function getPotionDatabaseUrl() {
+  const connectionString = process.env.ANALYTICS_DATABASE_URL?.trim() || process.env.DATABASE_URL?.trim();
+  if (!connectionString) throw new Error("potion_database_not_configured");
+  return connectionString;
+}
+
+async function getPotionPool() {
+  const pool = new Pool({
+    connectionString: getPotionDatabaseUrl(),
+    connectionTimeoutMillis: 3000,
+  });
+  try {
+    const client = await pool.connect();
+    client.release();
+    return pool;
+  } catch {
+    await pool.end().catch(() => {});
+    throw new Error("potion_database_unreachable");
+  }
+}
+
 function getSecret() {
   const configured = process.env.ANALYTICS_HASH_SECRET?.trim();
   if (configured) return configured;
@@ -365,20 +386,86 @@ async function profile(pool) {
   console.log(JSON.stringify(report, null, 2));
 }
 
+async function potionProfile(pool) {
+  const tableResult = await pool.query(
+    "SELECT to_regclass('potion_pilot_visitors')::text AS table_name"
+  );
+  if (!tableResult.rows[0]?.table_name) {
+    console.log(JSON.stringify({
+      generatedAt: new Date().toISOString(),
+      installed: false,
+      expiredCount: null,
+      oldestExpiry: null,
+      maximumExpiry: null,
+    }));
+    return;
+  }
+
+  const result = await pool.query(
+    `SELECT
+       COUNT(*) FILTER (WHERE expires_at <= now())::int AS expired_count,
+       MIN(expires_at) AS oldest_expiry,
+       MAX(expires_at) AS maximum_expiry
+     FROM potion_pilot_visitors`
+  );
+  const row = result.rows[0] ?? {};
+  console.log(JSON.stringify({
+    generatedAt: new Date().toISOString(),
+    installed: true,
+    expiredCount: Number(row.expired_count ?? 0),
+    oldestExpiry: row.oldest_expiry ?? null,
+    maximumExpiry: row.maximum_expiry ?? null,
+  }));
+}
+
+async function potionRetention(pool) {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    await client.query("SET LOCAL lock_timeout = '5s'");
+    await client.query("SET LOCAL statement_timeout = '60s'");
+    const deleted = await client.query(
+      "DELETE FROM potion_pilot_visitors WHERE expires_at <= now()"
+    );
+    const remaining = await client.query(
+      `SELECT COUNT(*)::int AS remaining_expired,
+              transaction_timestamp() AS executed_at
+       FROM potion_pilot_visitors
+       WHERE expires_at <= now()`
+    );
+    const remainingExpired = Number(remaining.rows[0]?.remaining_expired ?? 0);
+    if (remainingExpired !== 0) throw new Error("expired_potion_rows_remain");
+    await client.query("COMMIT");
+    console.log(JSON.stringify({
+      executedAt: remaining.rows[0]?.executed_at ?? new Date().toISOString(),
+      deletedVisitors: deleted.rowCount ?? 0,
+      remainingExpired,
+    }));
+  } catch {
+    await client.query("ROLLBACK").catch(() => {});
+    throw new Error("potion_retention_failed");
+  } finally {
+    client.release();
+  }
+}
+
 async function main() {
   const command = process.argv[2];
-  if (!["migrate", "backfill", "retention", "scrub-ip", "profile", "all"].includes(command)) {
-    console.error("Usage: node scripts/analytics-maintenance.mjs <migrate|backfill|retention|scrub-ip|profile|all>");
+  if (!["migrate", "backfill", "retention", "scrub-ip", "profile", "all", "potion-profile", "potion-retention"].includes(command)) {
+    console.error("Usage: node scripts/analytics-maintenance.mjs <migrate|backfill|retention|scrub-ip|profile|all|potion-profile|potion-retention>");
     process.exit(2);
   }
 
-  const pool = await getPool();
+  const potionCommand = command === "potion-profile" || command === "potion-retention";
+  const pool = potionCommand ? await getPotionPool() : await getPool();
   try {
     if (command === "migrate" || command === "all") await migrate(pool);
     if (command === "backfill" || command === "all") await backfill(pool);
     if (command === "scrub-ip" || command === "all") await scrubIp(pool);
     if (command === "retention" || command === "all") await retention(pool);
     if (command === "profile") await profile(pool);
+    if (command === "potion-profile") await potionProfile(pool);
+    if (command === "potion-retention") await potionRetention(pool);
   } finally {
     await pool.end();
   }

@@ -12,6 +12,20 @@ jobs:
   test:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    services:
+      potion-test-db:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: potion_test
+          POSTGRES_USER: potion_test
+          POSTGRES_PASSWORD: local-test-only
+        ports:
+          - 5546:5432
+        options: >-
+          --health-cmd "pg_isready -U potion_test -d potion_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
 
     steps:
       - name: Checkout code
@@ -42,6 +56,12 @@ jobs:
         working-directory: frontend
         run: npm test
 
+      - name: Potion database integration tests
+        working-directory: frontend
+        env:
+          POTION_TEST_DATABASE_URL: postgres://potion_test:local-test-only@127.0.0.1:5546/potion_test
+        run: npm test -- app/lib/analytics/potion-db.test.ts app/lib/analytics/potion-summary.test.ts app/lib/analytics/potion-maintenance.test.ts --maxWorkers=1
+
       - name: Setup Python
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
@@ -62,3 +82,59 @@ jobs:
       - name: Build
         working-directory: frontend
         run: npm run build
+
+      - name: Install test browser
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+
+      - name: Browser regression tests (disposable database)
+        working-directory: frontend
+        env:
+          SMOKE_BASE_URL: http://127.0.0.1:3165
+          ANALYTICS_DATABASE_URL: postgres://potion_test:local-test-only@127.0.0.1:5546/potion_test
+          ANALYTICS_HASH_SECRET: isolated-ci-only
+          POTION_EXPECT_DATABASE: 'true'
+          ADMIN_BASIC_AUTH_USERNAME: smoke-admin
+          ADMIN_BASIC_AUTH_PASSWORD: isolated-ci-only
+        run: |
+          set -euo pipefail
+          node scripts/start-smoke-server.mjs > /tmp/potion-next.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill "$SERVER_PID" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:3165/api/health > /dev/null; then break; fi
+            sleep 2
+          done
+          curl -fsS http://127.0.0.1:3165/api/health
+          npm run smoke:potion
+          npm run smoke:potion-analytics
+          npm run smoke:admin
+          node scripts/smoke-potion-endpoints.mjs
+          node scripts/smoke-potion-entry.mjs
+          npm run smoke:promotion
+
+  docker-image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Build production Docker image without production secrets
+        run: docker build -t witchs-potion:test frontend
+      - name: Verify isolated production container
+        run: |
+          set -euo pipefail
+          docker run -d --name potion-smoke -p 127.0.0.1:3167:3000 witchs-potion:test
+          trap 'docker rm -f potion-smoke > /dev/null' EXIT
+          for attempt in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:3167/api/health > /dev/null; then break; fi
+            sleep 2
+          done
+          curl -fsS http://127.0.0.1:3167/api/health
+          curl -fsS http://127.0.0.1:3167/games/potion-timing > /dev/null
+          curl -fsS http://127.0.0.1:3167/api/games/potion-timing/daily > /dev/null
+          test "$(curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:3167/broadcasts)" = '200'
+          test "$(curl -sS -o /tmp/potion-youtube.json -w '%{http_code}' http://127.0.0.1:3167/api/youTubePlayer)" = '200'
+          python3 -c 'import json; data=json.load(open("/tmp/potion-youtube.json")); assert data["error"] == "MISSING_API_KEY"; assert all(data[key] == [] for key in ["moing", "fullmoing", "moingFan"])'

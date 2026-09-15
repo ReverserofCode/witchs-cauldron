@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
+import { blockAnalyticsWrites, verifyAnalyticsInterception } from './smoke-analytics-guard.mjs';
 
 const baseUrl = process.env.SMOKE_BASE_URL || 'http://127.0.0.1:3000';
+assert.ok(['127.0.0.1', 'localhost', '[::1]'].includes(new URL(baseUrl).hostname), 'admin smoke is loopback only');
 const username = process.env.ADMIN_BASIC_AUTH_USERNAME || 'admin';
 const password = process.env.ADMIN_BASIC_AUTH_PASSWORD || 'dev-password';
 
@@ -166,9 +168,11 @@ async function main() {
   });
 
   const publicContext = await browser.newContext();
+  await blockAnalyticsWrites(publicContext);
   const publicPage = await publicContext.newPage();
   await publicPage.goto(new URL('/', baseUrl).toString(), { waitUntil: 'domcontentloaded', timeout: 45_000 });
   await publicPage.locator('body').waitFor();
+  await verifyAnalyticsInterception(publicPage);
 
   await assert.rejects(
     () => publicPage.getByRole('link', { name: '분석 대시보드' }).waitFor({ state: 'visible', timeout: 1200 }),
@@ -179,6 +183,7 @@ async function main() {
   const adminContext = await browser.newContext({
     httpCredentials: { username, password },
   });
+  await blockAnalyticsWrites(adminContext);
   const adminPage = await adminContext.newPage();
   const requests = [];
   const healthRequests = [];
@@ -204,6 +209,7 @@ async function main() {
   });
 
   await adminPage.goto(new URL('/admin/analytics', baseUrl).toString(), { waitUntil: 'domcontentloaded', timeout: 45_000 });
+  await verifyAnalyticsInterception(adminPage);
   await adminPage.getByRole('heading', { name: 'Analytics Dashboard' }).waitFor();
   await adminPage.getByRole('region', { name: 'Analytics 운영 상태' }).waitFor();
   await adminPage.getByRole('heading', { name: '운영 상태' }).waitFor();
@@ -235,6 +241,20 @@ async function main() {
   const clippedMobileText = await findClippedAdminSummaryText(adminPage);
   assert.deepEqual(clippedMobileText, [], `admin summary text should not be clipped on mobile: ${JSON.stringify(clippedMobileText, null, 2)}`);
   await adminPage.getByRole('region', { name: '핵심 지표' }).scrollIntoViewIfNeeded();
+  // scrollIntoViewIfNeeded may stop with the tall, intentionally static date
+  // toolbar halfway through the viewport. First verify its mobile policy,
+  // then scroll it fully away before checking the remaining sticky controls.
+  const mobilePositions = await adminPage.evaluate(() => ({
+    toolbar: getComputedStyle(document.querySelector('.admin-toolbar')).position,
+    nav: getComputedStyle(document.querySelector('nav[aria-label="Analytics 섹션"]')).position,
+  }));
+  assert.equal(mobilePositions.toolbar, 'static', 'mobile date controls must not become sticky');
+  assert.equal(mobilePositions.nav, 'sticky', 'mobile section navigation must stay sticky');
+  await adminPage.evaluate(() => {
+    const toolbar = document.querySelector('.admin-toolbar').getBoundingClientRect();
+    window.scrollTo({ top: window.scrollY + toolbar.bottom + 16, behavior: 'instant' });
+  });
+  await adminPage.waitForFunction(() => document.querySelector('.admin-toolbar').getBoundingClientRect().bottom <= 0);
   const stickyLayout = await adminPage.evaluate(() => {
     const nav = document.querySelector('nav[aria-label="Analytics 섹션"]')?.getBoundingClientRect();
     const toolbar = document.querySelector('.admin-toolbar')?.getBoundingClientRect();
@@ -245,6 +265,9 @@ async function main() {
     return {
       nav: { top: nav.top, bottom: nav.bottom },
       toolbar: { top: toolbar.top, bottom: toolbar.bottom },
+      navPosition: getComputedStyle(document.querySelector('nav[aria-label="Analytics 섹션"]')).position,
+      toolbarPosition: getComputedStyle(document.querySelector('.admin-toolbar')).position,
+      scrollY: window.scrollY,
       overlapArea: horizontalOverlap * verticalOverlap,
     };
   });

@@ -3,8 +3,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { POTION_GAME_ENABLED } from "@/app/lib/games/potion-timing/config";
 
-type HeaderItem = { label: string; href: string; external?: boolean };
+type HeaderItem = { label: string; href: string; external?: boolean; prefetch?: boolean };
 
 export interface HeaderProps {
   brand?: ReactNode;
@@ -13,6 +14,7 @@ export interface HeaderProps {
 
 const defaultItems: HeaderItem[] = [
   { label: "방송 모아보기", href: "/broadcasts", external: false },
+  ...(POTION_GAME_ENABLED ? [{ label: "포션 불조절", href: "/games/potion-timing", external: false, prefetch: false }] : []),
   { label: "치지직", href: "https://chzzk.naver.com/1d333ff175b4db5bd06f87a88579ec1e" },
   { label: "유튜브", href: "https://www.youtube.com/channel/UCHzre37UF4o64HRhp-7CDzQ" },
   { label: "유튜브 다시보기", href: "https://www.youtube.com/@fullmoing" },
@@ -20,6 +22,13 @@ const defaultItems: HeaderItem[] = [
 ];
 
 function HeaderIcon({ name, className }: { name: string; className?: string }) {
+  if (name === "포션 불조절") {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true" className={className} fill="none" stroke="currentColor" strokeWidth="1.8">
+        <path d="M6 10h12l2 5c0 4-4 6-8 6s-8-2-8-6l2-5ZM5 10h14M9 6c-2-2 2-3 0-5m6 6c-2-2 2-3 0-5" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    );
+  }
   if (name === "방송 모아보기") {
     return (
       <svg
@@ -121,7 +130,7 @@ export default function Header({ brand, items = defaultItems }: HeaderProps) {
                   title={item.label}
                   target={isExternal ? "_blank" : undefined}
                   rel={isExternal ? "noopener noreferrer" : undefined}
-                  prefetch={isExternal ? false : undefined}
+                  prefetch={isExternal ? false : item.prefetch}
                   data-analytics-menu="true"
                   data-analytics-id={item.href}
                   data-analytics-label={item.label}
@@ -185,7 +194,7 @@ export default function Header({ brand, items = defaultItems }: HeaderProps) {
                       href={item.href}
                       target={isExternal ? "_blank" : undefined}
                       rel={isExternal ? "noopener noreferrer" : undefined}
-                      prefetch={isExternal ? false : undefined}
+                    prefetch={isExternal ? false : item.prefetch}
                       className="flex min-h-12 items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-purple-950 transition-colors hover:bg-purple-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/70 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
                       data-analytics-menu="true"
                       data-analytics-id={item.href}
