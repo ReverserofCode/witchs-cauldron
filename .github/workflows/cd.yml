@@ -112,6 +112,8 @@ jobs:
           npm run smoke:potion-analytics
           npm run smoke:admin
           node scripts/smoke-potion-endpoints.mjs
+          node scripts/smoke-potion-entry.mjs
+          npm run smoke:promotion
 
   deploy:
     needs: build-and-test

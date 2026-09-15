@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
+import { blockAnalyticsWrites, verifyAnalyticsInterception } from './smoke-analytics-guard.mjs';
 
 const baseUrl = process.env.SMOKE_BASE_URL || 'http://127.0.0.1:3000';
 assert.ok(['127.0.0.1', 'localhost', '[::1]'].includes(new URL(baseUrl).hostname), 'admin smoke is loopback only');
@@ -159,12 +160,6 @@ async function findClippedAdminSummaryText(page) {
   });
 }
 
-async function blockAnalyticsWrites(context) {
-  for (const pathname of ['/api/analytics/track', '/api/analytics/potion/track']) {
-    await context.route(`**${pathname}`, route => route.fulfill({ status: 204 }));
-  }
-}
-
 async function main() {
   const browser = await chromium.launch({
     headless: true,
@@ -177,6 +172,7 @@ async function main() {
   const publicPage = await publicContext.newPage();
   await publicPage.goto(new URL('/', baseUrl).toString(), { waitUntil: 'domcontentloaded', timeout: 45_000 });
   await publicPage.locator('body').waitFor();
+  await verifyAnalyticsInterception(publicPage);
 
   await assert.rejects(
     () => publicPage.getByRole('link', { name: '분석 대시보드' }).waitFor({ state: 'visible', timeout: 1200 }),
@@ -213,6 +209,7 @@ async function main() {
   });
 
   await adminPage.goto(new URL('/admin/analytics', baseUrl).toString(), { waitUntil: 'domcontentloaded', timeout: 45_000 });
+  await verifyAnalyticsInterception(adminPage);
   await adminPage.getByRole('heading', { name: 'Analytics Dashboard' }).waitFor();
   await adminPage.getByRole('region', { name: 'Analytics 운영 상태' }).waitFor();
   await adminPage.getByRole('heading', { name: '운영 상태' }).waitFor();

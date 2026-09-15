@@ -53,12 +53,20 @@ npm test -- --maxWorkers=2
 npm run typecheck
 npm run lint
 npm run build
-# 로컬 서버를 기동하고 다른 터미널에서 실행
+# 운영 standalone 서버를 기동하고 다른 터미널에서 smoke 실행
 $env:SMOKE_BASE_URL = 'http://127.0.0.1:3165'
+node scripts/start-smoke-server.mjs
+# 다른 터미널
 npm run smoke:potion
 npm run smoke:potion-analytics
 npm run smoke:admin
+node scripts/smoke-potion-entry.mjs
+npm run smoke:promotion
+# standalone 서버와 같은 테스트용 Basic Auth 값을 설정한 뒤
+node scripts/smoke-potion-endpoints.mjs
 ```
+
+CI는 `potion_test` 폐기용 PostgreSQL16에서 DB 통합 테스트와 인증된 summary 응답을 검증한다. 별도 Docker 작업은 API 키 없이 이미지를 빌드하여 health, 게임, daily, `/broadcasts` 200 및 `/api/youTubePlayer`의 200/`MISSING_API_KEY` 응답을 확인한다. 운영 DB/인증정보를 이 테스트에 사용하지 않는다.
 
 게임/분석 smoke는 loopback에서만 실행하며 분석 POST를 가로채 실제 통계를 오염시키지 않는다. 분석 smoke는 실제 provider/client를 사용하는 React fixture이며 Next의 pathname 훅과 파일럿 활성 설정만 테스트용으로 대체한다. 실제 운영 데이터로 플레이 테스트나 삭제 테스트를 하지 않는다.
 

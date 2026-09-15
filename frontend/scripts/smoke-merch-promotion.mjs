@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
+import { blockAnalyticsWrites, verifyAnalyticsInterception } from './smoke-analytics-guard.mjs';
 
 const baseUrl = process.env.SMOKE_BASE_URL || "http://127.0.0.1:3000";
 const canonicalStoreUrl =
@@ -41,7 +42,6 @@ const officialProducts = Object.freeze([
 ]);
 const activeNow = "2026-08-10T12:00:00+09:00";
 const endedNow = "2026-09-01T00:00:00+09:00";
-const analyticsInterceptCounts = new WeakMap();
 
 export function resolveAdminCredentials(env = process.env) {
   const primaryUsername = env.SMOKE_ADMIN_USERNAME;
@@ -86,14 +86,7 @@ async function assertSecureNewTabRel(link, subject) {
 
 async function createSmokeContext(browser, options = {}) {
   const context = await browser.newContext(options);
-  analyticsInterceptCounts.set(context, 0);
-  await context.route("**/api/analytics/track", async (route) => {
-    analyticsInterceptCounts.set(
-      context,
-      (analyticsInterceptCounts.get(context) ?? 0) + 1
-    );
-    await route.fulfill({ status: 204, body: "" });
-  });
+  await blockAnalyticsWrites(context);
   return context;
 }
 
@@ -121,26 +114,7 @@ async function goto(page, pathname) {
     waitUntil: "domcontentloaded",
     timeout: 45_000,
   });
-  const context = page.context();
-  const beforeProbe = analyticsInterceptCounts.get(context);
-  assert.notEqual(
-    beforeProbe,
-    undefined,
-    "Analytics interception must be registered for the current browser context"
-  );
-  const probeStatus = await page.evaluate(async () => {
-    const probeResponse = await fetch("/api/analytics/track", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: "{}",
-    });
-    return probeResponse.status;
-  });
-  assert.equal(probeStatus, 204);
-  assert.ok(
-    analyticsInterceptCounts.get(context) > beforeProbe,
-    "The current browser context must intercept the analytics probe"
-  );
+  await verifyAnalyticsInterception(page);
   return response;
 }
 

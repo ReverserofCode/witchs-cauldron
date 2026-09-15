@@ -110,6 +110,8 @@ jobs:
           npm run smoke:potion-analytics
           npm run smoke:admin
           node scripts/smoke-potion-endpoints.mjs
+          node scripts/smoke-potion-entry.mjs
+          npm run smoke:promotion
 
   docker-image:
     runs-on: ubuntu-latest
@@ -133,3 +135,5 @@ jobs:
           curl -fsS http://127.0.0.1:3167/api/health
           curl -fsS http://127.0.0.1:3167/games/potion-timing > /dev/null
           curl -fsS http://127.0.0.1:3167/api/games/potion-timing/daily > /dev/null
+          curl -fsS http://127.0.0.1:3167/broadcasts > /dev/null
+          curl -fsS http://127.0.0.1:3167/api/youTubePlayer | python3 -c 'import json,sys; data=json.load(sys.stdin); assert data["error"] == "MISSING_API_KEY"; assert all(data[key] == [] for key in ["moing", "fullmoing", "moingFan"])'
