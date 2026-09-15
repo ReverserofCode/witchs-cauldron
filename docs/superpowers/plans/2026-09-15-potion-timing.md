@@ -6,9 +6,18 @@
 
 **Architecture:** 순수 TypeScript 규칙/상태 계층과 React 게임 화면을 분리한다. 서버는 오늘의 규칙과 시각만 제공하고 점수는 브라우저에 저장한다. 분석은 도메인 알림만 소비하는 별도 계획이며 게임의 실행 의존성이 아니다.
 
-**Tech Stack:** 현재 main의 Next.js 16.3.0, React 19.2.5 계열, TypeScript 6.0.3 계열, Tailwind v4, Vitest, Playwright. 구현 시 lockfile 버전을 확인하며 패키지 업그레이드는 하지 않는다.
+**Tech Stack:** 구현 기준 Next.js 16.3.3, React 19.2.5 계열, TypeScript 6.0.3 계열, Tailwind v4, Vitest, Playwright. 초기 계획의 Next.js 16.3.0에서 보안 패치를 반영했으며 경위는 [릴리스 기록](../../POTION_RELEASE_2026-09-15.md)을 따른다.
 
 **Spec:** [포션 불조절 개발 사양](../specs/2026-09-15-potion-timing-design.md), 특히 2–5절·7–8절.
+
+## 실행 상태 (2026-09-15)
+
+- **구현:** `/games/potion-timing`의 5라운드 규칙·조작·일시정지, KST 오전 9시 일일 도전, 일반/느린 연습, 기기별 첫/최고 기록, 홈/메뉴/사이트맵 진입과 소스 스위치를 구현했다. `POTION_GAME_ENABLED=true`이며 기능·중단 절차는 [게임 운영 가이드](../../POTION_TIMING_GAME.md)에 정리했다.
+- **기술 검증:** [CI 34965761454](https://github.com/ReverserofCode/witchs-cauldron/actions/runs/34965761454)가 `3420fdc`에서 성공했다. 일반 테스트 172 통과/16 DB 보류, 별도 PostgreSQL16 테스트 29/29 통과로 보류 항목을 모두 검증했다. Node22 typecheck/build, Docker·브라우저 smoke·백엔드 검증도 통과했다. ESLint는 0 errors/기존 22 warnings, audit은 취약점 0개다. 게이지 좌표·DB fixture 보완 후 전체 브랜치 검토 승인을 받았다.
+- **병합과 배포 구분:** [PR #6](https://github.com/ReverserofCode/witchs-cauldron/pull/6)은 `0483162`로 병합됐다. 병합/CI 성공은 운영 배포 완료 증거가 아니며 실제 배포 상태는 [릴리스 기록](../../POTION_RELEASE_2026-09-15.md)에서 확인한다.
+- **남은 사람·운영 게이트:** 사람 대상 사용성 평가와 재방문 효과 검증은 미실시다. 파일럿은 `POTION_PILOT_WINDOW=null`로 유지하며 운영 담당자·일정·자동 정리 예약을 확정하지 않았다. [측정 운영 가이드](../../POTION_RETENTION_MEASUREMENT.md)의 활성화 조건은 별도 후속 작업이다.
+
+아래 체크박스·기준 SHA·작업 순서는 최초 계획을 보존한 것이다. 미체크만으로 현재 미구현을 뜻하지 않으며, 현재 완료/보류 판정은 이 절과 릴리스 증거를 따른다. 초기 계획과 달리 브라우저·실제 DB 검증은 CI에도 추가했다.
 
 ## Global Constraints
 
@@ -19,7 +28,7 @@
 - 팬 창작 미니게임이며 모잉의 공식 설정·발언·공식 게임으로 표현하지 않는다.
 - 실제 상품 이미지·방송 장면·음성의 신규 수집은 범위에서 제외한다.
 - 게임 플레이는 분석 DB·YouTube API 키 없이 가능해야 한다.
-- 이번 문서의 체크박스는 **앞으로 실행할 작업**이다. 테스트 성공·구현 완료를 뜻하지 않는다.
+- 원래 체크박스는 일괄 완료 처리하지 않는다. 실제 구현·검증·미완료 게이트는 위 실행 상태로 구분한다.
 
 ## 기준 코드와 파일 지도
 
