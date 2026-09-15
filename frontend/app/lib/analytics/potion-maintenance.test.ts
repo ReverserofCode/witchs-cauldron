@@ -146,12 +146,10 @@ describeDatabase("potion maintenance against guarded PostgreSQL", () => {
 
   beforeEach(async () => {
     await pool.query("DELETE FROM potion_pilot_visitors WHERE visitor_id = ANY($1::uuid[])", [
-      IDS.expiredVisitor,
-      IDS.futureVisitor,
+      [IDS.expiredVisitor, IDS.futureVisitor],
     ]);
     await coexistencePool.query("DELETE FROM potion_pilot_visitors WHERE visitor_id = ANY($1::uuid[])", [
-      IDS.expiredVisitor,
-      IDS.futureVisitor,
+      [IDS.expiredVisitor, IDS.futureVisitor],
     ]);
     await coexistencePool.query("DELETE FROM analytics_events WHERE event_id = $1", [IDS.generalEvent]);
   });
@@ -159,8 +157,7 @@ describeDatabase("potion maintenance against guarded PostgreSQL", () => {
   afterAll(async () => {
     if (coexistencePool) {
       await coexistencePool.query("DELETE FROM potion_pilot_visitors WHERE visitor_id = ANY($1::uuid[])", [
-        IDS.expiredVisitor,
-        IDS.futureVisitor,
+        [IDS.expiredVisitor, IDS.futureVisitor],
       ]).catch(() => undefined);
       await coexistencePool.query("DELETE FROM analytics_events WHERE event_id = $1", [IDS.generalEvent])
         .catch(() => undefined);
@@ -168,8 +165,7 @@ describeDatabase("potion maintenance against guarded PostgreSQL", () => {
     }
     if (pool) {
       await pool.query("DELETE FROM potion_pilot_visitors WHERE visitor_id = ANY($1::uuid[])", [
-        IDS.expiredVisitor,
-        IDS.futureVisitor,
+        [IDS.expiredVisitor, IDS.futureVisitor],
       ]).catch(() => undefined);
       await pool.end();
     }
