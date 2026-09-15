@@ -61,8 +61,13 @@ describe('potion delivery', () => {
     expect(await trackPotionEvent(event)).toBeNull();
     expect(request).toHaveBeenCalledTimes(1);
   });
-  it('does not accept a malformed successful response', async () => {
-    vi.stubGlobal('fetch', async () => Response.json({ ...accepted, dayKst: '2026-09-14' }));
+  it('accepts a persisted event day independently from the fresh server clock', async () => {
+    const retried = { ...accepted, serverNowMs: Date.parse('2026-09-15T15:00:01Z'), dayKst: '2026-09-15' };
+    vi.stubGlobal('fetch', async () => Response.json(retried));
+    expect(await trackPotionEvent(event)).toEqual(retried);
+  });
+  it('does not accept an impossible persisted event day', async () => {
+    vi.stubGlobal('fetch', async () => Response.json({ ...accepted, dayKst: '2026-02-30' }));
     expect(await trackPotionEvent(event)).toBeNull();
   });
   it('does not retry invalid JSON in a successful response', async () => {
@@ -160,6 +165,31 @@ describe('potion activity adapter', () => {
     client.recordPilotSiteActivity();
     expect(request).toHaveBeenCalledTimes(2);
   });
+  it('accepts a lost start acknowledgement across KST midnight, chains completion, then records real activity', async () => {
+    const { client } = await adapter();
+    vi.spyOn(Date, 'now').mockReturnValue(now);
+    vi.spyOn(performance, 'now').mockReturnValue(0);
+    const afterMidnight = now + 120000;
+    const persistedStart = { ...reply(afterMidnight), dayKst: '2026-09-15' };
+    const request = vi.fn(async () => {
+      const attempt = request.mock.calls.length;
+      if (attempt === 1) throw new Error('ack lost after commit');
+      if (attempt === 2) return Response.json(persistedStart);
+      if (attempt === 3) return new Response(null, { status: 400 });
+      return Response.json(reply(afterMidnight));
+    });
+    vi.stubGlobal('fetch', request);
+
+    client.enqueueGameActivity(activity);
+    client.enqueueGameActivity({ ...activity, kind: 'game_complete' });
+    await vi.waitFor(() => expect(request).toHaveBeenCalledTimes(3));
+    client.recordPilotSiteActivity();
+    await vi.waitFor(() => expect(request).toHaveBeenCalledTimes(4));
+
+    const bodies = request.mock.calls.map(call => JSON.parse(call[1].body));
+    expect(bodies.map(body => body.type)).toEqual(['game_start', 'game_start', 'game_complete', 'site_active']);
+    expect(bodies[1].event_id).toBe(bodies[0].event_id);
+  });
   it('excludes an in-flight start without recreating the identity or sending queued completion', async () => {
     const { client, store } = await adapter();
     let acceptStart!: (response: Response) => void;
@@ -173,5 +203,43 @@ describe('potion activity adapter', () => {
     expect(fetch).toHaveBeenCalledTimes(1);
     expect(store.getItem('wc_potion_pilot_v1')).toBeNull();
     expect(store.getItem('wc_potion_pilot_excluded_v1')).toBe('1');
+  });
+  it.each(['excluded', 'hidden', 'admin'] as const)(
+    'does not retry an adapter request after the page becomes %s while the first attempt is pending',
+    async state => {
+      const { client, store, surface, documentState } = await adapter();
+      let finishFirst!: (response: Response) => void;
+      const request = vi.fn(() => new Promise<Response>(resolve => { finishFirst = resolve; }));
+      vi.stubGlobal('fetch', request);
+      client.enqueueGameActivity({ ...activity, runId: crypto.randomUUID() });
+      expect(request).toHaveBeenCalledTimes(1);
+
+      if (state === 'excluded') client.excludePilot(store);
+      if (state === 'hidden') documentState.visibilityState = 'hidden';
+      if (state === 'admin') surface.location.pathname = '/admin/analytics';
+      finishFirst(new Response(null, { status: 503 }));
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      expect(request).toHaveBeenCalledTimes(1);
+    }
+  );
+  it('stops the current tab when accepted identity alignment cannot be persisted', async () => {
+    const { client, store } = await adapter();
+    vi.spyOn(Date, 'now').mockReturnValue(now);
+    let finishStart!: (response: Response) => void;
+    const request = vi.fn().mockImplementationOnce(() => new Promise<Response>(resolve => { finishStart = resolve; }))
+      .mockImplementation(async () => Response.json(reply()));
+    vi.stubGlobal('fetch', request);
+    const runId = crypto.randomUUID();
+
+    client.enqueueGameActivity({ ...activity, runId });
+    store.setItem = () => { throw new Error('writes became blocked'); };
+    client.enqueueGameActivity({ ...activity, kind: 'game_complete', runId });
+    finishStart(Response.json(reply()));
+    await new Promise(resolve => setTimeout(resolve, 0));
+    client.recordPilotSiteActivity(true);
+    await new Promise(resolve => setTimeout(resolve, 0));
+
+    expect(request).toHaveBeenCalledTimes(1);
   });
 });

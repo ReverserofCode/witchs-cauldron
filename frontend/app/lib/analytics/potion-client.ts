@@ -1,11 +1,11 @@
 import { POTION_PILOT_WINDOW } from './potion-config';
-import type { PotionPilotEvent } from './potion-contract';
+import type { AcceptedEvent, PotionPilotEvent } from './potion-contract';
 import { validatePotionPayload } from './potion-contract';
 import type { GameActivity } from '../games/potion-timing/types';
 
 export type PilotIdentity = { visitorId: string; expiresAt: number };
 export type PilotStorage = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
-export type AcceptedEvent = { ok: true; serverNowMs: number; expiresAtMs: number; dayKst: string };
+export type { AcceptedEvent } from './potion-contract';
 export const PILOT_IDENTITY_KEY = 'wc_potion_pilot_v1';
 export const PILOT_EXCLUDED_KEY = 'wc_potion_pilot_excluded_v1';
 const TTL_MS = 45 * 86400000;
@@ -43,8 +43,7 @@ export function createPilotIdentity(store: PilotStorage, nowMs: number): PilotId
 }
 
 export function excludePilot(store: PilotStorage): boolean {
-  excludedInTab = true;
-  runs.clear();
+  stopPilotCollectionInCurrentTab();
   let persisted = false;
   try {
     store.setItem(PILOT_EXCLUDED_KEY, '1');
@@ -55,15 +54,20 @@ export function excludePilot(store: PilotStorage): boolean {
 }
 
 export function excludePilotInCurrentTab(): void {
-  excludedInTab = true;
-  runs.clear();
+  stopPilotCollectionInCurrentTab();
 }
 
 const dayKst = (ms: number) => new Date(ms + 9 * 3600000).toISOString().slice(0, 10);
+function isCalendarDay(value: unknown): value is string {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const parsed = new Date(`${value}T00:00:00.000Z`);
+  return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
+}
 type Delivery = { accepted: AcceptedEvent | null; status: number | null };
 
-async function deliver(event: PotionPilotEvent): Promise<Delivery> {
+async function deliver(event: PotionPilotEvent, shouldAttempt: () => boolean = () => true): Promise<Delivery> {
   for (let attempt = 0; attempt < 2; attempt++) {
+    if (!shouldAttempt()) return { accepted: null, status: null };
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 5000);
     try {
@@ -81,7 +85,7 @@ async function deliver(event: PotionPilotEvent): Promise<Delivery> {
         const result = value as Partial<AcceptedEvent>;
         if (result.ok === true && typeof result.serverNowMs === 'number' && Number.isFinite(result.serverNowMs) && Math.abs(result.serverNowMs) < 8640000000000000 - 9 * 3600000 &&
             typeof result.expiresAtMs === 'number' && Number.isFinite(result.expiresAtMs) &&
-            result.expiresAtMs > result.serverNowMs && result.dayKst === dayKst(result.serverNowMs)) {
+            result.expiresAtMs > result.serverNowMs && isCalendarDay(result.dayKst)) {
           return { accepted: result as AcceptedEvent, status: 200 };
         }
       }
@@ -115,6 +119,11 @@ const acceptedVisitors = new Set<string>();
 type RunDelivery = { start: Promise<boolean>; completeQueued: boolean; identity: PilotIdentity; detail: GameActivity };
 const runs = new Map<string, RunDelivery>();
 
+function stopPilotCollectionInCurrentTab(): void {
+  excludedInTab = true;
+  runs.clear();
+}
+
 function estimatedNow(): number {
   return clockAnchor ? clockAnchor.serverMs + Math.max(0, performance.now() - clockAnchor.performanceMs) : Date.now();
 }
@@ -123,20 +132,36 @@ function stillParticipating(store: PilotStorage, identity: PilotIdentity): boole
   return !excludedInTab && readPilotIdentity(store, estimatedNow())?.visitorId === identity.visitorId;
 }
 
-function accept(store: PilotStorage, identity: PilotIdentity, result: AcceptedEvent): void {
-  if (excludedInTab) return;
+function accept(store: PilotStorage, identity: PilotIdentity, result: AcceptedEvent): boolean {
+  if (excludedInTab) return false;
   try {
     const raw = store.getItem(PILOT_IDENTITY_KEY);
-    if (store.getItem(PILOT_EXCLUDED_KEY) === '1' || !raw) return;
-    const current: PilotIdentity = JSON.parse(raw);
-    if (current.visitorId !== identity.visitorId) return;
+    if (store.getItem(PILOT_EXCLUDED_KEY) === '1' || !raw) {
+      stopPilotCollectionInCurrentTab();
+      return false;
+    }
+    const current = JSON.parse(raw) as Partial<PilotIdentity>;
+    if (current.visitorId !== identity.visitorId || typeof current.expiresAt !== 'number' ||
+        !Number.isFinite(current.expiresAt)) {
+      stopPilotCollectionInCurrentTab();
+      return false;
+    }
     const expiry = acceptedVisitors.has(identity.visitorId)
       ? Math.min(current.expiresAt, result.expiresAtMs) : result.expiresAtMs;
     store.setItem(PILOT_IDENTITY_KEY, JSON.stringify({ visitorId: identity.visitorId, expiresAt: expiry }));
+    const saved = readPilotIdentity(store, result.serverNowMs);
+    if (!saved || saved.visitorId !== identity.visitorId || saved.expiresAt !== expiry) {
+      stopPilotCollectionInCurrentTab();
+      return false;
+    }
     acceptedVisitors.add(identity.visitorId);
     clockAnchor = { serverMs: result.serverNowMs, performanceMs: performance.now() };
     successfulDay = result.dayKst;
-  } catch { /* Analytics is optional; never interrupt gameplay. */ }
+    return true;
+  } catch {
+    stopPilotCollectionInCurrentTab();
+    return false;
+  }
 }
 
 function parseActivity(detail: unknown): GameActivity | null {
@@ -162,8 +187,9 @@ export function enqueueGameActivity(detail: unknown): void {
     if (!identity) return;
     const event: PotionPilotEvent = { schema_version: 1, type: 'game_start', visitor_id: identity.visitorId,
       event_id: crypto.randomUUID(), run_id: activity.runId, mode: activity.mode, rule_version: activity.rulesVersion };
-    const start = deliver(event).then(({ accepted, status }) => {
-      if (accepted) { accept(store, identity, accepted); return !excludedInTab; }
+    const canDeliver = () => permitted() && stillParticipating(store, identity);
+    const start = deliver(event, canDeliver).then(({ accepted, status }) => {
+      if (accepted) return accept(store, identity, accepted);
       if (status === 204 && !previous && stillParticipating(store, identity)) {
         try { store.removeItem(PILOT_IDENTITY_KEY); } catch { /* Best effort own-key cleanup. */ }
       }
@@ -178,7 +204,8 @@ export function enqueueGameActivity(detail: unknown): void {
       if (!started || !permitted() || !stillParticipating(store, existing.identity)) return;
       const event: PotionPilotEvent = { schema_version: 1, type: 'game_complete', visitor_id: existing.identity.visitorId,
         event_id: crypto.randomUUID(), run_id: activity.runId, mode: activity.mode, rule_version: activity.rulesVersion };
-      const accepted = await trackPotionEvent(event);
+      const { accepted } = await deliver(event,
+        () => permitted() && stillParticipating(store, existing.identity));
       if (accepted) accept(store, existing.identity, accepted);
     });
   }
@@ -198,9 +225,9 @@ export function recordPilotSiteActivity(forceCheck = false): void {
   if (!forceCheck && (successfulDay === day || (lastSiteAttempt?.day === day &&
       performance.now() - lastSiteAttempt.performanceMs < 60000))) return;
   lastSiteAttempt = { day, performanceMs: performance.now() };
-  siteInflight = trackPotionEvent({ schema_version: 1, type: 'site_active', visitor_id: identity.visitorId,
-    event_id: crypto.randomUUID() }).then(result => {
-    if (result) accept(store, identity, result);
+  siteInflight = deliver({ schema_version: 1, type: 'site_active', visitor_id: identity.visitorId,
+    event_id: crypto.randomUUID() }, () => permitted() && stillParticipating(store, identity)).then(({ accepted }) => {
+    if (accepted) accept(store, identity, accepted);
   }).finally(() => {
     siteInflight = null;
     if (queuedSiteActivity) {
