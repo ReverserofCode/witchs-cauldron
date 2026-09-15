@@ -316,27 +316,29 @@ export function PotionTimingGame(): React.JSX.Element {
                 <span>100</span>
               </div>
               <div className={styles.gaugeTrack}>
-                <div
-                  className={styles.targetZone}
-                  style={{
-                    left: `${rule.center - rule.halfWidth}%`,
-                    width: `${rule.halfWidth * 2}%`,
-                  }}
-                >
-                  <span aria-hidden="true">목표</span>
-                </div>
-                <div
-                  ref={gaugeRef}
-                  className={styles.gaugeTravel}
-                  role="meter"
-                  aria-label="현재 온도"
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                  aria-valuenow={0}
-                  data-testid="gauge-indicator"
-                  data-position="0"
-                >
-                  <span className={styles.gaugeMarker} />
+                <div className={styles.gaugeRail}>
+                  <div
+                    className={styles.targetZone}
+                    style={{
+                      left: `${rule.center - rule.halfWidth}%`,
+                      width: `${rule.halfWidth * 2}%`,
+                    }}
+                  >
+                    <span aria-hidden="true">목표</span>
+                  </div>
+                  <div
+                    ref={gaugeRef}
+                    className={styles.gaugeTravel}
+                    role="meter"
+                    aria-label="현재 온도"
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={0}
+                    data-testid="gauge-indicator"
+                    data-position="0"
+                  >
+                    <span className={styles.gaugeMarker} />
+                  </div>
                 </div>
               </div>
             </div>

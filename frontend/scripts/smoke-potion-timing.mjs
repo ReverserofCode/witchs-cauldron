@@ -183,6 +183,58 @@ async function runKnownScoreAndKeyboard(browser) {
   await context.close();
 }
 
+async function runGaugeCoordinateAlignment(browser) {
+  for (const width of [320, 1440]) {
+    for (const center of [25, 70]) {
+      const { context, intercepted } = await createSmokeContext(browser, {
+        viewport: { width, height: 900 },
+      });
+      const date = "2026-09-15";
+      const startsAtMs = Date.parse(`${date}T00:00:00Z`);
+      const fixture = dailyFixture(date, startsAtMs + 1_000);
+      fixture.challenge.rounds = fixture.challenge.rounds.map((rule) => ({
+        ...rule,
+        center,
+      }));
+      await context.route("**/api/games/potion-timing/daily", (route) =>
+        route.fulfill({ status: 200, json: fixture })
+      );
+
+      const page = await context.newPage();
+      const clockStart = Date.now();
+      await page.clock.install({ time: clockStart });
+      await gotoGame(page, intercepted);
+      await page.clock.pauseAt(clockStart + 10_000);
+      await page.getByRole("button", { name: "오늘의 도전", exact: true }).click();
+      const gauge = page.getByTestId("gauge-frame");
+      assert.equal(Number(await gauge.getAttribute("data-center")), center);
+      const periodMs = Number(await gauge.getAttribute("data-period-ms"));
+
+      await page.getByRole("button", { name: "가열 시작", exact: true }).click();
+      await page.clock.runFor((center * periodMs) / 200);
+      await page.getByRole("button", { name: "불 끄기", exact: true }).click();
+      const roundResult = await page.locator("[data-testid='game-state'] [role='status']").innerText();
+      assert.match(roundResult, /100점/);
+
+      const displayedPosition = Number(
+        await page.getByTestId("gauge-indicator").getAttribute("data-position")
+      );
+      assert.ok(Math.abs(displayedPosition - center) <= 1);
+      const markerBox = await page.getByTestId("gauge-indicator").locator("span").boundingBox();
+      const targetBox = await page.getByText("목표", { exact: true }).locator("..").boundingBox();
+      assert.ok(markerBox, `marker must have a bounding box at ${width}px / center ${center}`);
+      assert.ok(targetBox, `target must have a bounding box at ${width}px / center ${center}`);
+      const markerCenter = markerBox.x + markerBox.width / 2;
+      const targetCenter = targetBox.x + targetBox.width / 2;
+      assert.ok(
+        Math.abs(markerCenter - targetCenter) <= 1,
+        `${width}px / center ${center}: marker center ${markerCenter.toFixed(2)} must align with target center ${targetCenter.toFixed(2)}`
+      );
+      await context.close();
+    }
+  }
+}
+
 async function runTouchAndSlowMode(browser) {
   const { context, intercepted } = await createSmokeContext(browser, {
     viewport: { width: 390, height: 844 },
@@ -488,6 +540,7 @@ async function main() {
   try {
     await runPrimaryPractice(browser);
     await runKnownScoreAndKeyboard(browser);
+    await runGaugeCoordinateAlignment(browser);
     await runTouchAndSlowMode(browser);
     await runPauseAndRafCleanup(browser);
     await runDailyBoundary(browser);
