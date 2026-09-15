@@ -99,7 +99,10 @@ async function runPrimaryPractice(browser) {
     viewport: { width: 1440, height: 1000 },
   });
   const page = await context.newPage();
+  const clockStart = Date.now();
+  await page.clock.install({ time: clockStart });
   await gotoGame(page, intercepted);
+  await page.clock.pauseAt(clockStart + 10_000);
   await assertNoOverflow(page, 1440);
   assert.equal(await page.locator("audio, video").count(), 0, "game must remain silent");
   await assertMinimumTarget(
@@ -120,7 +123,11 @@ async function runPrimaryPractice(browser) {
   await page.waitForFunction(
     () => document.querySelector("[data-testid='game-state']")?.getAttribute("data-phase") === "running"
   );
-  await page.waitForTimeout(80);
+  const noInputPeriodMs = Number(
+    await page.getByTestId("gauge-frame").getAttribute("data-period-ms")
+  );
+  assert.ok(noInputPeriodMs > 0, "active round must expose a positive gauge period");
+  await page.clock.runFor(noInputPeriodMs + 1);
   assert.equal(await page.getByTestId("game-state").getAttribute("data-phase"), "running");
 
   const staleStop = page.getByRole("button", { name: "불 끄기", exact: true });
@@ -258,6 +265,7 @@ async function runPauseAndRafCleanup(browser) {
 
 async function runDailyBoundary(browser) {
   const { context, intercepted } = await createSmokeContext(browser);
+  const clockStart = Date.now();
   let requestCount = 0;
   const firstEnd = Date.parse("2026-09-15T00:00:00Z");
   await context.route("**/api/games/potion-timing/daily", async (route) => {
@@ -268,14 +276,16 @@ async function runDailyBoundary(browser) {
     await route.fulfill({ status: 200, json: fixture });
   });
   const page = await context.newPage();
+  await page.clock.install({ time: clockStart });
   await gotoGame(page, intercepted);
+  await page.clock.pauseAt(clockStart + 10_000);
   await page.getByRole("button", { name: "오늘의 도전", exact: true }).click();
   await page.getByTestId("game-state").waitFor();
   assert.match(
     (await page.getByTestId("game-state").getAttribute("data-challenge-id")) ?? "",
     /2026-09-14/
   );
-  await page.waitForTimeout(900);
+  await page.clock.runFor(801);
   await page.getByRole("button", { name: "가열 시작", exact: true }).click();
   await page.waitForFunction(() => document.querySelector("[data-challenge-id*='2026-09-15']"));
   assert.equal(requestCount, 2, "expired first START must fetch a new daily challenge");
@@ -285,16 +295,19 @@ async function runDailyBoundary(browser) {
 
 async function runDailySnapshotAfterBoundary(browser) {
   const { context, intercepted } = await createSmokeContext(browser);
+  const clockStart = Date.now();
   const end = Date.parse("2026-09-15T00:00:00Z");
   await context.route("**/api/games/potion-timing/daily", (route) =>
     route.fulfill({ status: 200, json: dailyFixture("2026-09-14", end - 500) })
   );
   const page = await context.newPage();
+  await page.clock.install({ time: clockStart });
   await gotoGame(page, intercepted);
+  await page.clock.pauseAt(clockStart + 10_000);
   await page.getByRole("button", { name: "오늘의 도전", exact: true }).click();
   const challengeId = await page.getByTestId("game-state").getAttribute("data-challenge-id");
   await page.getByRole("button", { name: "가열 시작", exact: true }).click();
-  await page.waitForTimeout(650);
+  await page.clock.runFor(501);
   await page.getByRole("button", { name: "불 끄기", exact: true }).click();
   assert.equal(await page.getByTestId("game-state").getAttribute("data-challenge-id"), challengeId);
   assert.equal(await page.getByTestId("game-state").getAttribute("data-score-count"), "1");
@@ -383,6 +396,48 @@ async function runDailyRequestRaces(browser) {
 }
 
 async function runStorageFaultsAndClear(browser) {
+  const quota = await createSmokeContext(browser);
+  await quota.context.addInitScript(() => {
+    const completedAtMs = Date.now() - 1_000;
+    const completed = new Date(completedAtMs);
+    const challengeDate = [
+      completed.getFullYear(),
+      String(completed.getMonth() + 1).padStart(2, "0"),
+      String(completed.getDate()).padStart(2, "0"),
+    ].join("-");
+    const existingRunId = "d7b360f9-e638-476a-a17e-62ec11a36fb8";
+    const existingKey = `wc:potion:run:v1:${existingRunId}`;
+    const nativeSetItem = Storage.prototype.setItem;
+    nativeSetItem.call(localStorage, existingKey, JSON.stringify({
+      schemaVersion: 1,
+      runId: existingRunId,
+      mode: "practice",
+      rulesVersion: "potion-v1",
+      challengeId: `potion-v1:${challengeDate}:practice`,
+      challengeDate,
+      completedAtMs,
+      scores: [80, 70, 60, 50, 40],
+      total: 300,
+    }));
+    Storage.prototype.setItem = function setItem(key, value) {
+      if (this === localStorage && key.startsWith("wc:potion:run:v1:") && key !== existingKey) {
+        throw new DOMException("quota", "QuotaExceededError");
+      }
+      return nativeSetItem.call(this, key, value);
+    };
+  });
+  const quotaPage = await quota.context.newPage();
+  await gotoGame(quotaPage, quota.intercepted);
+  await quotaPage.getByTestId("record-first-score").filter({ hasText: "300점" }).waitFor();
+  await quotaPage.getByRole("button", { name: "일반 연습", exact: true }).click();
+  await playRemainingRounds(quotaPage);
+  await quotaPage
+    .getByText("이 브라우저에 기록을 저장하지 못했어요", { exact: false })
+    .waitFor();
+  await quotaPage.getByTestId("record-first-score").filter({ hasText: "300점" }).waitFor();
+  assert.equal(await quotaPage.getByTestId("round-score").count(), 5);
+  await quota.context.close();
+
   const corrupt = await createSmokeContext(browser);
   await corrupt.context.addInitScript(() => {
     localStorage.setItem("wc:potion:run:v1:broken", "{not-json");

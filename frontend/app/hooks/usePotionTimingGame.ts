@@ -87,7 +87,6 @@ export function usePotionTimingGame(): PotionTimingGameController {
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const stateRef = useRef<GameState | null>(null);
   const gaugeRef = useRef<HTMLDivElement>(null);
-  const lastGaugePositionRef = useRef(0);
   const dailyDeadlineRef = useRef<{
     runId: string;
     expiresAtPerformanceMs: number;
@@ -122,7 +121,6 @@ export function usePotionTimingGame(): PotionTimingGameController {
         mode === "daily" && dailyDeadline
           ? { runId, expiresAtPerformanceMs: dailyDeadline.expiresAtPerformanceMs }
           : null;
-      lastGaugePositionRef.current = 0;
       stateRef.current = nextState;
       setState(nextState);
       setSaveStatus("idle");
@@ -176,7 +174,6 @@ export function usePotionTimingGame(): PotionTimingGameController {
       const stored = store ? saveRecord(store, record) : false;
       setSaveStatus(stored ? "saved" : "unavailable");
       if (stored) refreshRecords();
-      else setStorageAvailable(false);
     },
     [refreshRecords],
   );
@@ -209,7 +206,6 @@ export function usePotionTimingGame(): PotionTimingGameController {
         const rule = current.challenge.rounds[current.roundIndex];
         const position = positionAt(nowMs - current.startedAtMs, rule.periodMs);
         const gauge = gaugeRef.current;
-        lastGaugePositionRef.current = position;
         if (gauge) {
           gauge.style.transform = `translateX(${position}%)`;
           gauge.dataset.position = position.toFixed(2);
@@ -391,7 +387,6 @@ export function usePotionTimingGame(): PotionTimingGameController {
     if (!gauge) return;
 
     if (!state || state.phase === "ready" || state.phase === "paused") {
-      lastGaugePositionRef.current = 0;
       gauge.style.transform = "translateX(0%)";
       gauge.dataset.position = "0";
       gauge.setAttribute("aria-valuenow", "0");
@@ -414,7 +409,6 @@ export function usePotionTimingGame(): PotionTimingGameController {
         return;
       }
       const position = positionAt(nowMs - current.startedAtMs, periodMs);
-      lastGaugePositionRef.current = position;
       gauge.style.transform = `translateX(${position}%)`;
       gauge.dataset.position = position.toFixed(2);
       gauge.setAttribute("aria-valuenow", String(Math.round(position)));
