@@ -218,7 +218,7 @@ export async function ingestPotionEvent(
     );
 
     if (participant.rowCount === 0) {
-      if (event.type === "game_complete") return finish(client, conflict(), true);
+      if (event.type === "game_complete") return finish(client, { status: 204 });
       if (event.type !== "game_start" || nowMs < window.enrollFromMs || nowMs >= window.enrollUntilMs) {
         return finish(client, { status: 204 });
       }
@@ -258,11 +258,8 @@ export async function ingestPotionEvent(
           WHERE visitor_id = $1 AND run_id = $2 AND event_type = 'game_start'`,
         [event.visitor_id, event.run_id]
       );
-      if (
-        start.rowCount === 0 ||
-        start.rows[0]?.mode !== event.mode ||
-        start.rows[0]?.rule_version !== event.rule_version
-      ) {
+      if (start.rowCount === 0) return finish(client, { status: 204 });
+      if (start.rows[0]?.mode !== event.mode || start.rows[0]?.rule_version !== event.rule_version) {
         return finish(client, conflict(), true);
       }
     }

@@ -83,6 +83,40 @@ describe("potion schema initialization", () => {
   });
 });
 
+describe("completion without an accepted start", () => {
+  function poolWithNoMatchingStart(participantExists: boolean) {
+    const statements: string[] = [];
+    const client = {
+      release: vi.fn(),
+      query: vi.fn(async (sql: string) => {
+        statements.push(sql);
+        if (sql.includes("SELECT expires_at FROM potion_pilot_visitors")) {
+          return participantExists
+            ? { rowCount: 1, rows: [{ expires_at: new Date(NOW + 45 * DAY_MS) }] }
+            : { rowCount: 0, rows: [] };
+        }
+        return { rowCount: 0, rows: [] };
+      }),
+    };
+    return {
+      pool: { connect: vi.fn(async () => client) } as unknown as Pool,
+      statements,
+    };
+  }
+
+  it.each([
+    ["unknown participant", false],
+    ["existing participant with an unknown run", true],
+  ])("returns 204 for %s without creating a participant", async (_case, participantExists) => {
+    const { pool, statements } = poolWithNoMatchingStart(participantExists);
+
+    const result = await ingestPotionEvent(pool, gameEvent({ type: "game_complete" }), NOW, WINDOW);
+
+    expect(result).toEqual({ status: 204 });
+    expect(statements.some((sql) => sql.includes("INSERT INTO potion_pilot_visitors"))).toBe(false);
+  });
+});
+
 describe("getPotionPool", () => {
   beforeEach(clearGlobalPotionDbState);
   afterEach(() => {
@@ -247,7 +281,7 @@ describeDatabase("potion event ingestion against PostgreSQL", () => {
   });
 
   it("does not enroll from complete, site activity, or a start after enrollment", async () => {
-    expect((await ingestPotionEvent(pool, gameEvent({ type: "game_complete" }), NOW, WINDOW)).status).toBe(400);
+    expect((await ingestPotionEvent(pool, gameEvent({ type: "game_complete" }), NOW, WINDOW)).status).toBe(204);
     expect((await ingestPotionEvent(pool, {
       schema_version: 1,
       visitor_id: IDS.visitor,
@@ -287,7 +321,7 @@ describeDatabase("potion event ingestion against PostgreSQL", () => {
       event_id: IDS.event2,
       run_id: IDS.run2,
     }), NOW + 1, WINDOW);
-    expect(missing).toEqual({ status: 400, body: { error: "event_conflict" } });
+    expect(missing).toEqual({ status: 204 });
 
     const mismatch = await ingestPotionEvent(pool, gameEvent({
       type: "game_complete",
