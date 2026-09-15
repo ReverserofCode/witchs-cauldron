@@ -16,7 +16,8 @@
 - RED boundary mutation `npm test -- app/lib/analytics/potion-db.test.ts`: failed at exact `observeUntilMs` because the implementation attempted to connect; changed observation/enrollment windows to half-open intervals.
 - GREEN `npm test -- app/lib/analytics/potion-contract.test.ts app/lib/analytics/potion-db.test.ts app/lib/analytics/potion-summary.test.ts app/api/analytics/potion/track/route.test.ts`: 4 files passed, 17 tests passed, 12 PostgreSQL cases skipped.
 - GREEN scoped ESLint over all ten owned source/test files: exit 0, no findings.
-- `npx tsc --noEmit --pretty false` reached only concurrent-task errors outside this server scope: missing `potion-client.ts` and a non-exported game `RecordSummary`; no server-owned TypeScript diagnostics.
+- GREEN `npx tsc --noEmit --pretty false`: exit 0 after concurrent client/game sources landed.
+- Full `npm test`: 153 passed, 12 PostgreSQL cases skipped, and one concurrent game-switch test failed (`daily/route.test.ts` expected disabled `404` while the concurrently edited config returned `200`); the four server-owned files remained green.
 
 ## PostgreSQL coverage and remaining verification
 
