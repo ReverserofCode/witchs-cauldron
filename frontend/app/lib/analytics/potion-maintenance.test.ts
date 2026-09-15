@@ -26,8 +26,12 @@ if (testDatabaseUrl && !isSafeTestDatabaseUrl(testDatabaseUrl)) {
 
 type ScriptResult = { code: number | null; stdout: string; stderr: string };
 
-function runMaintenance(command: string, overrides: NodeJS.ProcessEnv = {}, timeoutMs = 12_000) {
-  const env = { ...process.env, ...overrides };
+function runMaintenance(command: string, overrides: Partial<NodeJS.ProcessEnv> = {}, timeoutMs = 12_000) {
+  const env: NodeJS.ProcessEnv = {
+    ...process.env,
+    ...overrides,
+    NODE_ENV: overrides.NODE_ENV ?? process.env.NODE_ENV ?? "test",
+  };
   delete env.POTION_TEST_DATABASE_URL;
   if (overrides.ANALYTICS_DATABASE_URL === undefined) delete env.ANALYTICS_DATABASE_URL;
   if (overrides.DATABASE_URL === undefined) delete env.DATABASE_URL;
