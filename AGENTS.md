@@ -8,7 +8,7 @@
 
 **프로젝트명**: 마녀의 포션 공방 (Witchs Cauldron)
 **설명**: 버튜버 "모잉(Moing)"을 위한 팬 커뮤니티 웹사이트
-**주요 기능**: 방송 스케줄, YouTube 콘텐츠, 치지직 라이브 상태, 팬아트 갤러리, 하이라이트 숏폼, **방송 모아보기**, **클립 자동 수집**, **방문자/클릭 분석**
+**주요 기능**: 방송 스케줄, YouTube 콘텐츠, 치지직 라이브 상태, 팬아트 갤러리, 하이라이트 숏폼, **방송 모아보기**, **클립 자동 수집**, **방문자/클릭 분석**, **포션 불조절 팬 창작 미니게임(베타)**
 **GitHub**: https://github.com/ReverserofCode/witchs-cauldron
 
 ---
@@ -18,7 +18,7 @@
 | 분류 | 기술 | 버전 |
 |------|------|------|
 | **Frontend** | | |
-| 프레임워크 | Next.js (App Router) | 16.3.0 |
+| 프레임워크 | Next.js (App Router) | 16.3.3 |
 | 언어 | TypeScript | 6.0.3 |
 | UI | React | 19.2.5 |
 | 스타일링 | Tailwind CSS | v4 |
@@ -166,6 +166,10 @@ witchs-cauldron/                      # 프로젝트 루트
 | 분석 DB 연결 | `frontend/app/api/analytics/db.ts` |
 | 이벤트 수집 API | `frontend/app/api/analytics/track/route.ts` |
 | 통계 조회 API | `frontend/app/api/analytics/stats/route.ts` |
+| 포션 불조절 페이지 | `frontend/app/games/potion-timing/page.tsx` |
+| 포션 게임 규칙·기록·공개 설정 | `frontend/app/lib/games/potion-timing/` |
+| 포션 파일럿 기간 설정 | `frontend/app/lib/analytics/potion-config.ts` |
+| 포션 파일럿 집계 API | `frontend/app/admin/analytics/potion-summary/route.ts` |
 
 ### Backend
 
@@ -195,6 +199,9 @@ witchs-cauldron/                      # 프로젝트 루트
 | `/api/analytics/track` | 페이지뷰/클릭 이벤트 수집 | no-store |
 | `/api/analytics/stats` | 통계 조회 (프로덕션 Basic Auth) | no-store |
 | `/admin/analytics` | 분석 대시보드 (프로덕션 Basic Auth) | - |
+| `GET /api/games/potion-timing/daily` | 서버 기준 오늘의 포션 도전·시각 | no-store |
+| `POST /api/analytics/potion/track` | 별도 파일럿 이벤트 수집 (현재 비활성, 204) | no-store |
+| `GET /admin/analytics/potion-summary` | `from`/`to` 코호트 집계 (프로덕션 Basic Auth) | private, no-store |
 
 ### Backend API (FastAPI)
 
@@ -477,6 +484,7 @@ RootLayout
 
 ## 최근 변경
 
+- **포션 불조절 베타 구현** - 5라운드 게임·일일 도전·연습·기기 기록·홈/메뉴 진입 및 격리된 재방문 측정 기반 추가. 아래 2026-09-15 요약 참조
 - **모잉 「여름의 공방」 기간 한정 굿즈 홍보** - 2026-08-31 23:59까지 전역 띠배너와 홈 상세 카드 자동 노출, 마감 카운트다운·세션 닫기·Analytics 추적 추가. 운영 기준은 [굿즈 홍보 운영 가이드](docs/SUMMER_ATELIER_PROMOTION.md) 참조
 - **YouTube Shorts 최신 영상 미반영 수정** - Shorts 필터링 기준 65초→185초 (YouTube 2024.10 3분 정책 반영), YouTube API fetch 캐시 `revalidate:60`→`no-store`로 변경, `MAX_LOOKAHEAD` 50→100 확대
 - **프로젝트 전반 디자인 개선** - 모바일 햄버거 메뉴 추가(Header), Footer 강화(커뮤니티/사이트 링크), 일정 그리드 반응형(`grid-cols-2 md:grid-cols-4`), 컬러 토큰 정리(중복 제거, `--moing-bg` 추가)
@@ -493,6 +501,14 @@ RootLayout
 - **2열 숏폼 레이아웃** - 치지직 클립 + YouTube Shorts를 나란히 표시
 - **숏폼 클립 뷰어** - ClipsViewer를 틱톡/릴스 스타일로 재작성 (9:16, 스와이프, 키보드)
 - **CI/CD 구축** - GitHub Actions 자동 배포 (무중단 배포)
+
+## 2026-09-15 작업 요약 (포션 불조절 베타)
+
+- `/games/potion-timing`에 비공식 팬 창작 게임을 구현했다. 5라운드·최대 500점, KST 오전 9시 갱신 일일 도전, 일반/느린 연습, 터치·키보드 조작, 화면 이탈 시 일시정지, 브라우저별 첫/최고 기록을 제공한다. [게임 기능·운영 가이드](docs/POTION_TIMING_GAME.md) 참조.
+- 소스 `POTION_GAME_ENABLED=true`이며 홈 카드·데스크톱/모바일 메뉴·사이트맵에 연결한다. 홈 ISR 300초와 게임 링크 `prefetch={false}`를 유지한다. 중단 시 소스를 `false`로 바꿔 재빌드·배포하면 진입점이 제거되고 게임 페이지/daily API가 404가 된다.
+- 재방문 측정은 별도 테이블·수집 계약·보호된 집계·만료 정리 명령으로 구현했다. **`POTION_PILOT_WINDOW=null`**이므로 파일럿 ID 생성·전송·신규 수집은 시작하지 않는다. 운영 담당자·파일럿 날짜·자동 정리 예약은 아직 미정/미설정이며, 활성화는 [측정 운영 가이드](docs/POTION_RETENTION_MEASUREMENT.md)의 준비 조건을 먼저 충족해야 한다.
+- [PR #6](https://github.com/ReverserofCode/witchs-cauldron/pull/6)은 `0483162`로 병합됐다. [CI 34965761454](https://github.com/ReverserofCode/witchs-cauldron/actions/runs/34965761454)는 `3420fdc`에서 성공했다. 일반 테스트 172 통과/16 DB 보류이며, 별도 PostgreSQL16 테스트 29/29 통과로 보류 항목을 모두 검증했다. Node22·Docker·브라우저·백엔드 검증도 통과했다. 중복 테스트를 합산하지 않는다.
+- 사람 대상 사용성 평가와 재방문 효과 검증은 **미실시**다. CI 성공·병합을 운영 배포 완료로 간주하지 않으며 실제 배포 결과는 [릴리스 기록](docs/POTION_RELEASE_2026-09-15.md)을 기준으로 확인한다. Next.js는 보안 패치를 반영한 `16.3.3`이다.
 
 ## 2026-02-02 작업 요약 (중요 변경)
 
