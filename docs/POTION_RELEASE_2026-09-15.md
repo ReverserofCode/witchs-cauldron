@@ -17,6 +17,7 @@
 - 게임 클라이언트 재시도/집계 제외/자정 경계를 실제 provider browser fixture로 검증했다.
 - 의존성 보안 패치와 Vitest ESM 설정 정리를 진행했다.
 - 집계 SQL의 매개변수 누락, DB idle 오류/HMR pool 중복, 자정 재시도 응답 해석, 집계 제외 이후 재전송 및 저장 실패 시 수집 중단을 추가 검토에서 보완했다.
+- 전체 브랜치 검토에서는 게이지 표식과 목표의 좌표계 차이 및 DB 정리 테스트의 배열 bind 오류를 발견했다. 게이지는 같은 좌표 rail을 쓰도록 보완하고 320/1440px·목표 25/70의 실제 bounding box를 비교한다. DB fixture는 배열을 하나의 SQL 매개변수로 전달하도록 수정했다.
 - 일반 Analytics 수집 계약/집계의 의미는 바꾸지 않았다. [최적화 검토](CODE_OPTIMIZATION_REVIEW_2026-09-15.md)에 별도 후보를 남겼다.
 
 ## 실행 중 판단과 비용
@@ -49,7 +50,11 @@
 
 ### CI 및 운영 배포
 
-CI/PR/CD 링크, 배포 SHA, 운영 read-only 응답은 완료 후 이 절을 갱신한다. 운영 DB를 테스트용으로 사용하거나 실제 방문 집계를 합성 이벤트로 오염시키지 않는다. 로컬 Node25와 달리 배포 기준 Node22/PostgreSQL16/Docker 검증은 CI 결과로 확정한다.
+- PR: [#6 포션 불조절 베타와 격리된 재방문 측정 기반](https://github.com/ReverserofCode/witchs-cauldron/pull/6).
+- 첫 CI [34965041767](https://github.com/ReverserofCode/witchs-cauldron/actions/runs/34965041767): Docker 이미지 및 API 키 없는 컨테이너 검증 통과. 일반 테스트 172 통과/16 보류. 실제 DB 테스트 26 통과/3 실패 — 서비스 쿼리가 아닌 maintenance fixture의 `ANY($1::uuid[])` bind 형식 오류를 재현했으며 `c0884e8`에서 수정했다. 실패 기록을 통과로 덮어쓰지 않는다.
+- 수정 후 CI/CD 링크, 배포 SHA, 운영 read-only 응답은 완료 후 갱신한다.
+
+운영 DB를 테스트용으로 사용하거나 실제 방문 집계를 합성 이벤트로 오염시키지 않는다. 로컬 Node25와 달리 배포 기준 Node22/PostgreSQL16/Docker 검증은 CI 결과로 확정한다.
 
 ## 참고 사항
 
