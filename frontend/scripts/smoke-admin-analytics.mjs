@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
 
 const baseUrl = process.env.SMOKE_BASE_URL || 'http://127.0.0.1:3000';
+assert.ok(['127.0.0.1', 'localhost', '[::1]'].includes(new URL(baseUrl).hostname), 'admin smoke is loopback only');
 const username = process.env.ADMIN_BASIC_AUTH_USERNAME || 'admin';
 const password = process.env.ADMIN_BASIC_AUTH_PASSWORD || 'dev-password';
 
@@ -158,6 +159,12 @@ async function findClippedAdminSummaryText(page) {
   });
 }
 
+async function blockAnalyticsWrites(context) {
+  for (const pathname of ['/api/analytics/track', '/api/analytics/potion/track']) {
+    await context.route(`**${pathname}`, route => route.fulfill({ status: 204 }));
+  }
+}
+
 async function main() {
   const browser = await chromium.launch({
     headless: true,
@@ -166,6 +173,7 @@ async function main() {
   });
 
   const publicContext = await browser.newContext();
+  await blockAnalyticsWrites(publicContext);
   const publicPage = await publicContext.newPage();
   await publicPage.goto(new URL('/', baseUrl).toString(), { waitUntil: 'domcontentloaded', timeout: 45_000 });
   await publicPage.locator('body').waitFor();
@@ -179,6 +187,7 @@ async function main() {
   const adminContext = await browser.newContext({
     httpCredentials: { username, password },
   });
+  await blockAnalyticsWrites(adminContext);
   const adminPage = await adminContext.newPage();
   const requests = [];
   const healthRequests = [];

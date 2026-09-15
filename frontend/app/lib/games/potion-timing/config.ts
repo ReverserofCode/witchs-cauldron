@@ -1,1 +1,1 @@
-export const POTION_GAME_ENABLED = false;
+export const POTION_GAME_ENABLED = true;
