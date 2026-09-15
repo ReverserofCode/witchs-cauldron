@@ -1,7 +1,12 @@
 import type { RoundRule } from "./types";
 
-function isValidRule(rule: RoundRule): boolean {
+export function isValidRoundRule(value: unknown): value is RoundRule {
+  if (typeof value !== "object" || value === null) return false;
+  const rule = value as Record<string, unknown>;
   return (
+    typeof rule.center === "number" &&
+    typeof rule.halfWidth === "number" &&
+    typeof rule.periodMs === "number" &&
     Number.isFinite(rule.center) &&
     Number.isFinite(rule.halfWidth) &&
     Number.isFinite(rule.periodMs) &&
@@ -22,7 +27,12 @@ export function positionAt(elapsedMs: number, periodMs: number): number {
 }
 
 export function scoreAt(position: number, rule: RoundRule): number {
-  if (!Number.isFinite(position) || position < 0 || position > 100 || !isValidRule(rule)) {
+  if (
+    !Number.isFinite(position) ||
+    position < 0 ||
+    position > 100 ||
+    !isValidRoundRule(rule)
+  ) {
     throw new RangeError("invalid_rule");
   }
 
@@ -47,7 +57,7 @@ export function makeRounds(seedText: string, slow = false): readonly RoundRule[]
     periodMs: periods[next() % periods.length] * (slow ? 1.8 : 1),
   }));
 
-  if (rounds.length !== 5 || rounds.some((rule) => !isValidRule(rule))) {
+  if (rounds.length !== 5 || rounds.some((rule) => !isValidRoundRule(rule))) {
     throw new RangeError("invalid_rule");
   }
   return rounds;

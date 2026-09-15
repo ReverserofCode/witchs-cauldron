@@ -1,5 +1,5 @@
-import { makeRounds } from "./rules";
-import type { Challenge, RoundRule } from "./types";
+import { isValidRoundRule, makeRounds } from "./rules";
+import type { Challenge } from "./types";
 
 const DAY_MS = 86_400_000;
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
@@ -23,23 +23,6 @@ function validDate(date: unknown): date is string {
   if (typeof date !== "string" || !DATE_PATTERN.test(date)) return false;
   const timestamp = Date.parse(`${date}T00:00:00Z`);
   return Number.isFinite(timestamp) && new Date(timestamp).toISOString().slice(0, 10) === date;
-}
-
-function validRule(value: unknown): value is RoundRule {
-  if (!isObject(value)) return false;
-  const { center, halfWidth, periodMs } = value;
-  return (
-    typeof center === "number" &&
-    typeof halfWidth === "number" &&
-    typeof periodMs === "number" &&
-    Number.isFinite(center) &&
-    Number.isFinite(halfWidth) &&
-    Number.isFinite(periodMs) &&
-    halfWidth > 0 &&
-    periodMs > 0 &&
-    center - halfWidth >= 0 &&
-    center + halfWidth <= 100
-  );
 }
 
 export function getDailyChallenge(nowMs: number): DailyChallenge {
@@ -78,7 +61,7 @@ export function parseDailyResponse(value: unknown): DailyResponse | null {
     endsAtMs - startsAtMs !== DAY_MS ||
     !Array.isArray(rounds) ||
     rounds.length !== 5 ||
-    !rounds.every(validRule)
+    !rounds.every(isValidRoundRule)
   ) {
     return null;
   }

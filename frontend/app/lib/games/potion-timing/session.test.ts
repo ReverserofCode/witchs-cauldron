@@ -49,6 +49,10 @@ describe("potion timing session", () => {
 
     const paused = transition(running, command(running, "PAUSE", 2000));
     expect(paused.state).toEqual({ ...running, phase: "paused", startedAtMs: null });
+    expect(transition(paused.state, command(paused.state, "PAUSE", 2500))).toEqual({
+      state: paused.state,
+      activity: null,
+    });
     expect(transition(paused.state, command(paused.state, "RESUME", 3000)).state.phase).toBe(
       "ready",
     );

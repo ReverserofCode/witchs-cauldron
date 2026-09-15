@@ -1,27 +1,14 @@
-import { positionAt, scoreAt } from "./rules";
+import { isValidRoundRule, positionAt, scoreAt } from "./rules";
 import type {
   Challenge,
   GameActivity,
   GameCommand,
   GameMode,
   GameState,
-  RoundRule,
   Transition,
 } from "./types";
 
 const MODES: readonly GameMode[] = ["daily", "practice", "slow-practice"];
-
-function isValidRule(rule: RoundRule): boolean {
-  return (
-    Number.isFinite(rule.center) &&
-    Number.isFinite(rule.halfWidth) &&
-    Number.isFinite(rule.periodMs) &&
-    rule.halfWidth > 0 &&
-    rule.periodMs > 0 &&
-    rule.center - rule.halfWidth >= 0 &&
-    rule.center + rule.halfWidth <= 100
-  );
-}
 
 function unchanged(state: GameState): Transition {
   return { state, activity: null };
@@ -48,7 +35,7 @@ export function createGame(runId: string, mode: GameMode, challenge: Challenge):
     challenge.date.length === 0 ||
     !Array.isArray(challenge.rounds) ||
     challenge.rounds.length !== 5 ||
-    challenge.rounds.some((rule) => !isValidRule(rule))
+    challenge.rounds.some((rule) => !isValidRoundRule(rule))
   ) {
     throw new RangeError("invalid_challenge");
   }

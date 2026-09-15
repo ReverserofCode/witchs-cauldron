@@ -10,6 +10,7 @@ describe("GET /api/games/potion-timing/daily", () => {
   });
 
   it("returns 404 while the source feature switch is disabled", async () => {
+    vi.doMock(CONFIG_PATH, () => ({ POTION_GAME_ENABLED: false }));
     const { GET } = await import("./route");
 
     const response = await GET();

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { makeRounds, positionAt, scoreAt } from "./rules";
+import { isValidRoundRule, makeRounds, positionAt, scoreAt } from "./rules";
 
 describe("potion timing rules", () => {
   it("scores known positions independently of render frequency", () => {
@@ -58,5 +58,14 @@ describe("potion timing rules", () => {
       "invalid_rule",
     );
     expect(() => scoreAt(50, { ...valid, periodMs: 0 })).toThrowError("invalid_rule");
+  });
+
+  it("exposes one round validity contract for every domain boundary", () => {
+    expect(isValidRoundRule({ center: 50, halfWidth: 10, periodMs: 4000 })).toBe(true);
+    expect(isValidRoundRule(null)).toBe(false);
+    expect(isValidRoundRule({ center: 50, halfWidth: 10 })).toBe(false);
+    expect(isValidRoundRule({ center: 5, halfWidth: 10, periodMs: 4000 })).toBe(false);
+    expect(isValidRoundRule({ center: 95, halfWidth: 10, periodMs: 4000 })).toBe(false);
+    expect(isValidRoundRule({ center: 50, halfWidth: 10, periodMs: Number.NaN })).toBe(false);
   });
 });

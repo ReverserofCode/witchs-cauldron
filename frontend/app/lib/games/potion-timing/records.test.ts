@@ -142,6 +142,26 @@ describe("potion timing records", () => {
     expect(store.getItem("unrelated:key")).toBe("keep");
   });
 
+  it("retains but does not display records completed in the future", () => {
+    const store = new MemoryStore();
+    const future = record({ completedAtMs: NOW + 1 });
+    saveRecord(store, future);
+
+    expect(readRecords(store, NOW)).toEqual({ records: [], storageAvailable: true });
+    expect(store.getItem(`wc:potion:run:v1:${future.runId}`)).toBe(JSON.stringify(future));
+  });
+
+  it("does not inspect or prune records when the current time is non-finite", () => {
+    for (const nowMs of [Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY]) {
+      const store = new MemoryStore();
+      const old = record({ completedAtMs: 1 });
+      saveRecord(store, old);
+
+      expect(readRecords(store, nowMs)).toEqual({ records: [], storageAvailable: true });
+      expect(store.getItem(`wc:potion:run:v1:${old.runId}`)).toBe(JSON.stringify(old));
+    }
+  });
+
   it("groups first and best by mode, rule version, and challenge snapshot", () => {
     const first = record({ completedAtMs: NOW - 5000, total: 300 });
     const lower = record({

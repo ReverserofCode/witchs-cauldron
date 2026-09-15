@@ -119,8 +119,11 @@ export function readRecords(
   nowMs: number,
 ): { records: RunRecord[]; storageAvailable: boolean } {
   try {
+    const keys = snapshotKeys(store);
+    if (!Number.isFinite(nowMs)) return { records: [], storageAvailable: true };
+
     const records: RunRecord[] = [];
-    for (const key of snapshotKeys(store)) {
+    for (const key of keys) {
       if (!key.startsWith(RECORD_PREFIX)) continue;
       const serialized = store.getItem(key);
       if (serialized === null) continue;
@@ -131,7 +134,9 @@ export function readRecords(
       }
 
       const ageMs = nowMs - record.completedAtMs;
-      if (ageMs > PRUNE_DAYS * DAY_MS) {
+      if (ageMs < 0) {
+        continue;
+      } else if (ageMs > PRUNE_DAYS * DAY_MS) {
         store.removeItem(key);
       } else if (ageMs <= DISPLAY_DAYS * DAY_MS) {
         records.push(record);
