@@ -171,8 +171,11 @@ describe('potion activity adapter', () => {
     vi.spyOn(performance, 'now').mockReturnValue(0);
     const afterMidnight = now + 120000;
     const persistedStart = { ...reply(afterMidnight), dayKst: '2026-09-15' };
-    const request = vi.fn(async () => {
-      const attempt = request.mock.calls.length;
+    const requestBodies: string[] = [];
+    const request = vi.fn(async (_url: string, init: RequestInit) => {
+      if (typeof init.body !== 'string') throw new TypeError('expected a JSON string request body');
+      requestBodies.push(init.body);
+      const attempt = requestBodies.length;
       if (attempt === 1) throw new Error('ack lost after commit');
       if (attempt === 2) return Response.json(persistedStart);
       if (attempt === 3) return new Response(null, { status: 400 });
@@ -186,7 +189,7 @@ describe('potion activity adapter', () => {
     client.recordPilotSiteActivity();
     await vi.waitFor(() => expect(request).toHaveBeenCalledTimes(4));
 
-    const bodies = request.mock.calls.map(call => JSON.parse(call[1].body));
+    const bodies = requestBodies.map(body => JSON.parse(body));
     expect(bodies.map(body => body.type)).toEqual(['game_start', 'game_start', 'game_complete', 'site_active']);
     expect(bodies[1].event_id).toBe(bodies[0].event_id);
   });
