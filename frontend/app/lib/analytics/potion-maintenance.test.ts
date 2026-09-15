@@ -81,7 +81,7 @@ describe("potion maintenance process contract", () => {
     expect(result.stdout).toBe("");
   });
 
-  it("uses only the first explicit URL and never prints either URL or its credentials", async () => {
+  it.each(["potion-profile", "potion-retention"])("%s uses only the first explicit URL and never prints either URL or its credentials", async (command) => {
     let fallbackConnections = 0;
     const fallback = createServer((socket) => {
       fallbackConnections += 1;
@@ -93,7 +93,7 @@ describe("potion maintenance process contract", () => {
     const secondary = `postgres://fallback-user:fallback-secret@127.0.0.1:${fallbackPort}/potion_test`;
 
     try {
-      const result = await runMaintenance("potion-profile", {
+      const result = await runMaintenance(command, {
         ANALYTICS_DATABASE_URL: primary,
         DATABASE_URL: secondary,
       });
@@ -113,19 +113,35 @@ describe("potion maintenance process contract", () => {
 });
 
 const describeDatabase = testDatabaseUrl ? describe : describe.skip;
+const COEXISTENCE_SCHEMA = "potion_maintenance_coexistence";
 const IDS = {
   expiredVisitor: "40000000-0000-4000-8000-000000000041",
   expiredEvent: "50000000-0000-4000-8000-000000000041",
   futureVisitor: "40000000-0000-4000-8000-000000000042",
   futureEvent: "50000000-0000-4000-8000-000000000042",
+  generalEvent: "60000000-0000-4000-8000-000000000041",
 } as const;
 
 describeDatabase("potion maintenance against guarded PostgreSQL", () => {
   let pool: Pool;
+  let coexistencePool: Pool;
+  let coexistenceDatabaseUrl: string;
 
   beforeAll(async () => {
     pool = new Pool({ connectionString: testDatabaseUrl, max: 3 });
     await ensurePotionSchema(pool);
+    await pool.query(`CREATE SCHEMA IF NOT EXISTS ${COEXISTENCE_SCHEMA}`);
+    const coexistenceUrl = new URL(testDatabaseUrl);
+    coexistenceUrl.searchParams.set("options", `-c search_path=${COEXISTENCE_SCHEMA}`);
+    coexistenceDatabaseUrl = coexistenceUrl.toString();
+    coexistencePool = new Pool({ connectionString: coexistenceDatabaseUrl, max: 3 });
+    await ensurePotionSchema(coexistencePool);
+    await coexistencePool.query(
+      `CREATE TABLE IF NOT EXISTS analytics_events (
+         event_id uuid PRIMARY KEY,
+         created_at timestamptz NOT NULL
+       )`
+    );
   });
 
   beforeEach(async () => {
@@ -133,9 +149,23 @@ describeDatabase("potion maintenance against guarded PostgreSQL", () => {
       IDS.expiredVisitor,
       IDS.futureVisitor,
     ]);
+    await coexistencePool.query("DELETE FROM potion_pilot_visitors WHERE visitor_id = ANY($1::uuid[])", [
+      IDS.expiredVisitor,
+      IDS.futureVisitor,
+    ]);
+    await coexistencePool.query("DELETE FROM analytics_events WHERE event_id = $1", [IDS.generalEvent]);
   });
 
   afterAll(async () => {
+    if (coexistencePool) {
+      await coexistencePool.query("DELETE FROM potion_pilot_visitors WHERE visitor_id = ANY($1::uuid[])", [
+        IDS.expiredVisitor,
+        IDS.futureVisitor,
+      ]).catch(() => undefined);
+      await coexistencePool.query("DELETE FROM analytics_events WHERE event_id = $1", [IDS.generalEvent])
+        .catch(() => undefined);
+      await coexistencePool.end();
+    }
     if (pool) {
       await pool.query("DELETE FROM potion_pilot_visitors WHERE visitor_id = ANY($1::uuid[])", [
         IDS.expiredVisitor,
@@ -145,13 +175,13 @@ describeDatabase("potion maintenance against guarded PostgreSQL", () => {
     }
   });
 
-  async function insertVisitorWithEvent(visitorId: string, eventId: string, expiresAt: string) {
-    await pool.query(
+  async function insertVisitorWithEvent(visitorId: string, eventId: string, expiresAt: string, target = pool) {
+    await target.query(
       `INSERT INTO potion_pilot_visitors (visitor_id, first_started_at, first_day_kst, expires_at)
        VALUES ($1, '2026-01-01T00:00:00Z', '2026-01-01', $2::timestamptz)`,
       [visitorId, expiresAt]
     );
-    await pool.query(
+    await target.query(
       `INSERT INTO potion_pilot_events
        (event_id, visitor_id, event_type, run_id, mode, rule_version, occurred_at, day_kst)
        VALUES ($1, $2, 'site_active', NULL, NULL, NULL, '2026-01-01T00:00:00Z', '2026-01-01')`,
@@ -180,15 +210,15 @@ describeDatabase("potion maintenance against guarded PostgreSQL", () => {
     expect(JSON.parse(uninstalled.stdout)).toMatchObject({ installed: false });
   });
 
-  it("deletes expired potion visitors transactionally, cascades their events, and preserves future potion rows", async () => {
-    await insertVisitorWithEvent(IDS.expiredVisitor, IDS.expiredEvent, "2026-01-02T00:00:00Z");
-    await insertVisitorWithEvent(IDS.futureVisitor, IDS.futureEvent, "2100-01-01T00:00:00Z");
-    const generalTable = await pool.query<{ table_name: string | null }>(
-      "SELECT to_regclass('analytics_events')::text AS table_name"
+  it("deletes only expired potion data while preserving future potion rows and general analytics", async () => {
+    await insertVisitorWithEvent(IDS.expiredVisitor, IDS.expiredEvent, "2026-01-02T00:00:00Z", coexistencePool);
+    await insertVisitorWithEvent(IDS.futureVisitor, IDS.futureEvent, "2100-01-01T00:00:00Z", coexistencePool);
+    await coexistencePool.query(
+      "INSERT INTO analytics_events (event_id, created_at) VALUES ($1, '2000-01-01T00:00:00Z')",
+      [IDS.generalEvent]
     );
-    expect(generalTable.rows[0]?.table_name).toBeNull();
 
-    const result = await runMaintenance("potion-retention", { ANALYTICS_DATABASE_URL: testDatabaseUrl });
+    const result = await runMaintenance("potion-retention", { ANALYTICS_DATABASE_URL: coexistenceDatabaseUrl });
     expect(result.code).toBe(0);
     const report = JSON.parse(result.stdout);
     expect(report).toMatchObject({ remainingExpired: 0 });
@@ -196,16 +226,24 @@ describeDatabase("potion maintenance against guarded PostgreSQL", () => {
     expect(result.stdout).not.toContain(IDS.expiredVisitor);
     expect(result.stdout).not.toContain(IDS.expiredEvent);
 
-    const rows = await pool.query<{ visitor_id: string }>(
+    const rows = await coexistencePool.query<{ visitor_id: string }>(
       "SELECT visitor_id::text FROM potion_pilot_visitors WHERE visitor_id = ANY($1::uuid[]) ORDER BY visitor_id",
       [[IDS.expiredVisitor, IDS.futureVisitor]]
     );
     expect(rows.rows).toEqual([{ visitor_id: IDS.futureVisitor }]);
-    const events = await pool.query<{ event_id: string }>(
+    const events = await coexistencePool.query<{ event_id: string }>(
       "SELECT event_id::text FROM potion_pilot_events WHERE event_id = ANY($1::uuid[]) ORDER BY event_id",
       [[IDS.expiredEvent, IDS.futureEvent]]
     );
     expect(events.rows).toEqual([{ event_id: IDS.futureEvent }]);
+    const general = await coexistencePool.query<{ event_id: string; created_at: Date }>(
+      "SELECT event_id::text, created_at FROM analytics_events WHERE event_id = $1",
+      [IDS.generalEvent]
+    );
+    expect(general.rows).toEqual([{
+      event_id: IDS.generalEvent,
+      created_at: new Date("2000-01-01T00:00:00.000Z"),
+    }]);
   });
 
   it("fails rather than reporting zero deletions when potion tables are not installed", async () => {
