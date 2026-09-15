@@ -93,11 +93,12 @@ jobs:
           SMOKE_BASE_URL: http://127.0.0.1:3165
           ANALYTICS_DATABASE_URL: postgres://potion_test:local-test-only@127.0.0.1:5546/potion_test
           ANALYTICS_HASH_SECRET: isolated-ci-only
+          POTION_EXPECT_DATABASE: 'true'
           ADMIN_BASIC_AUTH_USERNAME: smoke-admin
           ADMIN_BASIC_AUTH_PASSWORD: isolated-ci-only
         run: |
           set -euo pipefail
-          node node_modules/next/dist/bin/next start -H 127.0.0.1 -p 3165 > /tmp/potion-next.log 2>&1 &
+          node scripts/start-smoke-server.mjs > /tmp/potion-next.log 2>&1 &
           SERVER_PID=$!
           trap 'kill "$SERVER_PID" 2>/dev/null || true' EXIT
           for attempt in $(seq 1 30); do
@@ -108,6 +109,7 @@ jobs:
           npm run smoke:potion
           npm run smoke:potion-analytics
           npm run smoke:admin
+          node scripts/smoke-potion-endpoints.mjs
 
   docker-image:
     runs-on: ubuntu-latest

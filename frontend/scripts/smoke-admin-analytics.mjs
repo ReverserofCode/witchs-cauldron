@@ -244,6 +244,20 @@ async function main() {
   const clippedMobileText = await findClippedAdminSummaryText(adminPage);
   assert.deepEqual(clippedMobileText, [], `admin summary text should not be clipped on mobile: ${JSON.stringify(clippedMobileText, null, 2)}`);
   await adminPage.getByRole('region', { name: '핵심 지표' }).scrollIntoViewIfNeeded();
+  // scrollIntoViewIfNeeded may stop with the tall, intentionally static date
+  // toolbar halfway through the viewport. First verify its mobile policy,
+  // then scroll it fully away before checking the remaining sticky controls.
+  const mobilePositions = await adminPage.evaluate(() => ({
+    toolbar: getComputedStyle(document.querySelector('.admin-toolbar')).position,
+    nav: getComputedStyle(document.querySelector('nav[aria-label="Analytics 섹션"]')).position,
+  }));
+  assert.equal(mobilePositions.toolbar, 'static', 'mobile date controls must not become sticky');
+  assert.equal(mobilePositions.nav, 'sticky', 'mobile section navigation must stay sticky');
+  await adminPage.evaluate(() => {
+    const toolbar = document.querySelector('.admin-toolbar').getBoundingClientRect();
+    window.scrollTo({ top: window.scrollY + toolbar.bottom + 16, behavior: 'instant' });
+  });
+  await adminPage.waitForFunction(() => document.querySelector('.admin-toolbar').getBoundingClientRect().bottom <= 0);
   const stickyLayout = await adminPage.evaluate(() => {
     const nav = document.querySelector('nav[aria-label="Analytics 섹션"]')?.getBoundingClientRect();
     const toolbar = document.querySelector('.admin-toolbar')?.getBoundingClientRect();
@@ -254,6 +268,9 @@ async function main() {
     return {
       nav: { top: nav.top, bottom: nav.bottom },
       toolbar: { top: toolbar.top, bottom: toolbar.bottom },
+      navPosition: getComputedStyle(document.querySelector('nav[aria-label="Analytics 섹션"]')).position,
+      toolbarPosition: getComputedStyle(document.querySelector('.admin-toolbar')).position,
+      scrollY: window.scrollY,
       overlapArea: horizontalOverlap * verticalOverlap,
     };
   });

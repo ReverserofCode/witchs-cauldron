@@ -4,6 +4,7 @@ dist
 coverage
 *.tsbuildinfo
 playwright-screenshots
+output/playwright/
 .playwright-cli
 .env*
 
