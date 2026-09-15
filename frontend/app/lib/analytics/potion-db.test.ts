@@ -138,12 +138,17 @@ describeDatabase("potion event ingestion against PostgreSQL", () => {
       "potion_events_active_day_uq",
     ]));
 
+    await pool.query(
+      `INSERT INTO potion_pilot_visitors (visitor_id, first_started_at, first_day_kst, expires_at)
+       VALUES ($1, now(), CURRENT_DATE, now() + interval '45 days')`,
+      [IDS.visitor]
+    );
     await expect(pool.query(
       `INSERT INTO potion_pilot_events
        (event_id, visitor_id, event_type, run_id, mode, rule_version, occurred_at, day_kst)
        VALUES ($1, $2, 'site_active', $3, 'daily', 'potion-v1', now(), CURRENT_DATE)`,
       [IDS.event1, IDS.visitor, IDS.run]
-    )).rejects.toBeInstanceOf(Error);
+    )).rejects.toMatchObject({ code: "23514" });
   });
 
   it("enrolls only a first game_start during enrollment without moving its first timestamp or expiry", async () => {
