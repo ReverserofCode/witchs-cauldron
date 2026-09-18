@@ -4,7 +4,7 @@
 
 **Goal:** Implement and test the approved administrator-mediated permission workflow, without deploying or contacting creators.
 **Architecture:** A dedicated PostgreSQL catalog and private persistent image volume feed uncached public routes. Explicit creator permission and operator review gate upload/publication; existing static artworks remain separately identified legacy entries.
-**Tech Stack:** Existing Next.js 16.3, React 19, TypeScript, pg, sharp, Vitest, Playwright, PostgreSQL 16. No production dependencies added.
+**Tech Stack:** Existing Next.js 16.3.3, React 19, TypeScript, pg, sharp 0.35.4, Vitest, Playwright, PostgreSQL 16. No production dependencies added.
 **Spec:** `docs/superpowers/specs/2026-09-15-fanart-permission-workflow-design.md` (approved by user on 2026-09-18).
 
 ## Global Constraints
@@ -71,7 +71,7 @@ expect((await handlers.create(badOrigin)).status).toBe(403);
 
 ### Task 2: Admin UI, live gallery and durable deployment configuration
 
-**Ownership:** `frontend/app/admin/fanart/**`; gallery/modal/shared type integration; new gallery hook and browser test; `frontend/app/lib/fanart.ts`; Compose files, Dockerfile, next image config if necessary, .gitignore, sample environment documentation and `docs/FANART_PERMISSION_WORKFLOW.md`. Do not rewrite Task 1 backend without reporting need.
+**Ownership:** `frontend/app/admin/fanart/**`; gallery/modal/shared type integration; new gallery hook and browser test; `frontend/app/lib/fanart.ts`; Compose files, Dockerfile and .dockerignore, next image config if necessary, .gitignore, package.json smoke script, sample environment documentation, CI fanart test steps and `docs/FANART_PERMISSION_WORKFLOW.md`. Do not rewrite Task 1 backend without reporting need.
 
 **Interfaces:** Consume Task 1 REST/model contract, confirmed from Task 1 report before edits. Legacy loader remains synchronous; new API polled client-side. New type supports optional id/sourceUrl/publishedAt alongside legacy src/alt/credit/download.
 
@@ -81,6 +81,7 @@ expect((await handlers.create(badOrigin)).status).toBe(403);
 - [ ] Every newly-managed image in gallery/modal/thumbnails uses unoptimized, not just the main image. Block `/media/fanart/**` from next/image optimizer via localPatterns exclusion or request guard, so manually crafted `/_next/image?url=/media/fanart/...` cannot outlive withdrawal. Preserve legacy/local image optimization.
 - [ ] Add source link, KST introduction date, verification label for new images; keep existing legacy image behavior and revise empty copy. Shared type exports preserve existing imports.
 - [ ] Configure fanart_assets volume and FANART_ASSETS_DIR/FANART_ALLOWED_ORIGIN in dev/prod/server Compose. Ensure nonroot Docker runner owns mount initialization directory and retains files after recreate. Ignore frontend/.data. Document FANART_DATABASE_URL optional (same existing PG allowed), admin envs, backups, rollback, legacy limitations, no scrape/auto-send, no deployment performed.
+- [ ] Exclude .data from Docker build context as well as Git. Add a `smoke:fanart` npm command. Wire fanart repository integration tests and browser smoke into existing CI test job with its disposable PostgreSQL service; preserve workflow triggers, permissions, pinned actions, existing checks and production secrets isolation. Tests use their own schemas. Allow the existing CI disposable database name in test URL guard only if explicitly configured and loopback; no default fallback.
 - [ ] GREEN: browser smoke, full tests/typecheck/lint/build; no hidden skipped browser claim. Commit owned paths and full test evidence report.
 
 ## Release verification (controller)
