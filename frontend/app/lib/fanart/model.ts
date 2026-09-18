@@ -1,3 +1,5 @@
+import type { OutreachState } from "./outreach/types";
+
 export type FanArtStatus = "candidate" | "requested" | "ready" | "published" | "withdrawn" | "rejected";
 export type FanArtReviewStatus = "pending" | "confirmed_non_generative" | "unclear" | "excluded_generative";
 
@@ -37,6 +39,7 @@ export interface FanArtWork {
   };
   asset: FanArtAsset | null;
   approvedHash: string | null;
+  outreach?: OutreachState;
 }
 
 export interface ReviewInput {
@@ -268,6 +271,9 @@ export function publishWork(work: FanArtWork, now: string): FanArtWork {
     return fail("terminal_work", "최종 처리된 작품은 변경할 수 없습니다.", 409);
   }
   requireTimestamp(now);
+  if (work.outreach && !["published", "cancelled"].includes(work.outreach.status)) {
+    return fail("outreach_approval_required", "자동 요청 작품은 준비된 이미지의 최종 승인을 사용해 주세요.", 409);
+  }
   if (!work.asset || !hasApproval(work) || work.status !== "ready") {
     return fail("not_ready", "게시 조건을 모두 충족해 주세요.", 409);
   }

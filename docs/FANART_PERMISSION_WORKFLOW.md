@@ -65,4 +65,4 @@ DB 또는 목록 요청이 실패하면 이전에 받은 목록을 유지할 수
 
 컨테이너 재생성 검증은 `scripts/smoke-fanart-persistence.mjs seed`, 테스트 frontend 컨테이너만 동일 DB/볼륨을 유지해 재생성, `... verify` 순서다. 양쪽에 같은 숫자형 `FANART_PERSISTENCE_RUN_ID`를 전달한다. 검증 후 게시 테스트 작품도 철회한다.
 
-이 작업에서는 운영 배포·푸시를 하지 않았다. 실제 검증 결과는 `FANART_IMPLEMENTATION_TEST_REPORT_2026-09-18.md`에 기록한다.
+초기 구현 단계에서는 운영 배포·푸시를 하지 않았다. 구현 검증은 `FANART_IMPLEMENTATION_TEST_REPORT_2026-09-18.md`, 이후 사용자가 승인한 실제 배포와 운영 확인 결과는 [배포 기록](FANART_DEPLOYMENT_2026-09-18.md)에 기록한다.

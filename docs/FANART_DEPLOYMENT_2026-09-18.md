@@ -1,7 +1,7 @@
 # 팬아트 승인형 게시 기능 운영 배포 기록
 
 작업일: 2026-09-18 (Asia/Seoul). 사용자 요청: “배포 진행해”.
-상태: 운영 CD 진행 중. 최종 결과는 아래에 기록한다.
+상태: 운영 배포 및 읽기 전용 검증 완료 (2026-09-18 22:09 KST).
 
 ## 대상과 범위
 
@@ -37,4 +37,30 @@
 - 실제 `docker compose config`를 실행하는9개 회귀 테스트에서 기본 설정3개가 먼저 실패했고, 수정 후9개 모두 통과했다. 외부/전용 DB 오버라이드가 우선함도 검증한다.
 - PR CI에 Compose 검증을 추가하고, CD에 팬아트 공개 API200/no-store/공개 필드 제한 및 관리자 무인증401·인증200을 검사하는 읽기 전용 검증을 추가했다. 작품 등록/게시/업로드는 하지 않는다.
 
-보완 배포 결과: 진행 중.
+보완 배포 결과:
+
+- [설정 보완 PR #9](https://github.com/ReverserofCode/witchs-cauldron/pull/9) 병합 완료. 최종 운영 SHA: `050892158b2581bc4115a5e340e38eccb6468a57`.
+- [보완 CI 35347778317](https://github.com/ReverserofCode/witchs-cauldron/actions/runs/35347778317): test·docker-image 모두 성공. Compose 9개 검증, 팬아트 DB 통합 테스트, 격리 DB 브라우저 회귀 테스트 통과.
+- 독립 배포 설정 리뷰에서 Critical/Important 지적 없음. CI docker-image 작업의 Node 버전을 명시적으로 고정하는 제안은 비차단 후속 개선 사항이다.
+- [최종 CD 35348090237](https://github.com/ReverserofCode/witchs-cauldron/actions/runs/35348090237): build-and-test·deploy 모두 성공. 서버 체크아웃 SHA가 최종 운영 SHA와 일치하고 컨테이너 헬스체크 및 기존 Analytics 인증 조회 검증을 통과했다.
+- 새 CD 검증에서 공개 팬아트 목록 200/no-store, 무인증 관리자 API 401, 인증 관리자 API 200/no-store 및 응답 구조를 확인했다. 인증 정보와 비공개 응답 본문은 출력하지 않았다.
+
+실제 운영 URL에 별도로 GET 요청해 확인한 결과:
+
+| 경로 | 결과 |
+|---|---|
+| `/` | 200, 팬 커뮤니티 작업실 마크업 존재 |
+| `/api/health` | 200 |
+| `/api/fanart` | 200, no-store, `images: []` |
+| `/admin/fanart`, `/api/admin/fanart` (무인증) | 401, Basic Auth challenge, private/no-store |
+| `/media/fanart/<존재하지 않는 UUID>` | 404, no-store |
+| 신규 팬아트 경로를 지정한 `/_next/image` 요청 | 400 (최적화 캐시 우회 차단) |
+| `/broadcasts`, `/games/potion-timing` | 200 |
+
+## 운영 인계와 검증 한계
+
+- 초기 배포의 팬아트 503은 설정 보완 후 같은 공개 API의 200 응답으로 해소를 확인했다.
+- 신규 게시 작품은 검증 시점에 0개다. 빈 목록에서는 실제 작품의 공개 필드나 이미지 렌더링을 운영에서 검증한 것이 아니다. 게시·철회·권한·파일 보존 흐름은 일회성 테스트 환경에서 검증했다.
+- 실제 작가의 허락이나 작품을 임의로 등록하지 않았고, 운영에서 업로드·게시·철회 요청을 실행하지 않았다. 운영 쓰기 흐름의 종단 간 확인은 첫 실제 허락 작품을 관리자가 게시할 때 필요하다.
+- 팬카페의 댓글/메시지에서 허락을 자동 감지하거나 이미지를 자동 수집하지 않는다. [관리자 화면](https://moingfans.com/admin/fanart)에서 원문 후보 → 동의·비AI 제작 확인·운영자 검수 기록 → 파일 업로드 → 게시 승인을 완료하면 공개 목록에 나타나고 갤러리가 갱신된다.
+- 작업 절차·동의 범위·철회·백업 정책은 [운영 가이드](FANART_PERMISSION_WORKFLOW.md)를 따른다. DB와 `fanart_assets` 볼륨을 함께 백업해야 한다.

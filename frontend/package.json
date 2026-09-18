@@ -10,6 +10,7 @@
 		"typegen": "next typegen",
 		"typecheck": "npm run typegen && tsc --noEmit",
 		"test": "vitest run",
+		"fanart:outreach": "tsx scripts/fanart-outreach.ts",
 		"dev:install:host": "npm install",
 		"capture:screens": "node scripts/capture-screenshots.mjs",
 		"smoke:admin": "node scripts/smoke-admin-analytics.mjs",
@@ -38,6 +39,7 @@
 		"playwright": "^1.59.1",
 		"postcss": "8.5.25",
 		"tailwindcss": "^4.2.2",
+		"tsx": "4.23.13",
 		"typescript": "^6.0.3",
 		"vitest": "^4.1.11"
 	}
