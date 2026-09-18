@@ -245,7 +245,33 @@ export function createFanArtHandlers(dependencies: HandlerDependencies = {}) {
     },
 
     async publish(request: Request, id: string) {
-      return action(request, id, (work, timestamp) => publishWork(work, timestamp));
+      try {
+        guard(request, true);
+        validId(id);
+        const body = await readJsonObject(request);
+        const version = positiveVersion(body.version);
+        const operationNow = now();
+        const repository = await getRepository();
+        const current = await repository.get(id);
+        if (!current) throw new FanArtError("not_found", "작품을 찾을 수 없습니다.", 404);
+
+        // A retry of a committed publication is still idempotent. New publication
+        // must verify the saved bytes outside the row lock, then recheck version
+        // and all approval conditions in the transaction below.
+        if (current.status !== "published") {
+          if (current.version !== version) {
+            throw new FanArtError("version_conflict", "다른 변경이 저장되었습니다. 새로고침 후 다시 시도해 주세요.", 409);
+          }
+          publishWork(current, operationNow);
+          if (!current.asset || !await assets.readVerified(current.asset)) {
+            throw new FanArtError("invalid_asset", "게시할 이미지 파일을 확인할 수 없습니다. 파일을 다시 준비해 주세요.", 409);
+          }
+        }
+        const work = await repository.update(id, version, (locked) => publishWork(locked, operationNow));
+        return json({ work }, 200, true);
+      } catch (error) {
+        return errorResponse(error, true);
+      }
     },
 
     async withdraw(request: Request, id: string) {

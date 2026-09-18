@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { authenticateAdmin } from "./app/lib/fanart/http";
+import { authenticateAdmin, getFanArtHttpConfig } from "./app/lib/fanart/http";
 import { FanArtError } from "./app/lib/fanart/model";
 
 const ADMIN_REALM = "MoingFans Admin";
@@ -51,11 +51,7 @@ export function proxy(request: NextRequest) {
 
   if (isFanArtAdminPath(request.nextUrl.pathname)) {
     try {
-      authenticateAdmin(request, {
-        username: username ?? "",
-        password: password ?? "",
-        origin: process.env.FANART_ALLOWED_ORIGIN ?? "",
-      });
+      authenticateAdmin(request, getFanArtHttpConfig());
       return addAdminHeaders(NextResponse.next());
     } catch (error) {
       if (error instanceof FanArtError && error.status === 401) return unauthorizedResponse();

@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
 import { proxy } from "../../../proxy";
+import { authenticateAdmin } from "./http";
 
 function request(path: string, authorization?: string) {
   return new NextRequest(`https://moingfans.com${path}`, {
@@ -18,6 +19,19 @@ afterEach(() => {
 });
 
 describe("fanart proxy authentication", () => {
+  it.each(["/api/admin/fanart", "/admin/fanart"])("uses the same exact whitespace-bearing credentials as the handler for %s", (path) => {
+    vi.stubEnv("ADMIN_BASIC_AUTH_USERNAME", " operator ");
+    vi.stubEnv("ADMIN_BASIC_AUTH_PASSWORD", " secret ");
+    const exact = request(path, basic(" operator ", " secret "));
+    const trimmed = request(path, basic("operator", "secret"));
+
+    expect(() => authenticateAdmin(exact)).not.toThrow();
+    expect(proxy(exact).status).toBe(200);
+    expect(() => authenticateAdmin(trimmed)).toThrow();
+    expect(proxy(trimmed).status).toBe(401);
+    // Other admin routes retain their historic trimming behavior.
+    expect(proxy(request("/admin/analytics", basic("operator", "secret"))).status).toBe(200);
+  });
   it.each(["/api/admin/fanart", "/admin/fanart"])(
     "fails closed for %s without credentials even in development",
     async (path) => {

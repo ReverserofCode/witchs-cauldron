@@ -64,11 +64,18 @@ try {
   assert.equal((await context.request.get(`${base}${published.src}`)).status(), 404);
   await gallery.evaluate(() => window.dispatchEvent(new Event('focus')));
   await gallery.getByRole('button', { name: `${title} 크게 보기` }).waitFor({ state: 'hidden' });
+  await gallery.getByRole('dialog', { name: '팬아트 상세 보기' }).waitFor({ state: 'hidden' });
+  // Release pointer/focus interaction so autoplay actually advances. A removed
+  // selection must clear the open intent, not just hide the dialog until then.
+  await gallery.mouse.move(0, 0);
+  await gallery.evaluate(() => document.activeElement instanceof HTMLElement && document.activeElement.blur());
+  await gallery.waitForTimeout(4500);
+  assert.equal(await gallery.getByRole('dialog', { name: '팬아트 상세 보기' }).count(), 0, 'withdrawn selection must not reopen a modal after autoplay');
   assert.equal((await (await context.request.get(`${base}/api/fanart`)).json()).images.some(image => image.id === published.id), false);
   await page.setViewportSize({ width: 390, height: 844 });
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true, 'mobile admin overflow');
   assert.deepEqual(errors, []);
-  console.log('PASS fanart browser: create, permission/review, upload, publish, gallery/modal, optimizer denial, withdraw, mobile');
+  console.log('PASS fanart browser: create, permission/review, upload, publish, gallery/modal, optimizer denial, withdraw, no modal reopen after autoplay, mobile');
 } finally {
   await browser.close();
 }

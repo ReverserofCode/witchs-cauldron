@@ -1,11 +1,15 @@
 import sharp from "sharp";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
-import type { FanArtAssetStore } from "./assets";
+import { createFanArtAssetStore, type FanArtAssetStore } from "./assets";
 import {
   applyReview,
   attachAsset,
   createCandidate,
+  FanArtError,
   publishWork,
   withdrawWork,
   type ReviewInput,
@@ -275,5 +279,74 @@ describe("fanart asset attachment", () => {
     expect(response.status).toBe(503);
     expect(store.removeCreated).toHaveBeenCalledTimes(1);
     expect(store.removeCreated).toHaveBeenCalledWith(asset.key);
+  });
+});
+
+describe("fanart publication file validation", () => {
+  function publishRequest(id: string, version: number) {
+    return new Request(`https://moingfans.com/api/admin/fanart/${id}/publish`, {
+      method: "POST",
+      headers: { ...adminHeaders(true), "content-type": "application/json" },
+      body: JSON.stringify({ version }),
+    });
+  }
+
+  it.each(["missing", "corrupt"])("does not publish a ready draft whose saved file is %s", async (damage) => {
+    const directory = await mkdtemp(join(tmpdir(), "fanart-publish-"));
+    try {
+      const store = createFanArtAssetStore(directory);
+      const png = await sharp({ create: { width: 20, height: 20, channels: 3, background: "#fff" } }).png().toBuffer();
+      const saved = await store.save(png);
+      let current = attachAsset(applyReview(candidate(), confirmed, NOW), saved, NOW);
+      const before = structuredClone(current);
+      if (damage === "missing") await store.removeCreated(saved.key);
+      else await writeFile(join(directory, saved.key), Buffer.from("corrupt"));
+      const repo = repository({
+        get: async () => current,
+        update: async (_id, _version, operation) => { current = operation(current); return current; },
+      });
+      const handlers = createFanArtHandlers({ getRepository: async () => repo, assets: store, config });
+
+      expect((await handlers.publish(publishRequest(current.id, current.version), current.id)).status).toBe(409);
+      expect(current).toEqual(before);
+      expect(current.status).toBe("ready");
+      expect(current.approvedHash).toBeNull();
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
+  it("does not bind validation of an old asset to a concurrently replaced asset", async () => {
+    const before = ready();
+    const replacement = { ...asset, key: "762ebfec-d1b5-4e40-bd0b-6dc64188b02a.webp", sha256: "b".repeat(64) };
+    let current = before;
+    const store = assetStore({ readVerified: async () => {
+      current = { ...applyReview(attachAsset(before, replacement, NOW), confirmed, NOW), version: before.version + 1 };
+      return Buffer.from("verified-old-file");
+    } });
+    const repo = repository({
+      get: async () => current,
+      update: async (_id, version, operation) => {
+        if (version !== current.version) throw new FanArtError("version_conflict", "conflict", 409);
+        current = operation(current);
+        return current;
+      },
+    });
+    const handlers = createFanArtHandlers({ getRepository: async () => repo, assets: store, config });
+
+    expect((await handlers.publish(publishRequest(before.id, before.version), before.id)).status).toBe(409);
+    expect(current.status).toBe("ready");
+    expect(current.asset?.sha256).toBe("b".repeat(64));
+    expect(current.approvedHash).toBeNull();
+  });
+
+  it("preserves successful publication retries even if the already-published file is later lost", async () => {
+    const current = { ...published(), version: 5 };
+    const repo = repository({ get: async () => current, update: async (_id, _version, operation) => operation(current) });
+    const handlers = createFanArtHandlers({ getRepository: async () => repo, assets: assetStore({ readVerified: async () => null }), config });
+
+    const response = await handlers.publish(publishRequest(current.id, 4), current.id);
+    expect(response.status).toBe(200);
+    expect((await response.json()).work).toEqual(current);
   });
 });

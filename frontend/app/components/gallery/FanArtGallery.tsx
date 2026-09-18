@@ -20,6 +20,13 @@ export default function FanArtGallery({ images: legacyImages, compact = false }:
   const [isAutoPlay, setIsAutoPlay] = useState(true);
   const [isInteracting, setIsInteracting] = useState(false);
 
+  // Reconcile the open intent as well as the visible selection when a catalog
+  // update removes it. Otherwise the next autoplay tick can reopen the modal.
+  if (selectedSrc !== null && !images.some(image => image.src === selectedSrc)) {
+    setSelectedSrc(null);
+    setIsModalOpen(false);
+  }
+
   useEffect(() => {
     if (images.length <= 1 || modalVisible || !isAutoPlay || isInteracting) return;
     const timer = window.setInterval(() => {
