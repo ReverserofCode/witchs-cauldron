@@ -8,6 +8,14 @@ const renderedText = value => value.trim().replace(/\s+/g, " ");
 
 function fail(message) { throw new Error(`Cafe browser: ${message}`); }
 
+export class UncertainSendError extends Error {
+  constructor(message = "uncertain send result; do not resubmit automatically", options) {
+    super(`Cafe browser: ${message}`, options);
+    this.name = "UncertainSendError";
+    this.code = "UNCERTAIN_SEND";
+  }
+}
+
 export function validateCafeSelectors(value) {
   if (!value || typeof value !== "object" || Array.isArray(value)) fail("explicit selectors are required");
   for (const key of REQUIRED) {
@@ -62,8 +70,25 @@ export function createCafeBrowserProvider({ page, selectors, operatorMemberKey, 
   if (typeof operatorMemberKey !== "string" || !/^[A-Za-z0-9_-]{1,128}$/.test(operatorMemberKey)) fail("operator member identity is required");
   if (!Number.isInteger(timeoutMs) || timeoutMs < 100 || timeoutMs > 30000) fail("invalid timeout");
 
+  async function assertNoBlockers(contentScope) {
+    for (const blocker of s.blockers) {
+      for (const owner of s.frame ? [page, contentScope] : [page]) {
+        const matches = owner.locator(blocker);
+        if (await matches.count() > 20) fail("ambiguous blocker selector");
+        for (const match of await matches.all()) {
+          if (await match.isVisible()) fail("login or verification requires operator intervention");
+        }
+      }
+    }
+  }
+
+  async function assertOperatorIdentity() {
+    const account = await unique(page.locator(s.signedInMemberLink), "signed-in account");
+    if (member(await account.getAttribute("href")) !== operatorMemberKey) fail("signed-in account does not match configured operator");
+  }
+
   async function scope() {
-    let scope = page;
+    let contentScope = page;
     if (s.frame) {
       await page.locator(s.frame).waitFor({ state: "attached", timeout: timeoutMs });
       await unique(page.locator(s.frame), "article frame");
@@ -72,23 +97,16 @@ export function createCafeBrowserProvider({ page, selectors, operatorMemberKey, 
       const frameUrl = new URL(src, page.url());
       frameUrl.pathname = frameUrl.pathname.replace(/^\/ca-fe\//, "/f-e/");
       if (source(frameUrl.href) !== source(page.url())) fail("frame points to a different article");
-      scope = page.frameLocator(s.frame);
+      contentScope = page.frameLocator(s.frame);
     }
-    for (const blocker of s.blockers) {
-      for (const owner of s.frame ? [page, scope] : [page]) {
-        const matches = owner.locator(blocker);
-        if (await matches.count() > 20) fail("ambiguous blocker selector");
-        for (const match of await matches.all()) {
-          if (await match.isVisible()) fail("login or verification requires operator intervention");
-        }
-      }
-    }
-    await scope.locator(s.article).waitFor({ state: "attached", timeout: timeoutMs });
-    return unique(scope.locator(s.article), "article container");
+    await assertNoBlockers(contentScope);
+    await contentScope.locator(s.article).waitFor({ state: "attached", timeout: timeoutMs });
+    return unique(contentScope.locator(s.article), "article container");
   }
 
   async function readCurrent(canonical) {
     if (source(page.url()) !== canonical) fail("article navigation changed unexpectedly");
+    await assertOperatorIdentity();
     const root = await scope();
     await root.locator(s.commentsReady).waitFor({ state: "attached", timeout: timeoutMs });
     await unique(root.locator(s.commentsReady), "complete comment marker");
@@ -136,8 +154,6 @@ export function createCafeBrowserProvider({ page, selectors, operatorMemberKey, 
     if (typeof marker !== "string" || !/^\[moingfans:[A-Za-z0-9-]{1,80}\]$/.test(marker)) fail("invalid request marker");
     if (typeof text !== "string" || !text.trim() || text.length + marker.length + 2 > 4000 || text.includes("[moingfans:")) fail("invalid request text");
     const snapshot = await inspect(raw);
-    const account = await unique(page.locator(s.signedInMemberLink), "signed-in account");
-    if (member(await account.getAttribute("href")) !== operatorMemberKey) fail("signed-in account does not match configured operator");
     const existing = snapshot.comments.filter(c => c.authorId === operatorMemberKey && c.parentId === null && c.text.endsWith(marker));
     if (existing.length > 1) fail("duplicate request markers require reconciliation");
     if (existing.length === 1) return { commentId: existing[0].id };
@@ -146,6 +162,9 @@ export function createCafeBrowserProvider({ page, selectors, operatorMemberKey, 
     const button = await unique(root.locator(s.commentSubmit), "comment submit button");
     if (!await input.isVisible() || !await input.isEnabled() || !await button.isVisible() || !await button.isEnabled()) fail("comment writing is unavailable");
     await input.fill(`${text.trim()}\n\n${marker}`, { timeout: timeoutMs });
+    await assertNoBlockers(s.frame ? page.frameLocator(s.frame) : page);
+    await assertOperatorIdentity();
+    if (!await button.isVisible() || !await button.isEnabled()) fail("comment writing is unavailable");
     try {
       await button.click({ timeout: timeoutMs });
       await root.locator(s.commentRow).filter({ hasText: marker }).waitFor({ state: "visible", timeout: timeoutMs });
@@ -153,8 +172,8 @@ export function createCafeBrowserProvider({ page, selectors, operatorMemberKey, 
       const matches = after.comments.filter(c => c.authorId === operatorMemberKey && c.parentId === null && renderedText(c.text) === renderedText(`${text}\n\n${marker}`));
       if (matches.length !== 1) fail("request comment could not be reconciled");
       return { commentId: matches[0].id };
-    } catch {
-      fail("uncertain send result; do not resubmit automatically");
+    } catch (cause) {
+      throw new UncertainSendError(undefined, { cause });
     }
   }
   return { inspect, sendRequest };

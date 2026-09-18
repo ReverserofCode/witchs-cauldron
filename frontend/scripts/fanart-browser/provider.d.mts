@@ -18,6 +18,10 @@ export interface CafeProvider {
   inspect(sourceUrl: string): Promise<CafeSnapshot>;
   sendRequest(sourceUrl: string, text: string, marker: string): Promise<{ commentId: string }>;
 }
+export class UncertainSendError extends Error {
+  readonly code: "UNCERTAIN_SEND";
+  constructor(message?: string, options?: ErrorOptions);
+}
 export function validateCafeSelectors(value: unknown): CafeSelectors;
 export function createCafeBrowserProvider(options: {
   page: Page; selectors: CafeSelectors; operatorMemberKey: string; timeoutMs?: number;

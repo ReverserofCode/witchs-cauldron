@@ -17,7 +17,7 @@ This separate test configuration intentionally does not launch Chromium during t
 
 ## Configuration contract
 
-`createCafeBrowserProvider({ page, selectors, operatorMemberKey })` consumes a Playwright Page, an explicitly validated selector object and the stable member key of the intended signed-in operator. The worker CLI supplies these; no account password belongs in this JSON.
+`createCafeBrowserProvider({ page, selectors, operatorMemberKey })` consumes a Playwright Page, an explicitly validated selector object and the stable member key of the intended signed-in operator. The worker CLI supplies these; no account password belongs in this JSON. Every `inspect` and `sendRequest` operation fails closed unless `signedInMemberLink` resolves to exactly one valid same-cafe member link matching `operatorMemberKey`. Logged-out, expired, ambiguous, malformed and mismatched identities are never accepted.
 
 Fixture-only example:
 
@@ -53,7 +53,7 @@ Fixture-only example:
 
 ## Sending and uncertainty
 
-Requests use a stable `[moingfans:<work UUID>]` marker. The adapter verifies the configured signed-in member and reconciles an existing own top-level marked request before any click. It requires one visible enabled input and submit control. After a single click, it waits for a uniquely identified own matching comment. Missing/ambiguous confirmation throws an uncertain-send error; the durable service must hold the request instead of automatically retrying it.
+Requests use a stable `[moingfans:<work UUID>]` marker. Callers pass plain request text without the marker; the adapter appends the marker exactly once. It verifies the configured signed-in member and reconciles an existing own top-level marked request before any click. It requires one visible enabled input and submit control, then rechecks blockers and the exact operator identity after filling and immediately before the one allowed click. After that click, it waits for a uniquely identified own matching comment. Missing/ambiguous confirmation throws `UncertainSendError` with stable code `UNCERTAIN_SEND`; the durable service must hold the request instead of automatically retrying it. Pre-click failures are also terminal to the caller and must not be automatically retried.
 
 The adapter does not enforce global daily/rate limits or durable ownership; those belong to the worker/service and must not be bypassed by calling this low-level module directly. A marker reconciles our own submission, not artist consent. Reply interpretation and final permission decisions remain with the administrator.
 
