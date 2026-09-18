@@ -26,12 +26,17 @@ function stableJson(value: unknown): string {
   return JSON.stringify(value);
 }
 function digest(value: unknown) { return createHash("sha256").update(stableJson(value)).digest("hex"); }
+function authorReplySetDigest(snapshot: CafeSnapshot, commentId: string) {
+  return digest(snapshot.comments
+    .filter(comment => comment.authorId === snapshot.authorId && comment.parentId === commentId)
+    .sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+}
 function eligible(work: FanArtWork, snapshot: CafeSnapshot) {
   if (normalizeSourceUrl(snapshot.sourceUrl).sourceKey !== work.sourceKey || snapshot.boardId !== "38" || !snapshot.authorId?.trim() || !snapshot.fingerprint?.trim() || snapshot.images.length === 0 || /(?:\bAI\b|생성형|인공지능)/i.test(snapshot.title)) fail("ineligible_source", "해당 게시판·작가·제작방식 조건을 확인할 수 없습니다.");
 }
 function matchingConfirmation(work: FanArtWork, snapshot: CafeSnapshot) {
   const outreach = state(work), confirmation = outreach.confirmation;
-  if (!confirmation) return false;
+  if (!confirmation?.authorReplySetDigest || !outreach.commentId || confirmation.authorReplySetDigest !== authorReplySetDigest(snapshot, outreach.commentId)) return false;
   const reply = snapshot.comments.find(comment => comment.id === confirmation.replyId && comment.authorId === snapshot.authorId && comment.parentId === outreach.commentId);
   const image = snapshot.images.find(image => image.id === confirmation.imageId);
   return !!reply && digest(reply) === confirmation.replyDigest && image?.url === confirmation.imageUrl && snapshot.fingerprint === confirmation.fingerprint && snapshot.authorId === confirmation.authorId;
@@ -87,7 +92,7 @@ export function createOutreachService({ repository, assets, provider, downloadIm
           review: { status: "confirmed_non_generative", creatorConfirmedAt: timestamp, confirmedAt: timestamp, note: "원작자 답변·선택 이미지를 운영자가 직접 검토함" },
         }, timestamp);
         return { ...reviewed, asset: null, status: "requested", outreach: { ...outreach, status: "preparation_queued", approvedPreparedHash: undefined,
-          confirmation: { replyId: reply.id, replyDigest: digest(reply), imageId: image.id, imageUrl: image.url, fingerprint: snapshot.fingerprint, authorId: snapshot.authorId } } };
+          confirmation: { replyId: reply.id, replyDigest: digest(reply), authorReplySetDigest: authorReplySetDigest(snapshot, outreach.commentId), imageId: image.id, imageUrl: image.url, fingerprint: snapshot.fingerprint, authorId: snapshot.authorId } } };
       });
     },
     async approve(id: string, version: number, preparedHash: string) {
@@ -96,6 +101,7 @@ export function createOutreachService({ repository, assets, provider, downloadIm
       if (!current.asset || current.asset.sha256 !== preparedHash || !await assets.readVerified(current.asset)) fail("invalid_asset", "준비된 이미지의 해시 또는 파일이 일치하지 않습니다.");
       return update(id, version, work => {
         const outreach = state(work);
+        if (!outreach.snapshot || !matchingConfirmation(work, outreach.snapshot)) fail("not_ready", "원작자 답변 집합을 다시 검토해 주세요.");
         if (outreach.status === "publication_queued" && outreach.approvedPreparedHash === preparedHash) return work;
         if (outreach.status !== "prepared" || !outreach.confirmation || work.asset?.sha256 !== preparedHash) fail("not_ready", "이미지 준비와 검토를 완료해 주세요.");
         return { ...work, updatedAt: now(), outreach: { ...outreach, status: "publication_queued", approvedPreparedHash: preparedHash } };

@@ -87,18 +87,32 @@ export function createCafeBrowserProvider({ page, selectors, operatorMemberKey, 
     if (member(await account.getAttribute("href")) !== operatorMemberKey) fail("signed-in account does not match configured operator");
   }
 
+  function frameSource(raw) {
+    const url = new URL(raw, page.url());
+    url.pathname = url.pathname.replace(/^\/ca-fe\//, "/f-e/");
+    return source(url.href);
+  }
+
+  async function articleFrame() {
+    if (!s.frame) return null;
+    const element = page.locator(s.frame);
+    await element.waitFor({ state: "attached", timeout: timeoutMs });
+    await unique(element, "article frame");
+    const src = await element.getAttribute("src");
+    if (!src || new URL(src, page.url()).origin !== "https://cafe.naver.com") fail("unexpected article frame origin");
+    if (frameSource(src) !== source(page.url())) fail("frame points to a different article");
+    const handle = await element.elementHandle();
+    const frame = await handle?.contentFrame();
+    await handle?.dispose();
+    if (!frame) fail("article frame is unavailable");
+    await frame.locator(s.article).waitFor({ state: "attached", timeout: timeoutMs });
+    // The iframe may navigate itself without changing the element's src attribute.
+    if (frameSource(frame.url()) !== source(page.url())) fail("frame points to a different article");
+    return frame;
+  }
+
   async function scope() {
-    let contentScope = page;
-    if (s.frame) {
-      await page.locator(s.frame).waitFor({ state: "attached", timeout: timeoutMs });
-      await unique(page.locator(s.frame), "article frame");
-      const src = await page.locator(s.frame).getAttribute("src");
-      if (!src || new URL(src, page.url()).origin !== "https://cafe.naver.com") fail("unexpected article frame origin");
-      const frameUrl = new URL(src, page.url());
-      frameUrl.pathname = frameUrl.pathname.replace(/^\/ca-fe\//, "/f-e/");
-      if (source(frameUrl.href) !== source(page.url())) fail("frame points to a different article");
-      contentScope = page.frameLocator(s.frame);
-    }
+    const contentScope = await articleFrame() ?? page;
     await assertNoBlockers(contentScope);
     await contentScope.locator(s.article).waitFor({ state: "attached", timeout: timeoutMs });
     return unique(contentScope.locator(s.article), "article container");
@@ -140,6 +154,7 @@ export function createCafeBrowserProvider({ page, selectors, operatorMemberKey, 
       if (!text || text.length > 4000) fail("invalid comment text");
       comments.push({ id, parentId, authorId, text });
     }
+    if (source(page.url()) !== canonical) fail("article navigation changed unexpectedly");
     return { sourceUrl: canonical, title, authorId, boardId, images, comments,
       fingerprint: digest(JSON.stringify({ sourceUrl: canonical, title, authorId, boardId, images })) };
   }
@@ -157,14 +172,26 @@ export function createCafeBrowserProvider({ page, selectors, operatorMemberKey, 
     const existing = snapshot.comments.filter(c => c.authorId === operatorMemberKey && c.parentId === null && c.text.endsWith(marker));
     if (existing.length > 1) fail("duplicate request markers require reconciliation");
     if (existing.length === 1) return { commentId: existing[0].id };
+    const originalFrame = await articleFrame();
     const root = await scope();
     const input = await unique(root.locator(s.commentInput), "comment input");
     const button = await unique(root.locator(s.commentSubmit), "comment submit button");
     if (!await input.isVisible() || !await input.isEnabled() || !await button.isVisible() || !await button.isEnabled()) fail("comment writing is unavailable");
     await input.fill(`${text.trim()}\n\n${marker}`, { timeout: timeoutMs });
-    await assertNoBlockers(s.frame ? page.frameLocator(s.frame) : page);
+    // Read without navigating or filling again: locators must not silently retarget
+    // a different article after an input-triggered DOM/navigation change.
+    const current = await readCurrent(snapshot.sourceUrl);
+    const currentFrame = await articleFrame();
+    if (currentFrame !== originalFrame || current.fingerprint !== snapshot.fingerprint) fail("article changed while preparing the request");
+    const appeared = current.comments.filter(c => c.text.includes(marker));
+    if (appeared.length) {
+      if (appeared.length === 1 && appeared[0].authorId === operatorMemberKey && appeared[0].parentId === null && appeared[0].text.endsWith(marker)) return { commentId: appeared[0].id };
+      fail("request marker appeared while preparing the request; reconciliation required");
+    }
+    await assertNoBlockers(currentFrame ?? page);
     await assertOperatorIdentity();
     if (!await button.isVisible() || !await button.isEnabled()) fail("comment writing is unavailable");
+    if (source(page.url()) !== snapshot.sourceUrl) fail("article navigation changed unexpectedly");
     try {
       await button.click({ timeout: timeoutMs });
       await root.locator(s.commentRow).filter({ hasText: marker }).waitFor({ state: "visible", timeout: timeoutMs });

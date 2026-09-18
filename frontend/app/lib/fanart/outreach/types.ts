@@ -8,6 +8,8 @@ export interface CafeProvider {
 export type OutreachStatus = "queued" | "sending" | "uncertain" | "awaiting_reply" | "preparation_queued" | "prepared" | "publication_queued" | "needs_review" | "cancelled" | "rejected" | "published";
 export interface OutreachConfirmation {
   replyId: string; replyDigest: string; imageId: string; imageUrl: string; fingerprint: string; authorId: string;
+  // Optional only for reading legacy records; missing bindings require re-review.
+  authorReplySetDigest?: string;
 }
 export interface OutreachState {
   status: OutreachStatus; queuedAt: string; marker: string; attemptedAt?: string; commentId?: string;

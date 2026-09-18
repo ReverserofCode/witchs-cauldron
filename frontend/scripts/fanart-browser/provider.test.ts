@@ -4,6 +4,7 @@ import { createCafeBrowserProvider, UncertainSendError } from "./provider.mjs";
 
 const URL = "https://cafe.naver.com/f-e/cafes/30182989/articles/10374";
 const FRAME_URL = "https://cafe.naver.com/ca-fe/cafes/30182989/articles/10374";
+const OTHER_FRAME_URL = "https://cafe.naver.com/ca-fe/cafes/30182989/articles/99999";
 const selectors = {
   article: "article", title: "h1", authorLink: ".writer", boardLink: ".board",
   image: ".art", commentsReady: ".comments-ready", commentsMore: ".more-comments",
@@ -25,7 +26,7 @@ type Options = {
   comments?: Comment[];
   disabledInput?: boolean;
   disabledSubmit?: boolean;
-  mutateOnInput?: "blocker" | "remove-account" | "change-account";
+  mutateOnInput?: "blocker" | "remove-account" | "change-account" | "change-url" | "change-frame-src" | "frame-self-navigation" | "change-author" | "change-title" | "change-image" | "change-board" | "marked-comment" | "foreign-marker";
   frame?: boolean;
 };
 let browser: Browser;
@@ -47,7 +48,7 @@ async function fixture(options: Options = {}) {
       await route.fulfill({ contentType: "application/json", body: JSON.stringify(options.noConfirmation ? null : comment) });
       return;
     }
-    if (request.url() !== URL && request.url() !== FRAME_URL) { await route.abort(); return; }
+    if (request.url() !== URL && request.url() !== FRAME_URL && request.url() !== OTHER_FRAME_URL) { await route.abort(); return; }
     const account = options.account === null ? "" : `<a class="signed-in" href="${options.accountHref ?? `/ca-fe/cafes/30182989/members/${options.account ?? "operator-key"}`}">operator</a>`;
     const duplicateAccount = options.ambiguousAccount ? '<a class="signed-in" href="/ca-fe/cafes/30182989/members/operator-key">duplicate</a>' : "";
     const article = `<article><h1>대장장이 김모잉</h1>
@@ -72,6 +73,15 @@ async function fixture(options: Options = {}) {
         if (mutation === 'blocker') document.body.insertAdjacentHTML('beforeend', '<div class="captcha">verify</div>');
         if (mutation === 'remove-account') parent.document.querySelectorAll('.signed-in').forEach(node => node.remove());
         if (mutation === 'change-account') parent.document.querySelector('.signed-in')?.setAttribute('href', '/ca-fe/cafes/30182989/members/intruder-key');
+        if (mutation === 'change-url') history.pushState({}, '', '/f-e/cafes/30182989/articles/99999');
+        if (mutation === 'change-frame-src') parent.document.querySelector('#cafe_main').src = ${JSON.stringify(OTHER_FRAME_URL)};
+        if (mutation === 'frame-self-navigation') history.pushState({}, '', '/ca-fe/cafes/30182989/articles/99999');
+        if (mutation === 'change-author') document.querySelector('.writer').href = '/ca-fe/cafes/30182989/members/different-artist';
+        if (mutation === 'change-title') document.querySelector('h1').textContent = 'Changed article';
+        if (mutation === 'change-image') document.querySelector('.art').src = 'https://cafefiles.pstatic.net/example/different.png';
+        if (mutation === 'change-board') document.querySelector('.board').href = '/ArticleList.nhn?search.clubid=30182989&search.menuid=39';
+        if (mutation === 'marked-comment' && !document.querySelector('[data-id="other-worker"]')) append({ id: 'other-worker', parentId: null, authorId: 'operator-key', text: document.querySelector('textarea').value });
+        if (mutation === 'foreign-marker' && !document.querySelector('[data-id="foreign-marker"]')) append({ id: 'foreign-marker', parentId: null, authorId: 'visitor', text: '[moingfans:test] appeared with extra text' });
       });
       document.querySelector('button.submit').onclick=async () => {
         const res=await fetch('/fixture-submit',{method:'POST',body:JSON.stringify({text:document.querySelector('textarea').value})});
@@ -178,6 +188,39 @@ describe("cafe browser provider against intercepted local DOM", () => {
       expect(error).toBeInstanceOf(UncertainSendError);
       expect(error).toMatchObject({ code: "UNCERTAIN_SEND" });
       expect(f.submissions()).toBe(1);
+    } finally { await f.context.close(); }
+  });
+  it.each([
+    ["top-level URL", { mutateOnInput: "change-url" }],
+    ["iframe target src", { frame: true, mutateOnInput: "change-frame-src" }],
+    ["actual iframe URL with unchanged element src", { frame: true, mutateOnInput: "frame-self-navigation" }],
+    ["same-URL author", { mutateOnInput: "change-author" }],
+    ["same-URL title", { mutateOnInput: "change-title" }],
+    ["same-URL image", { mutateOnInput: "change-image" }],
+    ["same-URL board", { mutateOnInput: "change-board" }],
+  ] as const)("never clicks when filling changes the %s", async (_label, options) => {
+    const f = await fixture(options);
+    try {
+      await expect(f.provider.sendRequest(URL, "request", "[moingfans:test]")).rejects.toThrow();
+      expect(f.submissions()).toBe(0);
+      if (options.mutateOnInput === "frame-self-navigation") {
+        expect(await f.page.locator("#cafe_main").getAttribute("src")).toBe(FRAME_URL);
+        expect(f.page.frames().some(frame => frame.url() === OTHER_FRAME_URL)).toBe(true);
+      }
+    } finally { await f.context.close(); }
+  });
+  it("reconciles a marked own request that appears during fill without another submit", async () => {
+    const f = await fixture({ mutateOnInput: "marked-comment" });
+    try {
+      await expect(f.provider.sendRequest(URL, "request", "[moingfans:test]")).resolves.toEqual({ commentId: "other-worker" });
+      expect(f.submissions()).toBe(0);
+    } finally { await f.context.close(); }
+  });
+  it("stops without submitting when an unowned request marker appears inside a comment during fill", async () => {
+    const f = await fixture({ mutateOnInput: "foreign-marker" });
+    try {
+      await expect(f.provider.sendRequest(URL, "request", "[moingfans:test]")).rejects.toThrow();
+      expect(f.submissions()).toBe(0);
     } finally { await f.context.close(); }
   });
 

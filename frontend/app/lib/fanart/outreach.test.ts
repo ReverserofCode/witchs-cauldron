@@ -148,6 +148,59 @@ describe.skipIf(!url)("durable fanart outreach", () => {
     expect(invalidated.permission.display).toBe(false);
     expect(invalidated.status).not.toBe("published");
   });
+  it.each(["preparation", "publication"])("new author reply invalidates consent before %s", async stage => {
+    const f = await setup();
+    if (stage === "preparation") {
+      await f.send(); f.reply(); await f.service.tick(f.work.id, { allowComments: false }); await f.confirm();
+    } else {
+      await f.prepare(); const prepared = await f.get(); await f.service.approve(f.work.id, prepared.version, prepared.asset!.sha256);
+    }
+    f.snapshot.comments.push({ id: "revoke", parentId: "our-comment", authorId: "artist", text: "Permission withdrawn. Do not publish." });
+    const stale = await f.get();
+    await f.service.tick(f.work.id, { allowComments: false });
+    const after = await f.get();
+    expect(after.outreach?.status).toBe("needs_review"); expect(after.permission.display).toBe(false);
+    expect(after.outreach?.confirmation).toBeUndefined(); expect(after.outreach?.approvedPreparedHash).toBeUndefined();
+    expect(after.status).not.toBe("published");
+    if (stage === "preparation") expect(after.asset).toBeNull();
+    else {
+      await expect(f.service.approve(f.work.id, after.version, stale.asset!.sha256)).rejects.toMatchObject({ code: "not_ready" });
+      const config = { username: "test", password: "test-only", origin: "https://example.test" };
+      const handlers = createOutreachHandlers({ config, getRepository: async () => f.repository, assets: f.assets });
+      const request = new Request(`https://example.test/preview?sha256=${stale.asset!.sha256}`, { headers: { authorization: `Basic ${Buffer.from("test:test-only").toString("base64")}` } });
+      expect((await handlers.preview(request, f.work.id)).status).toBe(404);
+    }
+  });
+  it.each(["edit", "delete"])("invalidates changes to an unselected original-author reply: %s", async action => {
+    const f = await setup(); await f.send(); f.reply();
+    f.snapshot.comments.push({ id: "other", parentId: "our-comment", authorId: "artist", text: "Additional original condition" });
+    await f.service.tick(f.work.id, { allowComments: false }); await f.confirm();
+    if (action === "edit") f.snapshot.comments[1].text = "Changed condition";
+    else f.snapshot.comments.splice(1, 1);
+    await f.service.tick(f.work.id, { allowComments: false });
+    expect((await f.get()).outreach?.status).toBe("needs_review"); expect((await f.get()).asset).toBeNull();
+  });
+  it("keeps confirmation valid across order-only and unrelated-comment changes", async () => {
+    const f = await setup(); await f.send(); f.reply();
+    f.snapshot.comments.push({ id: "other", parentId: "our-comment", authorId: "artist", text: "Additional condition" });
+    await f.service.tick(f.work.id, { allowComments: false }); await f.confirm();
+    f.snapshot.comments.reverse();
+    f.snapshot.comments.push({ id: "visitor", parentId: "our-comment", authorId: "visitor", text: "Untrusted unrelated text" });
+    f.snapshot.comments.push({ id: "other-thread", parentId: "elsewhere", authorId: "artist", text: "Other conversation" });
+    await f.service.tick(f.work.id, { allowComments: false });
+    expect((await f.get()).outreach?.status).toBe("prepared");
+  });
+  it("fails closed for legacy confirmation without an author reply-set digest", async () => {
+    const f = await setup(); await f.prepare(); const prepared = await f.get();
+    const legacy = await f.repository.update(prepared.id, prepared.version, work => {
+      const confirmation = { ...work.outreach!.confirmation! };
+      delete confirmation.authorReplySetDigest;
+      return { ...work, outreach: { ...work.outreach!, confirmation } };
+    });
+    await expect(f.service.approve(legacy.id, legacy.version, legacy.asset!.sha256)).rejects.toMatchObject({ code: "not_ready" });
+    await f.service.tick(legacy.id, { allowComments: false });
+    expect((await f.get()).outreach?.status).toBe("needs_review");
+  });
   it("binds exact prepared hash and atomically publishes only after final approval", async () => {
     const f = await setup(); await f.prepare(); const prepared = await f.get();
     expect(prepared.outreach?.status).toBe("prepared");
