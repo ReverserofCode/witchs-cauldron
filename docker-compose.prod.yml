@@ -94,6 +94,9 @@ services:
       - YOUTUBE_API_KEY=${YOUTUBE_API_KEY:-}
       # Analytics (Postgres)
       - ANALYTICS_DATABASE_URL=${ANALYTICS_DATABASE_URL:-}
+      - FANART_DATABASE_URL=${FANART_DATABASE_URL:-}
+      - FANART_ASSETS_DIR=/app/data/fanart
+      - FANART_ALLOWED_ORIGIN=${FANART_ALLOWED_ORIGIN:-https://moingfans.com}
       - ANALYTICS_HASH_SECRET=${ANALYTICS_HASH_SECRET:-}
       - ADMIN_BASIC_AUTH_USERNAME=${ADMIN_BASIC_AUTH_USERNAME:-}
       - ADMIN_BASIC_AUTH_PASSWORD=${ADMIN_BASIC_AUTH_PASSWORD:-}
@@ -105,6 +108,7 @@ services:
     volumes:
       # 이미지에 포함된 public/clips와 분리해 수집 클립을 읽기 전용으로 마운트
       - shared_clips:/app/shared/clips:ro
+      - fanart_assets:/app/data/fanart
     depends_on:
       backend:
         condition: service_healthy
@@ -137,3 +141,4 @@ volumes:
   shared_clips: null
   # analytics db data
   analytics_data: null
+  fanart_assets: null

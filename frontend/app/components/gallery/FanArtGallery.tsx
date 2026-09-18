@@ -3,29 +3,41 @@
 import Image from "next/image";
 import { useEffect, useState, type ReactElement } from "react";
 import { FanArtModal, type FanArtImage } from "@/app/components/modals";
+import { useFanArtCatalog } from "@/app/hooks/useFanArtCatalog";
+import { introductionDate, isManagedImage } from "@/app/lib/fanart/display";
 
 interface FanArtGalleryProps {
   images: FanArtImage[];
   compact?: boolean;
 }
 
-export default function FanArtGallery({ images, compact = false }: FanArtGalleryProps): ReactElement {
+export default function FanArtGallery({ images: legacyImages, compact = false }: FanArtGalleryProps): ReactElement {
+  const images = useFanArtCatalog(legacyImages);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [selectedSrc, setSelectedSrc] = useState<string | null>(null);
+  const currentIndex = Math.max(0, images.findIndex(image => image.src === selectedSrc));
+  const modalVisible = isModalOpen && images.some(image => image.src === selectedSrc);
   const [isAutoPlay, setIsAutoPlay] = useState(true);
   const [isInteracting, setIsInteracting] = useState(false);
 
+  // Reconcile the open intent as well as the visible selection when a catalog
+  // update removes it. Otherwise the next autoplay tick can reopen the modal.
+  if (selectedSrc !== null && !images.some(image => image.src === selectedSrc)) {
+    setSelectedSrc(null);
+    setIsModalOpen(false);
+  }
+
   useEffect(() => {
-    if (images.length <= 1 || isModalOpen || !isAutoPlay || isInteracting) return;
+    if (images.length <= 1 || modalVisible || !isAutoPlay || isInteracting) return;
     const timer = window.setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % images.length);
+      setSelectedSrc(images[(currentIndex + 1) % images.length].src);
     }, 4000);
 
     return () => window.clearInterval(timer);
-  }, [images.length, isModalOpen, isAutoPlay, isInteracting]);
+  }, [images, currentIndex, modalVisible, isAutoPlay, isInteracting]);
 
   const handleImageClick = (index: number) => {
-    setCurrentIndex(index);
+    setSelectedSrc(images[index]?.src ?? null);
     setIsModalOpen(true);
   };
 
@@ -34,20 +46,20 @@ export default function FanArtGallery({ images, compact = false }: FanArtGallery
   };
 
   const handleNavigate = (index: number) => {
-    setCurrentIndex(index);
+    setSelectedSrc(images[index]?.src ?? null);
   };
 
   if (images.length === 0) {
     return (
       <div className="flex flex-col gap-3 text-[11px] text-purple-900/75">
-        <p>아직 등록된 팬아트가 없습니다. 팬카페에 작품을 공유하면 이곳에 소개됩니다.</p>
+        <p>작가의 사용 허락과 검수를 마친 작품을 소개합니다. 아직 등록된 작품이 없습니다.</p>
         <a
           href="https://cafe.naver.com/moinge"
           target="_blank"
           rel="noopener noreferrer"
           className="justify-center text-xs btn btn-primary h-9"
         >
-          팬아트 업로드 가이드 보기
+          팬카페 보기
         </a>
       </div>
     );
@@ -73,6 +85,7 @@ export default function FanArtGallery({ images, compact = false }: FanArtGallery
           >
             <Image
               src={images[currentIndex].src}
+              unoptimized={isManagedImage(images[currentIndex])}
               alt={images[currentIndex].alt}
               width={320}
               height={420}
@@ -89,6 +102,13 @@ export default function FanArtGallery({ images, compact = false }: FanArtGallery
 
           {images[currentIndex].credit && (
             <figcaption className="text-[11px] text-purple-900/70">{images[currentIndex].credit}</figcaption>
+          )}
+          {isManagedImage(images[currentIndex]) && (
+            <div className="flex flex-wrap items-center gap-2 text-[11px] text-purple-800">
+              <span>작가 확인·운영자 검수</span>
+              <span>{introductionDate(images[currentIndex].publishedAt!)} 소개</span>
+              <a href={images[currentIndex].sourceUrl} target="_blank" rel="noopener noreferrer" className="underline">원문 보기</a>
+            </div>
           )}
 
           <div className="flex items-center justify-between text-[11px] text-purple-900/60">
@@ -117,7 +137,7 @@ export default function FanArtGallery({ images, compact = false }: FanArtGallery
       <FanArtModal
         images={images}
         currentIndex={currentIndex}
-        isOpen={isModalOpen}
+        isOpen={modalVisible}
         onClose={handleCloseModal}
         onNavigate={handleNavigate}
       />

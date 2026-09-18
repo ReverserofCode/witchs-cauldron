@@ -89,6 +89,9 @@ services:
       - YOUTUBE_API_KEY=${YOUTUBE_API_KEY:-}
       # Analytics (Postgres)
       - ANALYTICS_DATABASE_URL=${ANALYTICS_DATABASE_URL:-}
+      - FANART_DATABASE_URL=${FANART_DATABASE_URL:-}
+      - FANART_ASSETS_DIR=/app/data/fanart
+      - FANART_ALLOWED_ORIGIN=${FANART_ALLOWED_ORIGIN:-http://localhost:3000}
       - ADMIN_BASIC_AUTH_USERNAME=${ADMIN_BASIC_AUTH_USERNAME:-}
       - ADMIN_BASIC_AUTH_PASSWORD=${ADMIN_BASIC_AUTH_PASSWORD:-}
       - ADMIN_ALLOWED_EMAILS=${ADMIN_ALLOWED_EMAILS:-}
@@ -99,6 +102,7 @@ services:
       - frontend_node_modules:/app/node_modules
       # Backend 수집 클립과 로컬 정적 클립을 별도 루트로 제공
       - shared_clips:/app/shared/clips:ro
+      - fanart_assets:/app/data/fanart
       - ./frontend/public/clips:/app/public/clips:ro
     depends_on:
       backend:
@@ -131,3 +135,4 @@ volumes:
   shared_clips: null
   # analytics db data
   analytics_data: null
+  fanart_assets: null

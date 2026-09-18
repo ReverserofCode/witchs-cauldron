@@ -238,29 +238,27 @@ export default function Page(): ReactElement {
                   title="라이브 일정 · 팬아트"
                   description="최근 방송 일정과 팬 커뮤니티 작업을 함께 확인할 수 있습니다."
                 >
-                  <div className={`grid gap-3 ${fanArtImages.length > 0 ? 'xl:grid-cols-[minmax(0,1.08fr)_minmax(320px,0.92fr)]' : ''}`}>
+                  <div className="grid gap-3 xl:grid-cols-[minmax(0,1.08fr)_minmax(320px,0.92fr)]">
                     <div className="rounded-[20px] border border-purple-200/55 bg-white/70 p-3">
                       <ScheduleSection embedded daysToShow={7} limit={1} />
                     </div>
 
-                    {fanArtImages.length > 0 && (
-                      <div
-                        id="fanart-section"
-                        className="flex flex-col rounded-[20px] border border-purple-200/55 bg-white/70 p-3 xl:h-[34rem]"
-                      >
-                        <div className="mb-3 border-b border-purple-200/60 pb-2.5">
-                          <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-purple-700/70">
-                            팬아트
-                          </p>
-                          <p className="mt-1 text-sm font-semibold text-purple-950">
-                            팬 커뮤니티 작업실
-                          </p>
-                        </div>
-                        <div className="min-h-0 xl:flex-1">
-                          <FanArtGallery images={fanArtImages} compact />
-                        </div>
+                    <div
+                      id="fanart-section"
+                      className="flex flex-col rounded-[20px] border border-purple-200/55 bg-white/70 p-3 xl:h-[34rem]"
+                    >
+                      <div className="mb-3 border-b border-purple-200/60 pb-2.5">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-purple-700/70">
+                          팬아트
+                        </p>
+                        <p className="mt-1 text-sm font-semibold text-purple-950">
+                          팬 커뮤니티 작업실
+                        </p>
                       </div>
-                    )}
+                      <div className="min-h-0 xl:flex-1">
+                        <FanArtGallery images={fanArtImages} compact />
+                      </div>
+                    </div>
                   </div>
                 </SectionCard>
               </SectionTracker>

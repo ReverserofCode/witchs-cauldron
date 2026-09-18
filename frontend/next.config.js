@@ -20,6 +20,11 @@ const nextConfig = {
     };
   },
   images: {
+    // Managed fanart must be served through the revocable, no-store media route.
+    localPatterns: ['mainPage', 'rightAside', 'gnbIcon', 'logos', 'assets'].map((directory) => ({
+      pathname: `/${directory}/**`,
+      search: '',
+    })),
     remotePatterns: [
       {
         protocol: 'https',

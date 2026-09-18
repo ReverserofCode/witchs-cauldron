@@ -1,12 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 
-export interface FanArtImage {
-  src: string;
-  alt: string;
-  download?: string;
-  credit?: string;
-}
+import type { FanArtDisplayImage as FanArtImage } from "./fanart/display";
+export type { FanArtDisplayImage as FanArtImage } from "./fanart/display";
 
 const FAN_ART_DIR = path.join(process.cwd(), "public", "rightAside");
 const IMAGE_EXTENSIONS = [/\.png$/i, /\.jpe?g$/i, /\.webp$/i, /\.gif$/i];
