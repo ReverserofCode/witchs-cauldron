@@ -27,4 +27,40 @@ describe("published fanart client catalog", () => {
     await catalog.refresh();
     expect(catalog.getSnapshot()).toEqual([]);
   });
+  it("shares one visible polling timer and cleans up after the last gallery leaves", async () => {
+    vi.useFakeTimers();
+    const document = Object.assign(new EventTarget(), { visibilityState: "visible" });
+    const window = new EventTarget();
+    vi.stubGlobal("document", document);
+    vi.stubGlobal("window", window);
+    const fetcher = vi.fn().mockImplementation(async () => Response.json({ images: [] }));
+    const catalog = createFanArtCatalog(fetcher);
+    const first = catalog.subscribe(() => undefined);
+    const second = catalog.subscribe(() => undefined);
+    try {
+      await catalog.refresh();
+      expect(fetcher).toHaveBeenCalledTimes(1);
+      expect(vi.getTimerCount()).toBe(1);
+      await vi.advanceTimersByTimeAsync(60000);
+      expect(fetcher).toHaveBeenCalledTimes(2);
+      document.visibilityState = "hidden";
+      document.dispatchEvent(new Event("visibilitychange"));
+      await vi.advanceTimersByTimeAsync(120000);
+      window.dispatchEvent(new Event("focus"));
+      expect(fetcher).toHaveBeenCalledTimes(2);
+      expect(vi.getTimerCount()).toBe(0);
+      document.visibilityState = "visible";
+      document.dispatchEvent(new Event("visibilitychange"));
+      await catalog.refresh();
+      expect(fetcher).toHaveBeenCalledTimes(3);
+      first();
+      expect(vi.getTimerCount()).toBe(1);
+      second();
+      expect(vi.getTimerCount()).toBe(0);
+      window.dispatchEvent(new Event("focus"));
+      expect(fetcher).toHaveBeenCalledTimes(3);
+    } finally {
+      first(); second(); vi.unstubAllGlobals(); vi.useRealTimers();
+    }
+  });
 });
