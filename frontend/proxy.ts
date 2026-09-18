@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { authenticateAdmin } from "./app/lib/fanart/http";
+import { FanArtError } from "./app/lib/fanart/model";
+
 const ADMIN_REALM = "MoingFans Admin";
 
 function addAdminHeaders(response: NextResponse) {
@@ -35,9 +38,34 @@ function parseAuthorization(header: string | null) {
   }
 }
 
+function isFanArtAdminPath(pathname: string) {
+  return pathname === "/api/admin/fanart"
+    || pathname.startsWith("/api/admin/fanart/")
+    || pathname === "/admin/fanart"
+    || pathname.startsWith("/admin/fanart/");
+}
+
 export function proxy(request: NextRequest) {
   const username = process.env.ADMIN_BASIC_AUTH_USERNAME?.trim();
   const password = process.env.ADMIN_BASIC_AUTH_PASSWORD?.trim();
+
+  if (isFanArtAdminPath(request.nextUrl.pathname)) {
+    try {
+      authenticateAdmin(request, {
+        username: username ?? "",
+        password: password ?? "",
+        origin: process.env.FANART_ALLOWED_ORIGIN ?? "",
+      });
+      return addAdminHeaders(NextResponse.next());
+    } catch (error) {
+      if (error instanceof FanArtError && error.status === 401) return unauthorizedResponse();
+      return addAdminHeaders(
+        new NextResponse("Admin access is disabled until ADMIN_BASIC_AUTH_USERNAME and ADMIN_BASIC_AUTH_PASSWORD are configured.", {
+          status: 503,
+        })
+      );
+    }
+  }
 
   if (!username || !password) {
     if (process.env.NODE_ENV === "development") {

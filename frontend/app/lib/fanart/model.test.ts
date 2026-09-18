@@ -31,6 +31,7 @@ const confirmedReview: ReviewInput = {
   },
   review: {
     status: "confirmed_non_generative",
+    creatorConfirmedAt: REVIEWED_AT,
     confirmedAt: REVIEWED_AT,
     note: "운영자 제작 방식 검수 완료",
   },
@@ -104,7 +105,7 @@ describe("fanart approval workflow", () => {
       asset: null,
       approvedHash: null,
       permission: { display: false, resize: false, credit: false, confirmedAt: null },
-      review: { status: "pending", confirmedAt: null },
+      review: { status: "pending", creatorConfirmedAt: null, confirmedAt: null },
     });
     expect(permissionRequest(work)).toContain("https://moingfans.com");
     expect(permissionRequest(work)).toContain("AI 학습 및 재생성에는 사용하지 않습니다");
@@ -129,6 +130,42 @@ describe("fanart approval workflow", () => {
       );
     }
     expect(attachAsset(applyReview(base, cases[0], REVIEWED_AT), firstAsset, UPLOADED_AT).status).toBe("ready");
+  });
+
+  it("gates upload independently on creator assertion and operator review", () => {
+    const base = candidate();
+    const missingCreatorAssertion: ReviewInput = {
+      ...confirmedReview,
+      review: { ...confirmedReview.review, creatorConfirmedAt: null },
+    };
+    const missingOperatorReview: ReviewInput = {
+      ...confirmedReview,
+      review: { ...confirmedReview.review, confirmedAt: null },
+    };
+
+    expect(() => attachAsset(
+      applyReview(base, missingCreatorAssertion, REVIEWED_AT),
+      firstAsset,
+      UPLOADED_AT,
+    )).toThrow("허락과 제작 방식 검수를 먼저 완료해 주세요.");
+    expect(() => attachAsset(
+      applyReview(base, missingOperatorReview, REVIEWED_AT),
+      firstAsset,
+      UPLOADED_AT,
+    )).toThrow("허락과 제작 방식 검수를 먼저 완료해 주세요.");
+  });
+
+  it("does not treat empty permission evidence as approval", () => {
+    const withoutEvidence: ReviewInput = {
+      ...confirmedReview,
+      permission: { ...confirmedReview.permission, evidence: "   " },
+    };
+
+    expect(() => attachAsset(
+      applyReview(candidate(), withoutEvidence, REVIEWED_AT),
+      firstAsset,
+      UPLOADED_AT,
+    )).toThrow("허락과 제작 방식 검수를 먼저 완료해 주세요.");
   });
 
   it("rejects publication without current permission, review, and file approval", () => {
@@ -165,7 +202,7 @@ describe("fanart approval workflow", () => {
     const replaced = attachAsset(readyWork(), replacement, "2026-09-18T03:00:00.000Z");
 
     expect(replaced.status).toBe("requested");
-    expect(replaced.review).toMatchObject({ status: "pending", confirmedAt: null });
+    expect(replaced.review).toMatchObject({ status: "pending", creatorConfirmedAt: null, confirmedAt: null });
     expect(replaced.approvedHash).toBeNull();
     expect(() => publishWork(replaced, PUBLISHED_AT)).toThrow("게시 조건을 모두 충족해 주세요.");
 

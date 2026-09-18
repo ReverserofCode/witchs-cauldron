@@ -60,6 +60,7 @@ COPY --from=builder /app/healthcheck.js ./
 COPY --from=builder /app/scripts ./scripts
 
 # nextjs 사용자로 전환
+RUN mkdir -p /app/data/fanart && chown nextjs:nodejs /app/data/fanart
 USER nextjs
 
 # 포트 노출

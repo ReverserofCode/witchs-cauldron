@@ -4,12 +4,8 @@ import Image from "next/image";
 import { useCallback, useEffect, useState, type ReactElement } from "react";
 import { createPortal } from "react-dom";
 
-export interface FanArtImage {
-  src: string;
-  alt: string;
-  download?: string;
-  credit?: string;
-}
+import { introductionDate, isManagedImage, type FanArtDisplayImage as FanArtImage } from "@/app/lib/fanart/display";
+export type { FanArtDisplayImage as FanArtImage } from "@/app/lib/fanart/display";
 
 interface FanArtModalProps {
   images: FanArtImage[];
@@ -130,6 +126,7 @@ export default function FanArtModal({
           <div className="relative w-full h-[55vh] min-h-[300px]">
             <Image
               src={currentImage.src}
+              unoptimized={isManagedImage(currentImage)}
               alt={currentImage.alt}
               fill
               className="object-contain"
@@ -194,6 +191,8 @@ export default function FanArtModal({
             {currentImage.credit && (
               <p className="text-xs text-purple-600">{currentImage.credit}</p>
             )}
+            {isManagedImage(currentImage) && <p className="text-xs text-purple-600">작가 확인·운영자 검수 · {introductionDate(currentImage.publishedAt!)} 소개</p>}
+            {currentImage.sourceUrl && <a href={currentImage.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-xs underline">원문 보기</a>}
           </div>
           {currentImage.download && (
             <a
@@ -225,6 +224,7 @@ export default function FanArtModal({
                 >
                   <Image
                     src={image.src}
+                    unoptimized={isManagedImage(image)}
                     alt=""
                     fill
                     className="object-cover"

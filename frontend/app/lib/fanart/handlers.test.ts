@@ -27,6 +27,7 @@ const confirmed: ReviewInput = {
   },
   review: {
     status: "confirmed_non_generative",
+    creatorConfirmedAt: NOW,
     confirmedAt: NOW,
     note: "creator assertion and operator review",
   },
@@ -123,6 +124,27 @@ describe("fanart handler guards", () => {
     expect((await handlers.create(badCreate)).status).toBe(400);
     expect(getRepository).not.toHaveBeenCalled();
   });
+
+  it("rejects a non-scalar creator assertion timestamp through the review endpoint", async () => {
+    const current = candidate();
+    const repo = repository({
+      update: vi.fn(async (_id, _version, operation) => operation(current)),
+    });
+    const handlers = createFanArtHandlers({ getRepository: async () => repo, assets: assetStore(), config, now: () => NOW });
+    const request = new Request(`https://moingfans.com/api/admin/fanart/${current.id}`, {
+      method: "PATCH",
+      headers: { ...adminHeaders(true), "content-type": "application/json" },
+      body: JSON.stringify({
+        version: current.version,
+        review: {
+          ...confirmed,
+          review: { ...confirmed.review, creatorConfirmedAt: 123 },
+        },
+      }),
+    });
+
+    expect((await handlers.review(request, current.id)).status).toBe(400);
+  });
 });
 
 describe("fanart API projections and media", () => {
@@ -190,6 +212,28 @@ describe("fanart API projections and media", () => {
 });
 
 describe("fanart asset attachment", () => {
+  it.each([
+    ["creator assertion", { ...confirmed, review: { ...confirmed.review, creatorConfirmedAt: null } }],
+    ["operator review", { ...confirmed, review: { ...confirmed.review, confirmedAt: null } }],
+    ["permission evidence", { ...confirmed, permission: { ...confirmed.permission, evidence: "   " } }],
+  ])("does not process a file while %s is missing", async (_label, incomplete) => {
+    const current = applyReview(candidate(), incomplete, NOW);
+    const store = assetStore();
+    const repo = repository({ get: vi.fn(async () => current) });
+    const handlers = createFanArtHandlers({ getRepository: async () => repo, assets: store, config, now: () => NOW });
+    const form = new FormData();
+    form.set("version", String(current.version));
+    form.set("file", new File([new Uint8Array([1])], "shape.png", { type: "image/png" }));
+    const request = new Request(`https://moingfans.com/api/admin/fanart/${current.id}/asset`, {
+      method: "POST",
+      headers: adminHeaders(true),
+      body: form,
+    });
+
+    expect((await handlers.uploadAsset(request, current.id)).status).toBe(409);
+    expect(store.save).not.toHaveBeenCalled();
+  });
+
   it("rejects server paths and other non-file multipart values", async () => {
     const store = assetStore();
     const getRepository = vi.fn(async () => repository());

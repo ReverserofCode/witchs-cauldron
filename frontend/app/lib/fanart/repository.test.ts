@@ -38,6 +38,7 @@ const confirmed: ReviewInput = {
   },
   review: {
     status: "confirmed_non_generative",
+    creatorConfirmedAt: REVIEWED,
     confirmedAt: REVIEWED,
     note: "creator assertion and operator review confirmed",
   },
@@ -162,6 +163,11 @@ describeDatabase("fanart PostgreSQL repository", () => {
 
     const persisted = await firstRepository.get(work.id);
     expect(persisted?.version).toBe(2);
+    expect(persisted?.review).toMatchObject({
+      status: "confirmed_non_generative",
+      creatorConfirmedAt: REVIEWED,
+      confirmedAt: REVIEWED,
+    });
     expect((await firstRepository.audit(work.id)).map((event) => event.type)).toEqual(["created", "review_updated"]);
   });
 

@@ -31,6 +31,7 @@ export interface FanArtWork {
   };
   review: {
     status: FanArtReviewStatus;
+    creatorConfirmedAt: string | null;
     confirmedAt: string | null;
     note: string;
   };
@@ -93,7 +94,9 @@ function hasApproval(work: FanArtWork) {
     && work.permission.resize
     && work.permission.credit
     && validTimestamp(work.permission.confirmedAt)
+    && work.permission.evidence.trim().length > 0
     && work.review.status === "confirmed_non_generative"
+    && validTimestamp(work.review.creatorConfirmedAt)
     && validTimestamp(work.review.confirmedAt);
 }
 
@@ -172,6 +175,7 @@ export function createCandidate(
     },
     review: {
       status: "pending",
+      creatorConfirmedAt: null,
       confirmedAt: null,
       note: "",
     },
@@ -205,17 +209,10 @@ export function applyReview(work: FanArtWork, input: ReviewInput, now: string): 
     !(["pending", "confirmed_non_generative", "unclear", "excluded_generative"] as const).includes(review.status)
     || typeof review.note !== "string"
     || review.note.length > 2000
+    || (review.creatorConfirmedAt !== null && !validTimestamp(review.creatorConfirmedAt))
     || (review.confirmedAt !== null && !validTimestamp(review.confirmedAt))
   ) {
     return fail("invalid_review", "제작 방식 검수 기록 형식이 올바르지 않습니다.");
-  }
-
-  const allPermission = permission.display && permission.resize && permission.credit;
-  if (allPermission !== validTimestamp(permission.confirmedAt)) {
-    return fail("invalid_review", "허락 확인 일시를 정확히 기록해 주세요.");
-  }
-  if ((review.status === "confirmed_non_generative") !== validTimestamp(review.confirmedAt)) {
-    return fail("invalid_review", "제작 방식 확인 일시를 정확히 기록해 주세요.");
   }
 
   const changed: FanArtWork = {
@@ -259,7 +256,7 @@ export function attachAsset(work: FanArtWork, asset: FanArtAsset, now: string): 
     updatedAt: now,
     approvedHash: null,
     review: replacing
-      ? { status: "pending", confirmedAt: null, note: "" }
+      ? { status: "pending", creatorConfirmedAt: null, confirmedAt: null, note: "" }
       : { ...work.review },
   };
   return { ...changed, status: nextDraftStatus(changed) };

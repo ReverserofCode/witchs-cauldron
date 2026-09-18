@@ -66,3 +66,4 @@ frontend/playwright-screenshots/
 
 # local secrets used by operator scripts
 .secrets/
+frontend/.data/

@@ -13,6 +13,7 @@
 		"dev:install:host": "npm install",
 		"capture:screens": "node scripts/capture-screenshots.mjs",
 		"smoke:admin": "node scripts/smoke-admin-analytics.mjs",
+		"smoke:fanart": "node scripts/smoke-fanart.mjs",
 		"smoke:promotion": "node scripts/smoke-merch-promotion.mjs",
 		"smoke:potion": "node scripts/smoke-potion-timing.mjs",
 		"smoke:potion-analytics": "node scripts/smoke-potion-analytics.mjs",
