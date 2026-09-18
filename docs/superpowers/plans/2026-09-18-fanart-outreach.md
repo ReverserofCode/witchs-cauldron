@@ -19,6 +19,7 @@
 - Input image 10 MiB/20 million pixels; output WebP at most 1600px long side and 5 MiB. No download before recorded permission.
 - External comment writes default disabled and require explicit opt-in, positive limits, configured account identity and queued candidates. Ambiguous remote sends are never blindly retried.
 - Browser selectors are operator configuration, not claimed verified against the authenticated production cafe. Login is manual in a dedicated profile; no cookie export from other browsers.
+- User clarification: every live inspection, reply poll, preparation and publication step requires the configured Naver operator to be signed in. Missing/expired/mismatched identity fails closed. Offline administrator review/queueing does not itself send or publish anything; login mode only opens a manual login session.
 
 ## Provider interface shared across tasks
 
