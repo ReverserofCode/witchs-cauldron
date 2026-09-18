@@ -5,7 +5,7 @@ import { createCandidate, FanArtError, type FanArtStatus, type FanArtWork } from
 export interface FanArtAuditEvent {
   id: number;
   workId: string;
-  type: "created" | "review_updated" | "asset_attached" | "published" | "withdrawn" | "rejected";
+  type: "created" | "review_updated" | "asset_attached" | "published" | "withdrawn" | "rejected" | "outreach_updated";
   version: number;
   createdAt: string;
 }
@@ -95,6 +95,7 @@ function eventType(before: FanArtWork, after: FanArtWork): FanArtAuditEvent["typ
   if (after.status === "withdrawn" && before.status !== "withdrawn") return "withdrawn";
   if (after.status === "rejected" && before.status !== "rejected") return "rejected";
   if (after.asset?.sha256 !== before.asset?.sha256 || after.asset?.key !== before.asset?.key) return "asset_attached";
+  if (JSON.stringify(after.outreach) !== JSON.stringify(before.outreach)) return "outreach_updated";
   return "review_updated";
 }
 

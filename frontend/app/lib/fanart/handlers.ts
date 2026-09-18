@@ -8,6 +8,7 @@ import {
   rejectWork,
   withdrawWork,
   type FanArtStatus,
+  type FanArtWork,
   type ReviewInput,
 } from "./model";
 import { createFanArtAssetStore, type FanArtAssetStore } from "./assets";
@@ -41,18 +42,18 @@ interface HandlerDependencies {
   now?: () => string;
 }
 
-function responseHeaders(admin = false) {
+export function responseHeaders(admin = false) {
   return {
     "cache-control": "no-store",
     ...(admin ? { "x-robots-tag": "noindex, nofollow, noarchive" } : {}),
   };
 }
 
-function json(body: unknown, status = 200, admin = false) {
+export function json(body: unknown, status = 200, admin = false) {
   return Response.json(body, { status, headers: responseHeaders(admin) });
 }
 
-function errorResponse(error: unknown, admin = false) {
+export function errorResponse(error: unknown, admin = false) {
   if (error instanceof FanArtError) {
     const headers = new Headers(responseHeaders(admin));
     if (error.status === 401) headers.set("www-authenticate", `Basic realm="${ADMIN_REALM}"`);
@@ -61,11 +62,11 @@ function errorResponse(error: unknown, admin = false) {
   return json({ error: "서비스를 일시적으로 사용할 수 없습니다." }, 503, admin);
 }
 
-function validId(id: string) {
+export function validId(id: string) {
   if (!UUID.test(id)) throw new FanArtError("invalid_id", "작품 ID 형식이 올바르지 않습니다.", 400);
 }
 
-function positiveVersion(value: unknown) {
+export function positiveVersion(value: unknown) {
   if (!Number.isSafeInteger(value) || (value as number) <= 0) {
     throw new FanArtError("invalid_version", "버전 번호가 올바르지 않습니다.", 400);
   }
@@ -98,6 +99,12 @@ function reviewInput(value: unknown): ReviewInput {
     throw new FanArtError("invalid_review", "허락 및 검수 기록 형식이 올바르지 않습니다.", 400);
   }
   return value as ReviewInput;
+}
+
+function requireManualWorkflow(work: FanArtWork) {
+  if (work.outreach && work.outreach.status !== "cancelled") {
+    throw new FanArtError("outreach_approval_required", "요청 작업 패널에서 답변과 정확한 이미지를 검토해 주세요.", 409);
+  }
 }
 
 async function parseMultipart(request: Request) {
@@ -211,7 +218,10 @@ export function createFanArtHandlers(dependencies: HandlerDependencies = {}) {
         const input = reviewInput(body.review);
         const operationNow = now();
         const repository = await getRepository();
-        const work = await repository.update(id, version, (current) => applyReview(current, input, operationNow));
+        const work = await repository.update(id, version, (current) => {
+          requireManualWorkflow(current);
+          return applyReview(current, input, operationNow);
+        });
         return json({ work }, 200, true);
       } catch (error) {
         return errorResponse(error, true);
@@ -230,10 +240,14 @@ export function createFanArtHandlers(dependencies: HandlerDependencies = {}) {
           throw new FanArtError("version_conflict", "다른 변경이 저장되었습니다. 새로고침 후 다시 시도해 주세요.", 409);
         }
         const operationNow = now();
+        requireManualWorkflow(current);
         attachAsset(current, PREFLIGHT_ASSET, operationNow);
         const saved = await assets.save(new Uint8Array(await file.arrayBuffer()));
         try {
-          const work = await repository.update(id, version, (locked) => attachAsset(locked, saved, operationNow));
+          const work = await repository.update(id, version, (locked) => {
+            requireManualWorkflow(locked);
+            return attachAsset(locked, saved, operationNow);
+          });
           return json({ work }, 200, true);
         } catch (error) {
           await assets.removeCreated(saved.key).catch(() => undefined);
