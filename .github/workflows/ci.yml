@@ -134,6 +134,8 @@ jobs:
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
+      - name: Verify fanart Compose configuration
+        run: node frontend/scripts/test-fanart-compose.mjs
       - name: Build production Docker image without production secrets
         run: docker build -t witchs-potion:test frontend
       - name: Verify isolated production container
