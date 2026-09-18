@@ -33,7 +33,7 @@ REST responses: list `{works, hasMore}`; detail/create/mutations `{work, events?
 
 **Interfaces:** Produces shared contract above for Task 2. Read approved spec in full. Report any concrete contradiction before implementing.
 
-- [ ] Write failing domain tests: reject missing permission/review/file; canonical URLs deduplicate; terminal records cannot publish; asset replacement resets verification and cannot inherit prior approval; public projection contains no private fields. Example:
+- [x] Write failing domain tests: reject missing permission/review/file; canonical URLs deduplicate; terminal records cannot publish; asset replacement resets verification and cannot inherit prior approval; public projection contains no private fields. Example:
 
 ```ts
 const work = createCandidate({sourceUrl:'https://cafe.naver.com/moinge/123?x=1', title:'작품',credit:'작가'}, '2026-09-18T00:00:00.000Z');
@@ -42,9 +42,9 @@ expect(() => publishWork(work, '2026-09-18T01:00:00.000Z')).toThrow();
 expect(permissionRequest(work)).toContain('https://moingfans.com');
 ```
 
-- [ ] Run `npm test -- app/lib/fanart/model.test.ts` and record RED. Implement pure domain transitions. First upload requires permission/review confirmed. Replacing asset clears review confirmation so a fresh explicit review is required before publication. Changing permission/review resets approvedHash; published and terminal records cannot be edited/uploaded. Publication binds approvedHash to asset.sha256. Repeating already-successful publish/withdraw returns current result; stale conflicting updates are 409.
+- [x] Run `npm test -- app/lib/fanart/model.test.ts` and record RED. Implement pure domain transitions. First upload requires permission/review confirmed. Replacing asset clears review confirmation so a fresh explicit review is required before publication. Changing permission/review resets approvedHash; published and terminal records cannot be edited/uploaded. Publication binds approvedHash to asset.sha256. Repeating already-successful publish/withdraw returns current result; stale conflicting updates are 409.
 
-- [ ] Write storage integration tests against FANART_TEST_DATABASE_URL only, isolated schema per test run. Never touch a default or remote production DB in tests. Create two repository instances to test concurrent update conflict and repeated publication. Example:
+- [x] Write storage integration tests against FANART_TEST_DATABASE_URL only, isolated schema per test run. Never touch a default or remote production DB in tests. Create two repository instances to test concurrent update conflict and repeated publication. Example:
 
 ```ts
 const outcomes = await Promise.allSettled([
@@ -54,9 +54,9 @@ const outcomes = await Promise.allSettled([
 expect(outcomes.filter(outcome => outcome.status === 'fulfilled')).toHaveLength(1);
 ```
 
-- [ ] Implement dedicated tables with UUID id, unique source_key, indexed status/publication time, version and JSONB record, plus transactionally-written audit events. Avoid long image processing inside row lock. Never log evidence or DB credentials. Schema initialization retry after failure and concurrent creation protected with advisory transaction lock.
+- [x] Implement dedicated tables with UUID id, unique source_key, indexed status/publication time, version and JSONB record, plus transactionally-written audit events. Avoid long image processing inside row lock. Never log evidence or DB credentials. Schema initialization retry after failure and concurrent creation protected with advisory transaction lock.
 
-- [ ] Write HTTP/asset tests before code. Real Request/Response and sharp-generated test shapes; bound the stream regardless of Content-Length; invalid auth/origin cannot reach repository; SVG/disguised/GIF/oversize rejected; published projection redacted; media returns 404 after withdrawal and 503 on DB outage. Tests may inject storage at network boundary but domain must be real.
+- [x] Write HTTP/asset tests before code. Real Request/Response and sharp-generated test shapes; bound the stream regardless of Content-Length; invalid auth/origin cannot reach repository; SVG/disguised/GIF/oversize rejected; published projection redacted; media returns 404 after withdrawal and 503 on DB outage. Tests may inject storage at network boundary but domain must be real.
 
 ```ts
 const badOrigin = new Request('http://localhost/api/admin/fanart', {
@@ -65,9 +65,9 @@ const badOrigin = new Request('http://localhost/api/admin/fanart', {
 expect((await handlers.create(badOrigin)).status).toBe(403);
 ```
 
-- [ ] Implement auth via timing-safe comparison of fixed-length credential hashes; no development bypass. Stream cap before JSON/formData parse; validate IDs and all input scalar types/lengths. API error wrapper maps FanArtError to safe status/message, unknown errors to generic 503. Multipart cannot supply a server path. Re-encode to WebP, drop metadata, generated UUID key, fs write exclusive, no remote fetching. Asset file must exist before DB attachment; delete newly-created orphan on attachment failure only. Do not remove unrelated files.
-- [ ] Thin Node runtime routes await params and delegate to handlers. Media uses no-store/nosniff and checks current publication/hash on every request; verify saved file hash before response. Do not opt into Next image cache. Add proxy matcher while preserving unrelated auth behavior.
-- [ ] GREEN: focused tests then full `npm test`, `npm run typecheck`; self-review and commit only owned paths. Report actual skipped integrations separately with RED/GREEN evidence.
+- [x] Implement auth via timing-safe comparison of fixed-length credential hashes; no development bypass. Stream cap before JSON/formData parse; validate IDs and all input scalar types/lengths. API error wrapper maps FanArtError to safe status/message, unknown errors to generic 503. Multipart cannot supply a server path. Re-encode to WebP, drop metadata, generated UUID key, fs write exclusive, no remote fetching. Asset file must exist before DB attachment; delete newly-created orphan on attachment failure only. Do not remove unrelated files.
+- [x] Thin Node runtime routes await params and delegate to handlers. Media uses no-store/nosniff and checks current publication/hash on every request; verify saved file hash before response. Do not opt into Next image cache. Add proxy matcher while preserving unrelated auth behavior.
+- [x] GREEN: focused tests then full `npm test`, `npm run typecheck`; self-review and commit only owned paths. Report actual skipped integrations separately with RED/GREEN evidence.
 
 ### Task 2: Admin UI, live gallery and durable deployment configuration
 
@@ -75,18 +75,18 @@ expect((await handlers.create(badOrigin)).status).toBe(403);
 
 **Interfaces:** Consume Task 1 REST/model contract, confirmed from Task 1 report before edits. Legacy loader remains synchronous; new API polled client-side. New type supports optional id/sourceUrl/publishedAt alongside legacy src/alt/credit/download.
 
-- [ ] Write browser smoke script with assertions before UI (Playwright package already installed). Use dedicated local test app/DB and own generated image; no real café contents. Assert unauthorized API blocked; candidate cannot publish; fill permission and review; upload, publish, find artist/source in gallery, withdraw, media404 and gallery removal.
-- [ ] Run script against existing UI to observe missing admin workflow failure. Implement admin list/status filter/pagination/detail, editable evidence/review fields, request text copy and explicitly recorded request, upload and publish controls, rejection and named confirmation of withdrawal. Show API errors, stale version refresh prompt, private evidence warning, no automated sending claims. Use labels/accessibility and existing styles. Disable actions during in-flight operation; only reset state on successful response.
-- [ ] Create one shared client catalog subscription used by both galleries: initial load, focus and visible interval 60 seconds, pause when hidden, deduplicate overlapping fetches; preserve previous approved list on failure. Fetch no-store, validate public result. Merge legacy entries separately and label only records from published API as reviewed. Use current src/id selection with safe fallback when an item is removed, close empty modal.
-- [ ] Every newly-managed image in gallery/modal/thumbnails uses unoptimized, not just the main image. Block `/media/fanart/**` from next/image optimizer via localPatterns exclusion or request guard, so manually crafted `/_next/image?url=/media/fanart/...` cannot outlive withdrawal. Preserve legacy/local image optimization.
-- [ ] Add source link, KST introduction date, verification label for new images; keep existing legacy image behavior and revise empty copy. Shared type exports preserve existing imports.
-- [ ] Configure fanart_assets volume and FANART_ASSETS_DIR/FANART_ALLOWED_ORIGIN in dev/prod/server Compose. Ensure nonroot Docker runner owns mount initialization directory and retains files after recreate. Ignore frontend/.data. Document FANART_DATABASE_URL optional (same existing PG allowed), admin envs, backups, rollback, legacy limitations, no scrape/auto-send, no deployment performed.
-- [ ] Exclude .data from Docker build context as well as Git. Add a `smoke:fanart` npm command. Wire fanart repository integration tests and browser smoke into existing CI test job with its disposable PostgreSQL service; preserve workflow triggers, permissions, pinned actions, existing checks and production secrets isolation. Tests use their own schemas. Allow the existing CI disposable database name in test URL guard only if explicitly configured and loopback; no default fallback.
-- [ ] GREEN: browser smoke, full tests/typecheck/lint/build; no hidden skipped browser claim. Commit owned paths and full test evidence report.
+- [x] Write browser smoke script with assertions before UI (Playwright package already installed). Use dedicated local test app/DB and own generated image; no real café contents. Assert unauthorized API blocked; candidate cannot publish; fill permission and review; upload, publish, find artist/source in gallery, withdraw, media404 and gallery removal.
+- [x] Run script against existing UI to observe missing admin workflow failure. Implement admin list/status filter/pagination/detail, editable evidence/review fields, request text copy and explicitly recorded request, upload and publish controls, rejection and named confirmation of withdrawal. Show API errors, stale version refresh prompt, private evidence warning, no automated sending claims. Use labels/accessibility and existing styles. Disable actions during in-flight operation; only reset state on successful response.
+- [x] Create one shared client catalog subscription used by both galleries: initial load, focus and visible interval 60 seconds, pause when hidden, deduplicate overlapping fetches; preserve previous approved list on failure. Fetch no-store, validate public result. Merge legacy entries separately and label only records from published API as reviewed. Use current src/id selection with safe fallback when an item is removed, close empty modal.
+- [x] Every newly-managed image in gallery/modal/thumbnails uses unoptimized, not just the main image. Block `/media/fanart/**` from next/image optimizer via localPatterns exclusion or request guard, so manually crafted `/_next/image?url=/media/fanart/...` cannot outlive withdrawal. Preserve legacy/local image optimization.
+- [x] Add source link, KST introduction date, verification label for new images; keep existing legacy image behavior and revise empty copy. Shared type exports preserve existing imports.
+- [x] Configure fanart_assets volume and FANART_ASSETS_DIR/FANART_ALLOWED_ORIGIN in dev/prod/server Compose. Ensure nonroot Docker runner owns mount initialization directory and retains files after recreate. Ignore frontend/.data. Document FANART_DATABASE_URL optional (same existing PG allowed), admin envs, backups, rollback, legacy limitations, no scrape/auto-send, no deployment performed.
+- [x] Exclude .data from Docker build context as well as Git. Add a `smoke:fanart` npm command. Wire fanart repository integration tests and browser smoke into existing CI test job with its disposable PostgreSQL service; preserve workflow triggers, permissions, pinned actions, existing checks and production secrets isolation. Tests use their own schemas. Allow the existing CI disposable database name in test URL guard only if explicitly configured and loopback; no default fallback.
+- [x] GREEN: browser smoke, full tests/typecheck/lint/build; no hidden skipped browser claim. Commit owned paths and full test evidence report.
 
 ## Release verification (controller)
 
-- [ ] Read task reports and review diffs independently; fix Important/Critical findings before completion.
-- [ ] Run unit/integration tests, typecheck, lint, production build, local browser smoke with self-made image.
-- [ ] Try Docker build/recreate with dedicated test services/volumes only. If unavailable, record that limitation instead of using production infrastructure.
-- [ ] Document results and requirements for future deployment. Keep this feature branch local; no push/merge/deploy requested.
+- [x] Read task reports and review diffs independently; fix Important/Critical findings before completion.
+- [x] Run unit/integration tests, typecheck, lint, production build, local browser smoke with self-made image.
+- [x] Try Docker build/recreate with dedicated test services/volumes only. If unavailable, record that limitation instead of using production infrastructure.
+- [x] Document results and requirements for future deployment. Keep this feature branch local; no push/merge/deploy requested.
