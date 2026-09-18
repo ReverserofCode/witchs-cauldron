@@ -17,6 +17,7 @@ FANART_ASSETS_DIR=/app/data/fanart
 ```
 
 - `FANART_DATABASE_URL`이 비어 있으면 명시적으로 설정된 `ANALYTICS_DATABASE_URL`, 다음으로 `DATABASE_URL`을 사용한다. 세 값 모두 없으면 DB 기능은 503으로 닫힌다. 기본 자격증명을 자동 추정하지 않는다. 기존 PostgreSQL을 함께 사용해도 팬아트 전용 테이블만 생성한다.
+- 제공된 Docker Compose는 `FANART_DATABASE_URL` → `ANALYTICS_DATABASE_URL` → Compose에 함께 정의된 내부 `analytics-db` 순으로 연결을 명시해 컨테이너에 전달한다. 외부 DB나 변경한 자격증명을 사용한다면 환경변수로 덮어써야 한다. Docker 밖에서 npm으로 실행할 때의 명시적 설정 요구와 fail-closed 정책은 그대로다.
 - `FANART_ALLOWED_ORIGIN`은 실제 브라우저 주소의 origin과 정확히 같아야 한다(끝 슬래시 제외). 호스트명·프로토콜·포트가 다르면 변경 요청은 403이다. 개발 기본값은 `http://localhost:3000`, 운영 Compose 기본값은 `https://moingfans.com`이다.
 - 관리자 자격증명이 없으면 개발 환경에서도 신규 관리자 페이지/API를 비활성화한다. HTTPS를 사용하고 비밀번호는 Git·문서에 저장하지 않는다.
 - 최초 DB 접근 때 전용 테이블 `fanart_works`, `fanart_audit_events`와 인덱스를 생성하므로 해당 DB 계정에 필요한 DDL 권한이 있어야 한다. 기존 Analytics 테이블은 변경하지 않는다.

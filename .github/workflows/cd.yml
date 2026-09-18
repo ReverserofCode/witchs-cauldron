@@ -301,3 +301,49 @@ jobs:
           assert isinstance(data.get("topMenuClicks"), list), "topMenuClicks must be a list"
           print("analytics stats verification ok")
           PY
+
+      - name: Verify fanart endpoints
+        env:
+          ADMIN_BASIC_AUTH_USERNAME: ${{ secrets.ADMIN_BASIC_AUTH_USERNAME }}
+          ADMIN_BASIC_AUTH_PASSWORD: ${{ secrets.ADMIN_BASIC_AUTH_PASSWORD }}
+          BASE_URL: ${{ vars.UPTIME_MONITOR_BASE_URL || 'https://moingfans.com' }}
+        run: |
+          python3 - <<'PY'
+          import base64
+          import json
+          import os
+          import urllib.error
+          import urllib.request
+
+          base = os.environ["BASE_URL"].rstrip("/")
+          username = os.environ["ADMIN_BASIC_AUTH_USERNAME"]
+          password = os.environ["ADMIN_BASIC_AUTH_PASSWORD"]
+          assert username and password, "fanart administrator credentials must be configured"
+          auth = "Basic " + base64.b64encode(f"{username}:{password}".encode()).decode()
+
+          class NoRedirect(urllib.request.HTTPRedirectHandler):
+              def redirect_request(self, req, fp, code, msg, headers, newurl):
+                  return None
+
+          opener = urllib.request.build_opener(NoRedirect())
+          def read(path, authenticated=False):
+              headers = {"Authorization": auth} if authenticated else {}
+              with opener.open(urllib.request.Request(base + path, headers=headers), timeout=30) as response:
+                  assert response.status == 200, f"unexpected status for {path}"
+                  assert "no-store" in response.headers.get("Cache-Control", ""), f"missing no-store for {path}"
+                  return json.load(response)
+
+          catalog = read("/api/fanart")
+          assert isinstance(catalog.get("images"), list)
+          for image in catalog["images"]:
+              assert set(image) == {"id", "src", "alt", "credit", "sourceUrl", "publishedAt"}, "unexpected public fields"
+          try:
+              opener.open(base + "/api/admin/fanart", timeout=30)
+              raise AssertionError("unauthenticated fanart API was not rejected")
+          except urllib.error.HTTPError as error:
+              assert error.code == 401, "unexpected unauthenticated status"
+              error.close()
+          records = read("/api/admin/fanart?limit=1", authenticated=True)
+          assert isinstance(records.get("works"), list) and isinstance(records.get("hasMore"), bool)
+          print("fanart public catalog, private-field exclusion, admin authentication and no-store verification ok")
+          PY
